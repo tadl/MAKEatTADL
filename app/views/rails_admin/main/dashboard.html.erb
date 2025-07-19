@@ -1,30 +1,6 @@
 <%# app/views/rails_admin/main/dashboard.html.erb %>
 
 <div class="container-fluid py-4">
-  <div class="card mb-4">
-    <div class="card-header bg-light">
-      <h3 class="mb-0">Public Forms</h3>
-    </div>
-    <div class="card-body">
-      <div class="btn-toolbar" role="toolbar" aria-label="Public form links">
-        <div class="btn-group me-2" role="group" aria-label="Print">
-          <%= link_to '3D Print Request', main_app.submit_print_path, class: 'btn btn-primary', target: '_blank' %>
-        </div>
-        <div class="btn-group me-2" role="group" aria-label="Scan">
-          <%= link_to 'Scan Request', main_app.submit_scan_path, class: 'btn btn-primary', target: '_blank' %>
-        </div>
-        <div class="btn-group me-2" role="group" aria-label="Fidget">
-          <%= link_to 'Fidget Request', main_app.submit_fidget_path, class: 'btn btn-primary', target: '_blank' %>
-        </div>
-        <div class="btn-group me-2" role="group" aria-label="Assistive">
-          <%= link_to 'Assistive Request', main_app.submit_assistive_path, class: 'btn btn-primary', target: '_blank' %>
-        </div>
-        <div class="btn-group" role="group" aria-label="Staff">
-          <%= link_to 'Staff Print Request', main_app.submit_staff_path, class: 'btn btn-primary', target: '_blank' %>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="card mb-4">
     <div class="card-header bg-light">
@@ -87,11 +63,35 @@
     </div>
   <% end %>
 
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h3 class="mb-0">Public Forms</h3>
+    </div>
+    <div class="card-body">
+      <div class="btn-toolbar" role="toolbar" aria-label="Public form links">
+        <div class="btn-group me-2" role="group" aria-label="Print">
+          <%= link_to '3D Print Request', main_app.submit_print_path, class: 'btn btn-primary', target: '_blank' %>
+        </div>
+        <div class="btn-group me-2" role="group" aria-label="Scan">
+          <%= link_to 'Scan Request', main_app.submit_scan_path, class: 'btn btn-primary', target: '_blank' %>
+        </div>
+        <div class="btn-group me-2" role="group" aria-label="Fidget">
+          <%= link_to 'Fidget Request', main_app.submit_fidget_path, class: 'btn btn-primary', target: '_blank' %>
+        </div>
+        <div class="btn-group me-2" role="group" aria-label="Assistive">
+          <%= link_to 'Assistive Request', main_app.submit_assistive_path, class: 'btn btn-primary', target: '_blank' %>
+        </div>
+        <div class="btn-group" role="group" aria-label="Staff">
+          <%= link_to 'Staff Print Request', main_app.submit_staff_path, class: 'btn btn-primary', target: '_blank' %>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="print-lifecycle container my-4">
     <h1>3D Print Job Lifecycle</h1>
     <p>
       A clear process flow ensures staff and patrons understand the status transitions for each 3D print job.  
-      Below is the updated lifecycle using your defined statuses and the actions that trigger each transition.
     </p>
     <hr>
 
@@ -100,7 +100,7 @@
       <li><strong>pending</strong>: New request received; awaiting staff slicing/clarification.</li>
       <li><strong>information_requested</strong>: Patron has been given price/weight estimate; awaiting approval.</li>
       <li><strong>queued</strong>: Patron approved; job is in line for printing.</li>
-      <li><strong>in_progress</strong>: Printer has started printing; job assigned to a specific printer.</li>
+      <li><strong>in_progress</strong>: Job assigned to a specific printer, and has started printing. </li>
       <li><strong>ready_for_pickup</strong>: Print finished, weighed, and post-processed; patron notified.</li>
       <li><strong>archived</strong>: Patron picked up the print; job closed out and archived.</li>
       <li><strong>ongoing</strong>: Internal/staff-only print jobs to fill printer downtime.</li>
@@ -280,9 +280,6 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
-
-
 </div>
