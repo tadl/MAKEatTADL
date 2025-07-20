@@ -16,7 +16,6 @@
   },
   "scripts": {
     "dokku": {
-      "predeploy": "bundle exec rails db:migrate",
       "postdeploy": "bundle exec rails db:seed"
     }
   },
