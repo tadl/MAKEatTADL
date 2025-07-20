@@ -80,14 +80,8 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   config.action_controller.default_url_options = {
-    host:   'localhost',
-    port:   3000,
-    protocol: 'http'
-  }
-  Rails.application.routes.default_url_options = {
-    host:   'localhost',
-    port:   3000,
-    protocol: 'http'
+    host: ENV.fetch("APP_HOST", "make.tadl.org"),
+    protocol: ENV.fetch("APP_PROTOCOL", "https")
   }
 
 
