@@ -1,20 +1,44 @@
-<!-- app/views/portal/_device_selector.html.erb -->
+<!-- app/views/portal/_device_model.html.erb -->
 <div class="card mb-4">
-  <div class="card-header"><h4 class="mb-0">Device</h4></div>
+  <div class="card-header">
+    <h4 class="mb-0">Device</h4>
+  </div>
   <div class="card-body">
-    <div class="device-container d-flex flex-wrap gap-3">
-      <% @printable_models.each do |pm| %>
-        <div class="device-option" data-radio-id="job_printable_model_<%= pm.code %>">
-          <%= radio_button_tag 'job[printable_model_id]', pm.id,
-                params.dig(:job, :printable_model_id).to_s == pm.id.to_s,
-                id: "job_printable_model_#{pm.code}", class: 'd-none', required: true %>
-          <label for="job_printable_model_<%= pm.code %>" class="d-block mb-2">
+    <div
+      class="device-container d-flex flex-wrap gap-3"
+      role="radiogroup"
+      aria-labelledby="device-group-label"
+      id="device-group"
+    >
+      <% @printable_models.each_with_index do |pm, idx| %>
+        <% checked = params.dig(:job, :printable_model_id).to_s == pm.id.to_s %>
+        <div
+          class="device-option <%= 'selected' if checked %>"
+          role="radio"
+          aria-checked="<%= checked %>"
+          tabindex="<%= checked ? 0 : -1 %>"
+          data-radio-id="job_printable_model_<%= pm.code %>"
+        >
+          <%= radio_button_tag 'job[printable_model_id]', pm.id, checked,
+                id: "job_printable_model_#{pm.code}",
+                class: 'visually-hidden',
+                required: true,
+                'aria-labelledby': "label_#{pm.code}" %>
+
+          <label
+            for="job_printable_model_<%= pm.code %>"
+            id="label_<%= pm.code %>"
+            class="d-block mb-2"
+          >
             <strong><%= pm.name %></strong>
           </label>
+
           <% if pm.preview_image.attached? %>
             <%= image_tag pm.preview_image.variant(resize_to_limit: [250,250]),
-                  alt: pm.name, class: 'img-thumbnail' %>
+                          alt: pm.name,
+                          class: 'img-thumbnail' %>
           <% end %>
+
           <% if pm.notes.present? %>
             <p class="small text-muted mt-2"><%= pm.notes %></p>
           <% end %>
@@ -33,19 +57,58 @@
   cursor: pointer;
   text-align: center;
 }
-.device-option.selected { border-color: #2563eb; }
-.device-option img { max-width: 100%; height: auto; margin: 0 auto .75rem; }
+.device-option.selected {
+  border-color: #2563eb;
+  outline: none;
+}
+.device-option:focus {
+  outline: 3px solid #2563eb;
+}
 </style>
+
 <script>
 document.addEventListener('turbo:load', () => {
-  document.querySelectorAll('.device-option').forEach(opt => {
-    let radio = document.getElementById(opt.dataset.radioId);
-    if (radio.checked) opt.classList.add('selected');
-    opt.addEventListener('click', () => {
-      radio.checked = true;
-      document.querySelectorAll('.device-option').forEach(o=>o.classList.remove('selected'));
-      opt.classList.add('selected');
+  const container = document.getElementById('device-group');
+  const options = Array.from(container.querySelectorAll('.device-option'));
+
+  // Click handling
+  options.forEach(opt => {
+    const radio = document.getElementById(opt.dataset.radioId);
+    opt.addEventListener('click', () => selectOption(opt, radio));
+    opt.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        selectOption(opt, document.getElementById(opt.dataset.radioId));
+      }
+      // Left/Up arrow: previous
+      if (['ArrowLeft','ArrowUp'].includes(e.key)) {
+        e.preventDefault();
+        const prev = options[(options.indexOf(opt) - 1 + options.length) % options.length];
+        prev.focus();
+        selectOption(prev, document.getElementById(prev.dataset.radioId));
+      }
+      // Right/Down arrow: next
+      if (['ArrowRight','ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        const next = options[(options.indexOf(opt) + 1) % options.length];
+        next.focus();
+        selectOption(next, document.getElementById(next.dataset.radioId));
+      }
     });
   });
+
+  function selectOption(opt, radio) {
+    options.forEach(o => {
+      o.classList.remove('selected');
+      o.setAttribute('aria-checked', 'false');
+      o.setAttribute('tabindex', -1);
+      document.getElementById(o.dataset.radioId).checked = false;
+    });
+    opt.classList.add('selected');
+    opt.setAttribute('aria-checked', 'true');
+    opt.setAttribute('tabindex', 0);
+    radio.checked = true;
+    opt.focus();
+  }
 });
 </script>
