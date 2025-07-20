@@ -47,6 +47,8 @@ RUN apt-get update -qq && \
 
 WORKDIR /rails
 
+COPY Gemfile Gemfile.lock ./
+
 # Copy in gems and app code from build stage
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails        /rails
