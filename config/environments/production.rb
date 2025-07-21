@@ -13,6 +13,12 @@ Rails.application.configure do
   config.consider_all_requests_local       = false
   config.action_controller.perform_caching = true
 
+
+  config.action_dispatch.trusted_proxies = [
+    IPAddr.new("10.64.12.0/24"),
+    IPAddr.new("127.0.0.1")
+  ]
+
   # Do not fall back to assets pipeline if a precompiled asset is missed.
   config.assets.compile = false
 
