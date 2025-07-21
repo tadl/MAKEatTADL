@@ -14,7 +14,7 @@
             <%= link_to(
                   rails_admin.index_path(
                     model_name: 'job',
-                    f: { status => { status.id.to_s => { o: 'is', v: status.name } } }
+                    q: { status_id_eq: status.id }
                   ),
                   class: "card h-100 text-decoration-none #{'border-primary' if count.positive?}"
                 ) do %>
