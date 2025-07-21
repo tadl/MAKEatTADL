@@ -17,7 +17,8 @@ module PortalHelper
 
   def author_display_name(author)
     if author.is_a?(StaffUser)
-      author.name.split(/\s+/).first
+      #author.name.split(/\s+/).first
+      "TADL Staff"
     else
       author.name
     end
