@@ -36,12 +36,6 @@ Rails.application.configure do
   # config.action_dispatch.x_sendfile_header = "X-Sendfile" # for Apache
   # config.action_dispatch.x_sendfile_header = "X-Accel-Redirect" # for NGINX
 
-  trusted = IPAddr.new("10.64.12.0/24")
-  config.action_dispatch.trusted_proxies = [
-    *confiug.action_dispatch.trusted_proxies,
-    trusted
-  }
-
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
