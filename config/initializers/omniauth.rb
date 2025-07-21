@@ -4,11 +4,9 @@
 OmniAuth.config.allowed_request_methods = [:post, :get]
 
 if Rails.env.production?
-  # build the callback URL from X-Forwarded headers
+  # build the callback URL from env vars or use sensible fallbacks
   OmniAuth.config.full_host = lambda do |env|
-    scheme = env['HTTP_X_FORWARDED_PROTO'] || env['rack.url_scheme']
-    host   = env['HTTP_X_FORWARDED_HOST'] || env['HTTP_HOST']
-    "#{scheme}://#{host}"
+    "#{ENV.fetch('APP_PROTOCOL','https')}://#{ENV.fetch('APP_HOST','make.tadl.org')}"
   end
 end
 
