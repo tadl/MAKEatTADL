@@ -69,7 +69,7 @@ RailsAdmin.config do |config|
     label_plural     'Jobs'
 
     list do
-      scopes [:active, :archived]
+      scopes [:active, :inactive]
       sort_by :created_at
       field :patron
       field :status, :belongs_to_association do

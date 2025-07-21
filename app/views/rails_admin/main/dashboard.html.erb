@@ -4,17 +4,28 @@
 
   <div class="card mb-4">
     <div class="card-header bg-light">
-      <h3 class="mb-0">Tickets in Status</h3>
+      <h3 class="mb-0">Jobs in Status</h3>
     </div>
     <div class="card-body">
       <div class="row g-3">
         <% Status.order(:position).each do |status| %>
-          <% count = Job.with_status(status.code).count %>
+          <% link_scope = %w[archived cancelled].include?(status.code) ? 'inactive' : 'active' %>
+          <% count      = Job.with_status(status.code).count %>
+
           <div class="col-sm-6 col-md-4 col-lg-3">
             <%= link_to(
                   rails_admin.index_path(
                     model_name: 'job',
-                    q: { status_id_eq: status.id }
+                    scope:      link_scope,
+                    query:      '',
+                    f: {
+                      status: {
+                        '0' => {
+                          o: 'like',
+                          v: status.code
+                        }
+                      }
+                    }
                   ),
                   class: "card h-100 text-decoration-none #{'border-primary' if count.positive?}"
                 ) do %>

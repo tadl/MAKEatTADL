@@ -25,8 +25,9 @@ class Job < ApplicationRecord
   scope :with_status, ->(code) {
     joins(:status).where(statuses: { code: code })
   }
-  scope :active,   -> { joins(:status).where.not(statuses: { code: 'archived' }) }
-  scope :archived, -> { joins(:status).where(statuses:     { code: 'archived'  }) }
+
+  scope :active,   -> { joins(:status).where.not(statuses: { code: %w[archived cancelled] }) }
+  scope :inactive, -> { joins(:status).where(statuses:     { code: %w[archived cancelled] }) }
 
   private
 
