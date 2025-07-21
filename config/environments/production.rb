@@ -40,6 +40,12 @@ Rails.application.configure do
     host:     ENV.fetch("APP_HOST",     "make.tadl.org"),
     protocol: ENV.fetch("APP_PROTOCOL", "https")
   }
+  config.action_mailer.delivery_method = :mailgun
+  config.action_mailer.mailgun_settings = {
+    api_key: ENV.fetch("MAILGUN_API_KEY"),
+    domain:  ENV.fetch("MAILGUN_DOMAIN")
+  }
+
 
   # All other URL helpers (job_url, edit_user_url, etc.) should also use the same host/proto.
   Rails.application.routes.default_url_options = {
