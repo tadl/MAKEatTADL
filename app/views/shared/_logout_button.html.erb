@@ -2,7 +2,14 @@
 <% if current_staff_user || current_patron %>
   <div class="text-end ms-auto">
     <small class="text-muted me-2">
-      Welcome, <%= (current_staff_user&.name || current_patron&.name).to_s.split.first %>!
+      <% if current_patron %>
+        <%= current_patron.name %> &lt;<%= current_patron.email %>&gt;
+        <% if current_staff_user %>
+          (Authenticated Staff)
+        <% end %>
+      <% else %>
+        <%= current_staff_user.name %> &lt;<%= current_staff_user.email %>&gt;
+      <% end %>
     </small>
     <%= button_to "Log out", logout_path, method: :delete,
           form: { class: "d-inline" },
