@@ -1,21 +1,22 @@
 <%# app/views/rails_admin/main/_message.html.erb %>
 <div class="message <%= message.author_type.underscore %> <%= 'staff-note' if message.staff_note_only? %>">
-  <div class="message-header">
-    <strong>
-      <%= message.author.try(:name) %>
+  <div class="message-header d-flex justify-content-between align-items-center">
+    <div>
+      <strong><%= message.author.try(:name) %></strong>
       (<%= message.author_type == 'StaffUser' ? 'staff' : 'patron' %>)
-    </strong>
-    <span class="timestamp">
-      <%= l(message.created_at, format: :short) %>
-    </span>
+      <% if message.staff_note_only? %>
+        <span class="badge bg-secondary ms-2">Staff Note</span>
+      <% end %>
+    </div>
+    <small class="text-muted"><%= l(message.created_at, format: :short) %></small>
   </div>
 
-  <div class="message-body">
+  <div class="message-body mt-2">
     <%= simple_format(message.body) %>
   </div>
 
   <% if message.images.attached? %>
-    <div class="message-images mt-2">
+    <div class="message-images mt-3">
       <% message.images.each do |img| %>
         <%= link_to main_app.rails_blob_path(img, disposition: 'attachment'),
                     target:   '_blank',
