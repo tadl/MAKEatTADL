@@ -71,6 +71,7 @@ class PortalController < ApplicationController
 
     if @job.save
       JobMailer.job_received(@job).deliver_later
+      seed_notes_as_message(@job)
       redirect_to thank_you_path(kind: @type)
     else
       flash.now[:alert] = @job.errors.full_messages.to_sentence
@@ -99,6 +100,7 @@ class PortalController < ApplicationController
 
     if @job.save
       JobMailer.job_received(@job).deliver_later
+      seed_notes_as_message(@job)
       redirect_to thank_you_path(kind: 'scan')
     else
       flash.now[:alert] = @job.errors.full_messages.to_sentence
@@ -180,6 +182,15 @@ class PortalController < ApplicationController
       :spray_ok,
       :notes,
       :pickup_location
+    )
+  end
+
+  def seed_notes_as_message(job)
+    return if job.notes.blank?
+
+    job.conversation.messages.create!(
+      body:   job.notes,
+      author: job.patron
     )
   end
 
