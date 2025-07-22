@@ -1,0 +1,12 @@
+You’ve been mentioned by <%= @message.author.name %>
+
+In the conversation for Job #<%= @job.id %>, <%= @message.author.name %> wrote:
+
+<%= simple_format(@message.body) %>
+
+<%= link_to "View the conversation", rails_admin.url_for(
+    controller: 'rails_admin/main',
+    action:     'conversation',
+    model_name: 'job',
+    id:         @job.id
+  ) %>

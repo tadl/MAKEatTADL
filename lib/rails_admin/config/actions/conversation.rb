@@ -68,10 +68,14 @@ module RailsAdmin
               )
 
               # extract @mentions
-              msg.body.scan(/@(\w+)/).flatten.each do |username|
-                email = "#{username}@#{ENV['GOOGLE_DOMAIN']}"
-                if user = StaffUser.find_by(email: email)
-                  Notification.create!(staff_user: user, message: msg)
+              msg.body.scan(/@(\w+)/).flatten.uniq.each do |username|
+                staff_email = "#{username}@#{ENV.fetch('GOOGLE_DOMAIN')}"
+                if staff = StaffUser.find_by(email: staff_email)
+                  # persist in-app notification
+                  Notification.create!(staff_user: staff, message: msg)
+
+                  # email ping
+                  MentionMailer.user_mentioned(staff, msg).deliver_later
                 end
               end
 
