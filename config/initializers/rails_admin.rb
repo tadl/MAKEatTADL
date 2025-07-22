@@ -27,7 +27,7 @@ RailsAdmin.config do |config|
     Category
     Conversation
     Message
-    PrintableModelS
+    PrintableModel
     Audited::Audit
   ]
 
@@ -49,15 +49,14 @@ RailsAdmin.config do |config|
 
     edit do
       visible do
-        # admins can edit anything; non-admins can edit everything *except* Patron
-        bindings[:controller].current_staff_user.admin? ||
-          bindings[:abstract_model].model != Patron
+        bindings[:controller].current_ability.can?(:update, bindings[:abstract_model].model)
       end
     end
 
     delete do
-      only ['Message', 'FilamentColor', 'Status', 'Category', 'PrintableModel']
-      visible { bindings[:controller].current_staff_user.admin? }
+      visible do
+        bindings[:controller].current_ability.can?(:destroy, bindings[:abstract_model].model)
+      end
     end
   end
 
@@ -186,10 +185,14 @@ RailsAdmin.config do |config|
       field :status, :belongs_to_association do
         label 'Status'
         associated_collection_scope { ->(scope){ scope.order(:position) } }
+        inline_add   { bindings[:controller].current_staff_user.admin? }
+        inline_edit  { bindings[:controller].current_staff_user.admin? }
       end
       field :category, :belongs_to_association do
         label 'Category'
         associated_collection_scope { ->(scope){ scope.order(:position) } }
+        inline_add   { bindings[:controller].current_staff_user.admin? }
+        inline_edit  { bindings[:controller].current_staff_user.admin? }
       end
       field :type, :enum do
         label         'Job Type'
