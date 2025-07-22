@@ -27,7 +27,8 @@ RailsAdmin.config do |config|
     Category
     Conversation
     Message
-    PrintableModel
+    PrintableModelS
+    Audited::Audit
   ]
 
   # ─ Actions ────────────────────────────────────────────
@@ -368,6 +369,23 @@ RailsAdmin.config do |config|
   # ─────────────────────────────────────────────────────────
   #   Admin (everything staff/admin manage)
   # ─────────────────────────────────────────────────────────
+  config.model 'Audited::Audit' do
+    visible          { bindings[:controller].current_staff_user.admin? }
+    navigation_label 'Admin'
+    weight           299
+    label_plural 'Activity Log'
+    list do
+      field :created_at
+      field :user         # who made the change
+      field :auditable    # record that was changed
+      field :action       # update/create/destroy
+      field :audited_changes
+    end
+    show do
+      include_all_fields
+    end
+  end
+
   config.model 'Printer' do
     visible          { bindings[:controller].current_staff_user.admin? }
     navigation_label 'Admin'

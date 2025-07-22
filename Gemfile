@@ -88,3 +88,4 @@ gem 'recaptcha', require: 'recaptcha/rails'
 
 gem 'kaminari'
 gem 'kaminari-bootstrap', '~> 3.0.1'
+gem 'audited', '~> 5.2'

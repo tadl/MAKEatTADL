@@ -1,4 +1,5 @@
 class Message < ApplicationRecord
+  audited
   belongs_to :conversation
   belongs_to :author, polymorphic: true   # StaffUser or Patron (if you choose)
 

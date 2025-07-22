@@ -1,5 +1,6 @@
 # app/models/printable_model.rb
 class PrintableModel < ApplicationRecord
+  audited
   belongs_to :category
 
   has_one_attached :model_file     # e.g. .stl/.obj

@@ -1,5 +1,6 @@
 # app/models/conversation.rb
 class Conversation < ApplicationRecord
+  audited
   belongs_to :job
   has_many   :messages, -> { order(:created_at) }, dependent: :destroy
 

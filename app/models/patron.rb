@@ -1,5 +1,6 @@
 # app/models/patron.rb
 class Patron < ApplicationRecord
+  audited
   has_many :jobs, dependent: :destroy
 
   before_create :generate_access_token

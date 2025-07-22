@@ -1,5 +1,6 @@
 # app/models/job.rb
 class Job < ApplicationRecord
+  audited
   belongs_to :patron
   belongs_to :status
   belongs_to :category

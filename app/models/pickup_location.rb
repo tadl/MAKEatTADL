@@ -1,5 +1,6 @@
 # app/models/pickup_location.rb
 class PickupLocation < ApplicationRecord
+  audited
   scope :active,      -> { where(active: true) }
   scope :scanners,    -> { where(scanner: true).order(:position) }
   scope :fdm_printers,   -> { active.where(fdm_printer: true) }
