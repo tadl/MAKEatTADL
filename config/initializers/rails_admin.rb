@@ -108,6 +108,7 @@ RailsAdmin.config do |config|
       field :type do
         label 'Job Type'
       end
+      field :notes
 
       group :print_fields do
         label   'Print Details'
@@ -169,11 +170,9 @@ RailsAdmin.config do |config|
           end
         end
         field :spray_ok
-        field :notes
       end
 
       field :pickup_location
-      field :description
       field :created_at
       field :updated_at
     end
@@ -202,6 +201,7 @@ RailsAdmin.config do |config|
         enum     { PickupLocation.where(active: true).order(:position).pluck(:name, :code) }
         help     'Where should this job be picked up (or scan dropped off)?'
       end
+      field :notes
 
       group :print_fields do
         label   'Print-only fields'
@@ -266,10 +266,7 @@ RailsAdmin.config do |config|
           help  'Upload one photo (replaces the existing image)'
         end
         field :spray_ok
-        field :notes
       end
-
-      field :description, :text
     end
   end
 
@@ -283,14 +280,17 @@ RailsAdmin.config do |config|
     label_plural     'Filament Colors'
 
     list do
+      scopes [nil, :active]
       sort_by :name
       field :name
       field :code
+      field :active
     end
 
     edit do
       field :name
       field :code
+      field :active
     end
   end
 

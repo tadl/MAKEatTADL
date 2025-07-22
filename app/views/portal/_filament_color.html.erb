@@ -4,7 +4,12 @@
   <div class="card-body">
     <%= label_tag 'job[filament_color]', 'Choose a Color', class: 'form-label' %>
     <%= select_tag 'job[filament_color]',
-          options_from_collection_for_select(FilamentColor.all.order(:position), :code, :name, params.dig(:job, :filament_color)),
+          options_from_collection_for_select(
+            FilamentColor.active.order(:position),
+            :code,
+            :name,
+            params.dig(:job, :filament_color)
+          ),
           include_blank: 'Select color',
           id: 'job_filament_color',
           class: 'form-select',

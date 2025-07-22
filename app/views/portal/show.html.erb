@@ -45,7 +45,6 @@
 
               <% info << ['Assigned Printer', @job.assigned_printer.printer_model] if @job.assigned_printer %>
               <% info << ['Notes',            @job.notes]           if @job.notes.present? %>
-              <% info << ['Description',      @job.description]     if @job.description.present? %>
 
               <% info.each do |label, value| %>
                 <tr>
