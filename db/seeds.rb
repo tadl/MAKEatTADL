@@ -121,12 +121,12 @@ end
 ###############################################################################
 
 [
-  { name: "Bambi",   printer_type: "FDM", printer_model: "Bambu P1S",           bed_size: "256x256x256", location: "Outside Tech Center", pickup_location_code: "ebb", print_type_code: "fdm" },
-  { name: "Pee-wee", printer_type: "FDM", printer_model: "Bambu P1S",           bed_size: "256x256x256", location: "Main Floor by Stairs",  pickup_location_code: "ebb", print_type_code: "fdm" },
-  { name: "Prusa XL",printer_type: "FDM", printer_model: "Prusa XL",            bed_size: "360x360x360", location: "Technology Workroom",   pickup_location_code: "ebb", print_type_code: "fdm" },
-  { name: "Prusa 02",printer_type: "FDM",   printer_model: "Prusa MK3s",         bed_size: "250x210x210", location: nil,                    pickup_location_code: "wood", print_type_code: "fdm" },
+  { name: "Bambi",   printer_type: "FDM", printer_model: "Bambu P1S",           bed_size: "256x256x256", location: "Outside Tech Center", pickup_location_code: "wood", print_type_code: "fdm" },
+  { name: "Pee-wee", printer_type: "FDM", printer_model: "Bambu P1S",           bed_size: "256x256x256", location: "Main Floor by Stairs",  pickup_location_code: "wood", print_type_code: "fdm" },
+  { name: "Prusa XL",printer_type: "FDM", printer_model: "Prusa XL",            bed_size: "360x360x360", location: "Technology Workroom",   pickup_location_code: "wood", print_type_code: "fdm" },
+  { name: "Prusa 02",printer_type: "FDM",   printer_model: "Prusa MK3s",         bed_size: "250x210x210", location: nil,                    pickup_location_code: "ebb", print_type_code: "fdm" },
   { name: "Prusa 01",printer_type: "FDM",   printer_model: "Prusa MK3s",         bed_size: "250x210x210", location: nil,                    pickup_location_code: "kbl",  print_type_code: "fdm" },
-  { name: "Saturn",  printer_type: "Resin",   printer_model: "Elegoo Saturn 3 Ultra", bed_size: "218.88x122.88x260", location: "Technology Workroom", pickup_location_code: "ebb", print_type_code: "resin" }
+  { name: "Saturn",  printer_type: "Resin",   printer_model: "Elegoo Saturn 3 Ultra", bed_size: "218.88x122.88x260", location: "Technology Workroom", pickup_location_code: "wood", print_type_code: "resin" }
 ].each do |attrs|
   plc = PickupLocation.find_by!(code: attrs.delete(:pickup_location_code))
   pt  = PrintType.find_by!(code: attrs.delete(:print_type_code))
