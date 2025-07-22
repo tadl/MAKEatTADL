@@ -206,7 +206,7 @@ class PortalController < ApplicationController
       cookies.encrypted[:patron_id] = {
         value:    @patron.id,
         httponly: true,
-        expires:  4.hours.from_now
+        expires:  4.hours.from_now.to_time
       }
 
       # 2) redirect to the clean URL
