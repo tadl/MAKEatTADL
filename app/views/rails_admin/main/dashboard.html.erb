@@ -74,6 +74,37 @@
     </div>
   <% end %>
 
+  <% my_mentions = Notification.unread.where(staff_user: current_staff_user).joins(message: { conversation: :job })
+                     .select('jobs.id AS job_id, COUNT(notifications.*) AS cnt')
+                     .group('jobs.id') %>
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="mb-0">Mentions for You</h3>
+    </div>
+    <% if my_mentions.any? %>
+      <ul class="list-group list-group-flush">
+        <% my_mentions.each do |row| %>
+          <% job = Job.find(row.job_id) %>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <%= link_to "Job ##{job.id} — #{job.patron.name}",
+                        url_for(
+                          controller: "rails_admin/main",
+                          action:     "conversation",
+                          model_name: "job",
+                          id:         job.id
+                        ) %>
+            <span class="badge bg-warning rounded-pill"><%= row.cnt %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="card-body">
+        <em>No new mentions.</em>
+      </div>
+    <% end %>
+  </div>
+
   <div class="card mb-4">
     <div class="card-header bg-light">
       <h3 class="mb-0">Public Forms</h3>

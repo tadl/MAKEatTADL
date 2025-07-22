@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_07_22_181851) do
+ActiveRecord::Schema[7.1].define(version: 2025_07_22_184900) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -109,6 +109,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_07_22_181851) do
     t.index ["author_type", "author_id"], name: "index_messages_on_author"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["read_at"], name: "index_messages_on_read_at"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "staff_user_id", null: false
+    t.bigint "message_id", null: false
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_notifications_on_message_id"
+    t.index ["staff_user_id"], name: "index_notifications_on_staff_user_id"
   end
 
   create_table "patrons", force: :cascade do |t|
@@ -213,6 +223,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_07_22_181851) do
   add_foreign_key "jobs", "printers", column: "assigned_printer_id"
   add_foreign_key "jobs", "statuses"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "notifications", "messages"
+  add_foreign_key "notifications", "staff_users"
   add_foreign_key "print_job_notes", "jobs", column: "print_job_id"
   add_foreign_key "printable_models", "categories"
   add_foreign_key "printers", "pickup_locations"

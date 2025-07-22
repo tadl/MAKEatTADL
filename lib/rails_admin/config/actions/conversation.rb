@@ -39,6 +39,13 @@ module RailsAdmin
             @job          = @abstract_model.model.find(params[:id])
             @conversation = @job.conversation || @job.build_conversation
 
+            if current_staff_user
+              Notification
+                .where(staff_user: current_staff_user, message: @conversation.messages)
+                .unread
+                .find_each(&:mark_read!)
+            end
+
             if request.get?
               # ==== MARK PATRON MESSAGES READ ====
               # for each unread message NOT authored by staff, stamp read_at
@@ -59,6 +66,14 @@ module RailsAdmin
                 author:          current_staff_user,
                 staff_note_only: staff_only_flag
               )
+
+              # extract @mentions
+              msg.body.scan(/@(\w+)/).flatten.each do |username|
+                email = "#{username}@#{ENV['GOOGLE_DOMAIN']}"
+                if user = StaffUser.find_by(email: email)
+                  Notification.create!(staff_user: user, message: msg)
+                end
+              end
 
               # attach any uploaded images
               if params.dig(:conversation, :images).present?
