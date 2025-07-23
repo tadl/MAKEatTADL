@@ -169,6 +169,17 @@ RailsAdmin.config do |config|
             end
           end
         end
+        field :model_file, :active_storage do
+          label 'Scanned Model (STL/OBJ)'
+          pretty_value do
+            if (fm = bindings[:object].model_file).attached?
+              bindings[:view].link_to fm.filename.to_s,
+                Rails.application.routes.url_helpers.rails_blob_path(fm, disposition: 'attachment', only_path: true)
+            else
+              bindings[:view].content_tag(:em, 'No model attached')
+            end
+          end
+        end
         field :spray_ok
       end
 
@@ -268,6 +279,21 @@ RailsAdmin.config do |config|
         field :scan_image, :active_storage do
           label 'Submitted Photo'
           help  'Upload one photo (replaces the existing image)'
+        end
+        field :model_file, :active_storage do
+          label 'Model File'
+          pretty_value do
+            attachment = bindings[:object].model_file
+            if attachment.attached?
+              blob = attachment.blob
+              # Link to download the file, showing the original filename
+              bindings[:view].link_to \
+                blob.filename.to_s,
+                Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+            else
+              bindings[:view].content_tag(:em, 'No file uploaded')
+            end
+          end
         end
         field :spray_ok
       end
