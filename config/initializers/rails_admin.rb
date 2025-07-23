@@ -109,6 +109,21 @@ RailsAdmin.config do |config|
         label 'Job Type'
       end
       field :notes
+      field :model_file, :active_storage do
+        label 'Model File'
+        pretty_value do
+          attachment = bindings[:object].model_file
+          if attachment.attached?
+            blob = attachment.blob
+            # Link to download the file, showing the original filename
+            bindings[:view].link_to \
+              blob.filename.to_s,
+              Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+          else
+            bindings[:view].content_tag(:em, 'No file uploaded')
+          end
+        end
+      end
 
       group :print_fields do
         label   'Print Details'
@@ -118,21 +133,6 @@ RailsAdmin.config do |config|
           pretty_value   { bindings[:object].print_type&.name }
           filterable     true
           associated_collection_scope { ->(scope){ scope.order(:position) } }
-        end
-        field :model_file, :active_storage do
-          label 'Model File'
-          pretty_value do
-            attachment = bindings[:object].model_file
-            if attachment.attached?
-              blob = attachment.blob
-              # Link to download the file, showing the original filename
-              bindings[:view].link_to \
-                blob.filename.to_s,
-                Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
-            else
-              bindings[:view].content_tag(:em, 'No file uploaded')
-            end
-          end
         end
         field :url
         field :filament_color
@@ -166,17 +166,6 @@ RailsAdmin.config do |config|
               bindings[:view].link_to(thumb, blob_url, target: '_blank', rel: 'noopener')
             else
               bindings[:view].content_tag(:em, 'No photo uploaded.')
-            end
-          end
-        end
-        field :model_file, :active_storage do
-          label 'Scanned Model (STL/OBJ)'
-          pretty_value do
-            if (fm = bindings[:object].model_file).attached?
-              bindings[:view].link_to fm.filename.to_s,
-                Rails.application.routes.url_helpers.rails_blob_path(fm, disposition: 'attachment', only_path: true)
-            else
-              bindings[:view].content_tag(:em, 'No model attached')
             end
           end
         end
@@ -217,6 +206,21 @@ RailsAdmin.config do |config|
         help     'Where should this job be picked up (or scan dropped off)?'
       end
       field :notes
+      field :model_file, :active_storage do
+        label 'Model File'
+        pretty_value do
+          attachment = bindings[:object].model_file
+          if attachment.attached?
+            blob = attachment.blob
+            # Link to download the file, showing the original filename
+            bindings[:view].link_to \
+              blob.filename.to_s,
+              Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+          else
+            bindings[:view].content_tag(:em, 'No file uploaded')
+          end
+        end
+      end
 
       group :print_fields do
         label   'Print-only fields'
@@ -226,21 +230,6 @@ RailsAdmin.config do |config|
           inline_add                    false
           inline_edit                   false
           associated_collection_scope   { ->(scope){ scope.order(:position) } }
-        end
-        field :model_file, :active_storage do
-          label 'Model File'
-          pretty_value do
-            attachment = bindings[:object].model_file
-            if attachment.attached?
-              blob = attachment.blob
-              # Link to download the file, showing the original filename
-              bindings[:view].link_to \
-                blob.filename.to_s,
-                Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
-            else
-              bindings[:view].content_tag(:em, 'No file uploaded')
-            end
-          end
         end
         field :url
         field :filament_color, :enum do
@@ -279,21 +268,6 @@ RailsAdmin.config do |config|
         field :scan_image, :active_storage do
           label 'Submitted Photo'
           help  'Upload one photo (replaces the existing image)'
-        end
-        field :model_file, :active_storage do
-          label 'Model File'
-          pretty_value do
-            attachment = bindings[:object].model_file
-            if attachment.attached?
-              blob = attachment.blob
-              # Link to download the file, showing the original filename
-              bindings[:view].link_to \
-                blob.filename.to_s,
-                Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
-            else
-              bindings[:view].content_tag(:em, 'No file uploaded')
-            end
-          end
         end
         field :spray_ok
       end
