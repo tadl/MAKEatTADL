@@ -1,7 +1,6 @@
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
   before_action { Current.staff_user = current_staff_user }
-  before_action  :log_forwarded_for
 
   helper_method :current_staff_user
   def current_staff_user
@@ -19,7 +18,4 @@ class ApplicationController < ActionController::Base
 
   private
 
-  def log_forwarded_for
-    Rails.logger.info("[Client IPs] X-Forwarded-For: #{request.headers['X-Forwarded-For'].to_s.inspect} | RemoteAddr: #{request.remote_ip}")
-  end
 end
