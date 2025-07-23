@@ -8,15 +8,8 @@ class PrintJob < Job
              optional:   true
 
   validates :status,   presence: true
+  validates :filament_color, length: { maximum: 50 }, allow_blank: true
 
-  # only on update do we *really* require a print_type
-  with_options on: :update do
-    validates :print_type,      presence: true
-    validates :print_type_code, presence: true,
-                                inclusion: { in: -> { PrintType.pluck(:code) } }
-  end
-
-  # everything else stays the same
   validates :url,
             format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]),
                       message: 'must be a valid URL' },
@@ -29,11 +22,14 @@ class PrintJob < Job
               message: "%{value} is not a valid pickup location"
             }
 
-  validates :filament_color, length: { maximum: 50 }, allow_blank: true
+  validate :url_or_model_file_present, on: :create, if: :patron_request?
 
-  validate :url_or_model_file_present
 
   private
+
+  def patron_request?
+    category&.name == 'Patron'
+  end
 
   def url_or_model_file_present
     if url.blank? && !model_file.attached?
