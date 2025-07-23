@@ -27,7 +27,7 @@ class Message < ApplicationRecord
 
     job = conversation.job
     if job.status.code == 'information_requested'
-      new_status = Status.find_by!(code: 'requested')
+      new_status = Status.find_by!(code: 'response_received')
       job.update!(status: new_status)
     end
   end
