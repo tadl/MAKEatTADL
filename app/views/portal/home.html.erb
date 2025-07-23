@@ -14,17 +14,26 @@
 
   <div class="container">
 
-    <!-- Queue Stats -->
-    <section class="stats-grid my-8">
-      <%= [ ['Requested',      'requested'],
-            ['Queued',       'queued'],
-            ['Printing',     'printing'],
-            ['Ready', 'ready_for_pickup'] ].map do |label, code| %>
-        <div class="stats-card">
-          <div class="stats-card__count"><%= Job.with_status(code).count %></div>
-          <div class="stats-card__label"><%= label %></div>
-        </div>
-      <% end.join.html_safe %>
+    <section class="my-8">
+      <h2 class="h4 mb-3">Current Job Status</h2>
+
+      <div class="row gx-3 gy-3">
+        <% [
+          ['Received',       'requested'],
+          ['Ready to Print',         'approved'],
+          ['Printing',       'in_progress'],
+          ['Complete',          'ready_for_pickup']
+        ].each do |label, code| %>
+          <div class="col-6 col-md-3">
+            <div class="card text-center shadow-sm">
+              <div class="card-body py-4">
+                <div class="display-6"><%= PrintJob.with_status(code).count %></div>
+                <div class="text-muted"><%= label %></div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
     </section>
 
     <!-- About Card -->
