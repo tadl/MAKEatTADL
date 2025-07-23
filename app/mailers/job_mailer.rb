@@ -16,7 +16,6 @@ class JobMailer < ApplicationMailer
          subject: "We’ve received your #{@job.is_a?(PrintJob) ? 'print' : 'scan'} job ##{@job.id}"
   end
 
-
   def notify_patron(message)
     @message      = message
     @conversation = message.conversation

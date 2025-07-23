@@ -20,6 +20,7 @@ class Job < ApplicationRecord
 
   has_one  :conversation, dependent: :destroy
   after_create :build_conversation!
+  after_update :archive_if_completed
 
   validates :status, presence: true
 
@@ -34,5 +35,12 @@ class Job < ApplicationRecord
 
   def build_conversation!
     create_conversation! unless conversation
+  end
+
+  def archive_if_completed
+    if saved_change_to_completion_date? && completion_date.present?
+      archived = Status.find_by!(code: 'archived')
+      update_column(:status_id, archived.id)
+    end
   end
 end

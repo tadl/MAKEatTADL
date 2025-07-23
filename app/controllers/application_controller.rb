@@ -1,5 +1,6 @@
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
+  before_action { Current.staff_user = current_staff_user }
 
   helper_method :current_staff_user
   def current_staff_user

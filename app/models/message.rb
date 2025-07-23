@@ -3,6 +3,8 @@ class Message < ApplicationRecord
   belongs_to :conversation
   belongs_to :author, polymorphic: true   # StaffUser or Patron (if you choose)
 
+  after_create :mark_requested_if_patron_reply
+
   has_many_attached :images
 
   validates :body, presence: true
@@ -17,4 +19,16 @@ class Message < ApplicationRecord
   end
 
   alias_method :mark_read!, :update_read_at!
+
+  private
+
+  def mark_requested_if_patron_reply
+    return unless author_type == 'Patron'
+
+    job = conversation.job
+    if job.status.code == 'information_requested'
+      new_status = Status.find_by!(code: 'requested')
+      job.update!(status: new_status)
+    end
+  end
 end
