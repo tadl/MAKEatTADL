@@ -25,7 +25,7 @@
   server {
     listen      [::]:{{ $hostPort }};
     listen            {{ $hostPort }};
-    server_name       {{ $.NOSSL_SERVER_NAME }};
+    server_name       $http_host;
 
     access_log  /var/log/nginx/{{ $.APP }}-access.log;
     error_log   /var/log/nginx/{{ $.APP }}-error.log;
