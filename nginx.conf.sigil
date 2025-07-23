@@ -11,13 +11,17 @@ upstream {{ .APP }} {
 
 server {
   # listen on both IPv4 & IPv6 on the PROXY_PORT assigned by Dokku
-  listen      [::]:{{ .PROXY_PORT }};
-  listen            {{ .PROXY_PORT }};
+  listen      [::]:{{ .NGINX_PORT }};
+  listen            {{ .NGINX_PORT }};
+
+  # your app’s domains (falls back to global vhosts)
+  server_name {{ .NGINX_SERVER_NAMES }} {{ .DOKKU_GLOBAL_VHOSTS }};
+
 
   access_log  /var/log/nginx/{{ .APP }}-access.log;
   error_log   /var/log/nginx/{{ .APP }}-error.log;
-  underscores_in_headers off;
 
+  underscores_in_headers off;
   client_body_timeout    60s;
   client_header_timeout  60s;
   keepalive_timeout      75s;
