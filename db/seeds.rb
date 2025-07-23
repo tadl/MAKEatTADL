@@ -59,12 +59,13 @@ end
 [
   { name: "Requested",             code: "requested",               position: 0 },
   { name: "Information Requested", code: "information_requested",   position: 1 },
-  { name: "Queued",                code: "queued",                  position: 2 },
-  { name: "Printing",              code: "printing",                position: 3 },
-  { name: "Ready for pickup",      code: "ready_for_pickup",        position: 4 },
-  { name: "Archived",              code: "archived",                position: 5 },
-  { name: "Ongoing",               code: "ongoing",                 position: 6 },
-  { name: "Cancelled",             code: "cancelled",               position: 7 }
+  { name: "Response Received",     code: "response_received",       position: 2 },
+  { name: "Approved",              code: "approved",                position: 3 },
+  { name: "In Progress",           code: "in_progress",             position: 4 },
+  { name: "Ready for pickup",      code: "ready_for_pickup",        position: 5 },
+  { name: "Archived",              code: "archived",                position: 6 },
+  { name: "Ongoing",               code: "ongoing",                 position: 7 },
+  { name: "Cancelled",             code: "cancelled",               position: 8 }
 ].each do |attrs|
   s = Status.find_or_initialize_by(code: attrs[:code])
   s.name     = attrs[:name]
