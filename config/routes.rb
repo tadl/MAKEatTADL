@@ -59,7 +59,7 @@ Rails.application.routes.draw do
   get "/reports/print", to: "reports#print", as: :print_report
 
   # Health check endpoint
-  mount Rails::Health::Engine => '/up'
+  get '/up', to: 'rails/health#show', as: :rails_health_check
 
   # Inbound mailgun webhooks
   post  '/inbound/mailgun', to: 'inbound#mailgun'
