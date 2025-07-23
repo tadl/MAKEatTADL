@@ -15,8 +15,8 @@ Rails.application.configure do
 
 
   config.action_dispatch.trusted_proxies = [
-    IPAddr.new("10.64.12.0/24"),
     IPAddr.new("172.17.0.0/16"),
+    IPAddr.new("10.64.12.0/24"),
     IPAddr.new("127.0.0.1")
   ]
 
