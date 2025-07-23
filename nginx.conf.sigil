@@ -1,0 +1,45 @@
+# ────────────────────────────────────────────────────────────────
+# Custom Dokku Nginx template: preserve upstream X-Forwarded-For
+# ────────────────────────────────────────────────────────────────
+
+# define the upstream to your web process
+upstream dokku_%APP%_web {
+  # Dokku’s default socket
+  server unix:/tmp/nginx.socket;
+}
+
+server {
+  # listen on both IPv4 & IPv6
+  listen [::]:%NGINX_HTTP_PORT% default_server;
+  listen      %NGINX_HTTP_PORT% default_server;
+
+  # your app’s domains, configured via `dokku domains:add`
+  server_name %NGINX_SERVER_NAMES%;
+
+  # long keep-alive for Heroku-style dynos
+  keepalive_timeout 600;
+
+  # proxy all requests to your Rails app
+  location / {
+    proxy_http_version 1.1;
+
+    # preserve the real Host header
+    proxy_set_header Host              $host;
+
+    # leave X-Forwarded-For untouched if already set by public proxy,
+    # instead of overwriting with the last hop’s IP
+    proxy_set_header X-Forwarded-For   $http_x_forwarded_for;
+
+    # still send the immediate client in X-Real-IP (for logs)
+    proxy_set_header X-Real-IP         $remote_addr;
+
+    # standard headers
+    proxy_set_header X-Forwarded-Host  $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Port  $server_port;
+
+    proxy_pass http://dokku_%APP%_web;
+  }
+
+  # (Optional) static file serving, health checks, etc. go here
+}
