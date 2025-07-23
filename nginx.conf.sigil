@@ -7,20 +7,28 @@ upstream dokku_%APP_NAME%_web {
 }
 
 server {
-  listen [::]:%DOKKU_NGINX_PORT% default_server;
-  listen      %DOKKU_NGINX_PORT% default_server;
+  # listen on both IPv4 & IPv6 using the PROXY_PORT sigil
+  listen [::]:%PROXY_PORT% default_server;
+  listen      %PROXY_PORT% default_server;
 
-  # if you have app vhosts, they'll appear here; otherwise
-  # fallback to the global vhost(s)
+  # your app domains (if none, falls back to the global vhosts)
   server_name %NGINX_SERVER_NAMES% %DOKKU_GLOBAL_VHOSTS%;
 
+  # long keep-alive for dynos
   keepalive_timeout 600;
 
   location / {
     proxy_http_version 1.1;
-    proxy_set_header Host            $host;
-    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
-    proxy_set_header X-Real-IP       $remote_addr;
+
+    # preserve the real Host header
+    proxy_set_header Host              $host;
+
+    # leave X-Forwarded-For untouched so Rails.remote_ip sees the original client
+    proxy_set_header X-Forwarded-For   $http_x_forwarded_for;
+
+    # still log the immediate remote in X-Real-IP (optional)
+    proxy_set_header X-Real-IP         $remote_addr;
+
     proxy_set_header X-Forwarded-Host  $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-Port  $server_port;
@@ -28,5 +36,5 @@ server {
     proxy_pass http://dokku_%APP_NAME%_web;
   }
 
-  # You can still define a /up healthcheck or static locations here…
+  # you can still define /up healthchecks or static-file locations here
 }
