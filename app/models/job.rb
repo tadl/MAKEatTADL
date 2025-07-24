@@ -31,6 +31,8 @@ class Job < ApplicationRecord
   scope :active,   -> { joins(:status).where.not(statuses: { code: %w[archived cancelled] }) }
   scope :inactive, -> { joins(:status).where(statuses:     { code: %w[archived cancelled] }) }
 
+  scope :ongoing, -> { with_status('ongoing') }
+
   private
 
   def build_conversation!
