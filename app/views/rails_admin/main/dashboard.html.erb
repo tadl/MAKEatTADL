@@ -9,7 +9,7 @@
     <div class="card-body">
       <div class="row g-3">
         <% Status.order(:position).each do |status| %>
-          <% link_scope = %w[archived cancelled].include?(status.code) ? 'inactive' : 'active' %>
+          <% link_scope = %w[archived cancelled rejected abandoned].include?(status.code) ? 'inactive' : 'active' %>
           <% count      = Job.with_status(status.code).count %>
 
           <div class="col-sm-6 col-md-4 col-lg-3">

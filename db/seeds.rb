@@ -65,7 +65,9 @@ end
   { name: "Ready for pickup",      code: "ready_for_pickup",        position: 5 },
   { name: "Archived",              code: "archived",                position: 6 },
   { name: "Ongoing",               code: "ongoing",                 position: 7 },
-  { name: "Cancelled",             code: "cancelled",               position: 8 }
+  { name: "Cancelled",             code: "cancelled",               position: 8 },
+  { name: "Rejected",              code: "rejected",                position: 9 },
+  { name: "Abandoned",             code: "abandoned",               position: 10 }
 ].each do |attrs|
   s = Status.find_or_initialize_by(code: attrs[:code])
   s.name     = attrs[:name]
