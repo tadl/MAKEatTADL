@@ -235,7 +235,6 @@ PRs are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) if available.
 ## Credits
 
 - Developed by Traverse Area District Library Technology Team
-- Core Authors: [@wjr](https://github.com/wrockwood) and TADL contributors
 - Built with [Ruby on Rails](https://rubyonrails.org/)
 - ChatGPT was used to assist with development.
 
