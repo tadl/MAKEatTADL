@@ -33,7 +33,7 @@
               <% if @job.is_a?(PrintJob) %>
                 <% info << ['Print Type', @job.print_type&.name]          if @job.print_type %>
                 <% info << ['Filament Color', @job.filament_color]        if @job.filament_color.present? %>
-                <% info << ['Est. Print Time', "#{@job.print_time_estimate} min"] if @job.print_time_estimate.present? %>
+                <% info << ['Est. Print Time', "#{@job.print_time_estimate_hm} hr:min"] if @job.print_time_estimate.present? %>
                 <% info << ['Slicer Weight', "#{@job.slicer_weight} g"]     if @job.slicer_weight.present? %>
                 <% info << ['Slicer Cost', number_to_currency(@job.slicer_cost)] if @job.slicer_cost.present? %>
                 <% info << ['Actual Weight', "#{@job.actual_weight} g"]     if @job.actual_weight.present? %>

@@ -136,7 +136,9 @@ RailsAdmin.config do |config|
         end
         field :url
         field :filament_color
-        field :print_time_estimate
+        field :print_time_estimate_hm do
+          label 'Print time estimate'
+        end
         field :slicer_weight
         field :slicer_cost
         field :actual_weight
@@ -259,8 +261,9 @@ RailsAdmin.config do |config|
           label "Quantity"
           help "Number of copies printed. Update this when printing additional copies."
         end
-        field :print_time_estimate do
-          help 'Estimated print duration from slicer.'
+        field :print_time_estimate_hm do
+          label 'Print time estimate'
+          help 'Enter estimated print duration from slicer. Format: HH:MM.'
         end
         field :slicer_weight do
           label "Weight estimate (grams)"

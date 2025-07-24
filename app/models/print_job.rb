@@ -13,7 +13,45 @@ class PrintJob < Job
 
   belongs_to :assigned_printer, class_name: 'Printer', optional: true
 
-  # … other validations and methods …
+  validates :status,          presence: true
+  validates :filament_color,  length: { maximum: 50 }, allow_blank: true
+
+  validates :url,
+            format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]),
+                      message: 'must be a valid URL' },
+            allow_blank: true
+
+  validates :pickup_location,
+            presence: true,
+            inclusion: {
+              in:  ->(_) { PickupLocation.active.pluck(:code) },
+              message: "%{value} is not a valid pickup location"
+            }
+
+  validate :url_or_model_file_present, on: :create, if: :patron_request?
+
+  def print_time_estimate_hm
+    return if print_time_estimate.blank?
+    hours = print_time_estimate / 60
+    minutes = print_time_estimate % 60
+    if hours > 0
+      format("%d:%02d", hours, minutes)
+    else
+      format("%d", minutes)
+    end
+  end
+
+  def print_time_estimate_hm=(value)
+    return if value.blank?
+    parts = value.strip.split(':').map(&:to_i)
+    minutes =
+      case parts.length
+      when 2 then parts[0] * 60 + parts[1] # HH:MM
+      when 1 then parts[0]                 # MM
+      else nil
+      end
+    self.print_time_estimate = minutes
+  end
 
   private
 
