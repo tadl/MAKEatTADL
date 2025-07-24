@@ -181,31 +181,37 @@ RailsAdmin.config do |config|
       field :patron do
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
+        help ''
       end
       field :status, :belongs_to_association do
         label 'Status'
         associated_collection_scope { ->(scope){ scope.order(:position) } }
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
+        help ''
       end
       field :category, :belongs_to_association do
         label 'Category'
         associated_collection_scope { ->(scope){ scope.order(:position) } }
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
+        help ''
       end
       field :type, :enum do
         label         'Job Type'
         enum          { [['Print','PrintJob'], ['Scan','ScanJob']] }
         default_value { bindings[:object].type || 'PrintJob' }
+        help ''
       end
       field :pickup_location, :enum do
         label    'Pickup Location'
         required true
         enum     { PickupLocation.where(active: true).order(:position).pluck(:name, :code) }
-        help     'Where should this job be picked up (or scan dropped off)?'
+        help ''
       end
-      field :notes
+      field :notes do
+        help 'Notes from requestor. Print jobs for Asssitive/Fidget categories will include relevant contact method/info and/or company/organization information here.'
+      end
       field :model_file, :active_storage do
         label 'Model File'
         pretty_value do
@@ -220,31 +226,48 @@ RailsAdmin.config do |config|
             bindings[:view].content_tag(:em, 'No file uploaded')
           end
         end
+        help ''
       end
 
       group :print_fields do
         label   'Print-only fields'
         visible { bindings[:object].is_a?(PrintJob) }
-        field :print_type, :belongs_to_association do
-          label                         'Print Type'
-          inline_add                    false
-          inline_edit                   false
-          associated_collection_scope   { ->(scope){ scope.order(:position) } }
+        field :assigned_printer, :belongs_to_association do
+          inline_add   { bindings[:controller].current_staff_user.admin? }
+          inline_edit  { bindings[:controller].current_staff_user.admin? }
+          associated_collection_scope { ->(scope){ scope.order(:name) } }
+          help 'The printer that will be used for this job.'
         end
-        field :url
+        field :print_type, :belongs_to_association do
+          inline_add   { bindings[:controller].current_staff_user.admin? }
+          inline_edit  { bindings[:controller].current_staff_user.admin? }
+          label                         'Print Type'
+          associated_collection_scope   { ->(scope){ scope.order(:position) } }
+          help 'Automatically set from the assigned printer.'
+        end
+        field :url do
+          label 'URL'
+          help 'A URL is provided by the requestor when a model file is not.'
+        end
         field :filament_color, :enum do
           enum          { FilamentColor.order(:name).pluck(:name, :code) }
           default_value { bindings[:object].filament_color }
+          help ''
         end
         field :quantity, :integer do
           label "Quantity"
-          help "Number of copies printed"
+          help "Number of copies printed. Update this when printing additional copies."
         end
-        field :print_time_estimate
+        field :print_time_estimate do
+          help 'Estimated print duration from slicer.'
+        end
         field :slicer_weight do
-          label "Estimated weight (grams)"
+          label "Weight estimate (grams)"
+          help 'Estimated weight from slicer.'
         end
-        field :slicer_cost
+        field :slicer_cost do
+          help 'Estimated cost, derived from estimated weight.'
+        end
         field :resin_volume_ml do
           label "Resin Volume (mL)"
           help  "How many milliliters of resin were used?"
@@ -253,12 +276,11 @@ RailsAdmin.config do |config|
           label "Weight (grams)"
           help "How many grams is the finished print?"
         end
-        field :actual_cost
-        field :completion_date, :date
-        field :assigned_printer, :belongs_to_association do
-          inline_add   { bindings[:controller].current_staff_user.admin? }
-          inline_edit  { bindings[:controller].current_staff_user.admin? }
-          associated_collection_scope { ->(scope){ scope.order(:name) } }
+        field :actual_cost do
+          help 'When a value is entered here, the patron will be notified their print is ready to pick up.'
+        end
+        field :completion_date, :date do
+          help 'Set this when the print is picked up.'
         end
       end
 

@@ -1,14 +1,18 @@
 # app/models/print_job.rb
 class PrintJob < Job
   self.table_name = 'jobs'
+
+  # after you assign a printer, sync its print_type
+  before_validation :sync_print_type_from_printer, if: :will_save_change_to_assigned_printer_id?
+
   after_update :send_cost_estimate, if: :just_set_slicer_cost?
 
   belongs_to :assigned_printer,
              class_name: 'Printer',
              optional:   true
 
-  validates :status,   presence: true
-  validates :filament_color, length: { maximum: 50 }, allow_blank: true
+  validates :status,          presence: true
+  validates :filament_color,  length: { maximum: 50 }, allow_blank: true
 
   validates :url,
             format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]),
@@ -24,8 +28,12 @@ class PrintJob < Job
 
   validate :url_or_model_file_present, on: :create, if: :patron_request?
 
-
   private
+
+  def sync_print_type_from_printer
+    return unless assigned_printer
+    self.print_type = assigned_printer.print_type
+  end
 
   def patron_request?
     category&.name == 'Patron'
@@ -51,7 +59,7 @@ class PrintJob < Job
       body: <<~EOS.strip,
         Hello,
 
-        The estimated cost for this order is $#{'%.2f' % slicer_cost}.  
+        The estimated cost for this order is $#{'%.2f' % slicer_cost}.
         If that sounds ok, let us know and we’ll add you to the queue.
 
         Thank you
