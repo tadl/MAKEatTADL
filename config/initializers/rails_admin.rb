@@ -145,6 +145,7 @@ RailsAdmin.config do |config|
         end
         field :actual_cost
         field :completion_date
+        field :pickup_date
         field :assigned_printer
       end
 
@@ -280,7 +281,10 @@ RailsAdmin.config do |config|
           help 'When a value is entered here, the patron will be notified their print is ready to pick up.'
         end
         field :completion_date, :date do
-          help 'Set this when the print is picked up.'
+          help "Set this to today's date when the print is completed."
+        end
+        field :pickup_date, :date do
+          help "Set this to today's date when the print is picked up."
         end
       end
 
