@@ -36,7 +36,7 @@ MAKEatTADL is a web application developed by [Traverse Area District Library (TA
 
 - 🖨️ **Patron Print Requests** – Simple form for library patrons to submit 3D print jobs, including file uploads (STL, OBJ, ZIP).
 - 🗨️ **Conversation Thread** – Messaging system for patron/staff communication per job.
-- 🏷️ **Status Tracking** – Granular status management: *submitted*, *info requested*, *awaiting approval*, *queued*, *printing*, *ready*, *delivered*, *rejected*, *archived*.
+- 🏷️ **Status Tracking** – Granular status management: *pending*, *information requested*, *response received*, *approved*, *in progress*, *ready for pickup*, *cancelled*... Statuses are a model, you can add more as needed.
 - 💰 **Cost Estimation** – Staff can provide filament/cost/time estimates and request patron approval.
 - 🏢 **Admin UI** – RailsAdmin-based staff portal full oversight, configuration, user/staff management.
 - 📨 **Email Notifications** – Automated notifications for key status changes and messages.
