@@ -4,7 +4,6 @@
 
 [![Ruby](https://img.shields.io/badge/Ruby-3.2.8-red)](https://www.ruby-lang.org)
 [![Rails](https://img.shields.io/badge/Rails-7.1.3.3-red)](https://rubyonrails.org/)
-[![CI](https://github.com/tadl/MAKEatTADL/actions/workflows/ci.yml/badge.svg)](https://github.com/tadl/MAKEatTADL/actions)
 
 ---
 
