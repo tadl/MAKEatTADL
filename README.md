@@ -1,112 +1,245 @@
-# MAKE at TADL
+# MAKEatTADL
 
-**A 3D-printing & scanning request portal for the Traverse Area District Library (TADL).**
-MAKE at TADL lets patrons submit jobs, tracks status from “pending” through “ready for pickup,” and gives staff a beautiful RailsAdmin dashboard to manage the queue.
+**A full-featured 3D Print Job Management Platform for Public Libraries**
 
----
-
-## 🚀 Features
-
-- **Multi-step request forms** for 3D printing, scanning, fidget and assistive-tech devices, and staff jobs
-- **reCAPTCHA** integration to block bots
-- **Mailgun API** for reliable transactional email (job confirmations & notifications)
-- **Google OAuth** for staff logins
-- **Role-based UI**: patrons vs. staff, with a dedicated RailsAdmin console
-- **Job status lifecycle**: pending → information\_requested → queued → in\_progress → ready\_for\_pickup → archived
-- **Custom scopes** (active/inactive) to keep past jobs tidy
-- **Active Storage** file uploads (STL models, object photos, etc.)
-- **Rich job detail pages** with slicer metrics, cost estimates, and messaging
+[![Ruby](https://img.shields.io/badge/Ruby-3.2.8-red)](https://www.ruby-lang.org)
+[![Rails](https://img.shields.io/badge/Rails-7.1.3.3-red)](https://rubyonrails.org/)
+[![CI](https://github.com/tadl/MAKEatTADL/actions/workflows/ci.yml/badge.svg)](https://github.com/tadl/MAKEatTADL/actions)
 
 ---
 
-## 📦 Tech Stack
-
-- **Ruby on Rails** 7.1
-- **PostgreSQL** (production & development)
-- **RailsAdmin** for the staff console
-- **Stimulus / Bootstrap 5** for interactive forms & layout
-- **Active Storage** (local or cloud-backed) for file uploads
-- **Sidekiq / ActiveJob** for mail delivery
+MAKEatTADL is a web application developed by [Traverse Area District Library (TADL)](https://www.tadl.org) for managing 3D print requests from patrons and staff. The platform streamlines communication, estimation, and fulfillment of 3D printing jobs, designed for real-world use in public libraries.
 
 ---
 
-## 🔧 Quickstart
+## Table of Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Development](#development)
+- [Usage](#usage)
+  - [Submitting a Print Job](#submitting-a-print-job)
+  - [Staff Workflow](#staff-workflow)
+  - [Admin Panel](#admin-panel)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+- [Credits](#credits)
+
+---
+
+## Features
+
+- 🖨️ **Patron Print Requests** – Simple form for library patrons to submit 3D print jobs, including file uploads (STL, OBJ, ZIP).
+- 🗨️ **Conversation Thread** – Messaging system for patron/staff communication per job.
+- 🏷️ **Status Tracking** – Granular status management: *submitted*, *info requested*, *awaiting approval*, *queued*, *printing*, *ready*, *delivered*, *rejected*, *archived*.
+- 💰 **Cost Estimation** – Staff can provide filament/cost/time estimates and request patron approval.
+- 🏢 **Admin UI** – RailsAdmin-based staff portal full oversight, configuration, user/staff management.
+- 📨 **Email Notifications** – Automated notifications for key status changes and messages.
+- 🔒 **Google OAuth** – Secure staff login via Google Workspace SSO.
+- 🗄️ **File Storage** – All print files handled by ActiveStorage, configurable for local or S3.
+- ✨ **Accessible UI** – Simple, mobile-friendly design for patrons and staff.
+
+---
+
+## Screenshots
+
+> *(Add actual screenshots here when available)*
+
+![Patron Print Request](docs/screenshots/patron-request.png)
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-- Ruby 3.2.x
-- PostgreSQL 14+
-- Node.js & Yarn
-- Redis (for ActiveJob/Sidekiq, optional)
-- Mailgun account
-- Google Cloud OAuth credentials
-- reCAPTCHA v2 keys
+- **Ruby**: 3.2.8 (use [rbenv](https://github.com/rbenv/rbenv) or [asdf](https://asdf-vm.com/))
+- **Rails**: 7.1.3.3
+- **PostgreSQL**: 13+
+- **Redis**: For Sidekiq jobs/queues
+- **Node.js & Yarn**: For JS dependencies
+- **ImageMagick**: For image processing (used by ActiveStorage)
+- **libvips**: (optional, for faster image handling)
 
-### Clone & Install
+#### Recommended Dev Tools
 
-```bash
+- [Docker](https://www.docker.com/)
+- [dotenv](https://github.com/bkeepers/dotenv) (for `.env` support)
+
+---
+
+### Installation
+
+Clone the repo:
+
+```sh
 git clone https://github.com/tadl/MAKEatTADL.git
 cd MAKEatTADL
+```
 
-# Ruby gems
+Install Ruby gems and JS dependencies:
+
+```sh
 bundle install
-
-# JS/CSS packages
 yarn install
 ```
 
-### Environment
+Set up the database:
 
-Copy and edit the example:
-
-```bash
-cp .env.example .env
+```sh
+bin/rails db:setup
 ```
-
-Fill in your:
-
-- `MAILGUN_API_KEY` & `MAILGUN_DOMAIN`
-- `RECAPTCHA_SITE_KEY` & `RECAPTCHA_SECRET_KEY`
-- `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET` & `GOOGLE_DOMAIN`
-- `APP_PUBLIC_HOST` (e.g. `https://make.tadl.org`)
-
-### Database
-
-```bash
-rails db:create db:migrate db:seed
-```
-
-### Start the App
-
-```bash
-rails server
-# → http://localhost:3000
-```
-
-Staff console sits at `/admin`. Sign in via Google.
 
 ---
 
-## 🚢 Deployment
+### Configuration
 
-We deploy to Dokku (or your favorite PaaS). Make sure:
+**Environment Variables**
 
-- Env vars match `.env.example`
-- A Postgres add-on is attached
-- Active Storage is configured for S3 (or local)
+Copy `.env.example` to `.env` and fill in the following at minimum:
+
+```env
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+DEFAULT_ADMIN_EMAIL=admin@yourdomain.org
+DEFAULT_ADMIN_PASSWORD=changeme
+MAILGUN_DOMAIN=your.mailgun.domain
+MAILGUN_API_KEY=your-mailgun-api-key
+RAILS_MASTER_KEY=your-master-key
+SECRET_KEY_BASE=your-secret-key
+```
+
+**Google OAuth Setup**
+
+- Go to Google Cloud Console.
+- Create OAuth2 Credentials.
+- Set authorized redirect URI to:  
+  `https://<your-domain>/users/auth/google_oauth2/callback`
+- Fill in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in your `.env`.
+
+**Mail Configuration**
+
+- Outbound email is used for notifications.
+- Fill in Mailgun API credentials in `.env`.
+
+**ActiveStorage**
+
+- Default: local storage (`storage/` dir)
+- For S3, update `config/storage.yml` and set `STORAGE_SERVICE=amazon`.
 
 ---
 
-## 🤝 Contributing
+### Development
 
-1. Fork
-2. Create a feature branch (`git checkout -b feature/foo`)
-3. Commit changes (`git commit -m 'Add foo'`)
-4. Push and open a Pull Request
+- Start the Rails server:  
+  `bin/rails server`
 
-Please follow the [Rails Style Guide] and include tests for new features.
+Visit [http://localhost:3000](http://localhost:3000) to get started.
 
 ---
 
-*Made with ♥ by the TADL Tech Team*
+## Usage
 
+### Submitting a Print Job (Patron Workflow)
+
+1. Patron fills out the print job request form, uploads 3D model.
+2. Staff are notified and review the submission.
+3. Staff can communicate with patron via job message thread for clarification or updates.
+4. Staff estimate cost/time/materials and request approval.
+5. Patron approves/rejects; job moves to next stage.
+6. Staff assign job to printer, set status, and track progress.
+7. When job is done, staff mark as *ready*; patron is notified for pickup.
+
+### Staff Workflow
+
+- Log in via Google SSO.
+- View, filter, and manage all jobs.
+- Use the RailsAdmin panel for advanced management.
+- Communicate with patrons via messages.
+- Track metrics and status of all jobs.
+- Download and prepare print files.
+
+### Admin Panel
+
+- Available at `/admin`.
+- Requires staff login.
+- Manage users, jobs, printers, statuses, and more.
+- All models manageable via RailsAdmin UI.
+
+---
+
+## Architecture
+
+- **Rails 7** app, modular design.
+- **ActiveStorage** for all file uploads (optionally S3).
+- **OmniAuth** for Google OAuth2 staff authentication.
+- **RailsAdmin** for administrative interface.
+- **PostgreSQL** database.
+
+Directory layout:
+```
+app/
+  controllers/
+  models/
+  views/
+  jobs/
+  mailers/
+  services/
+  ...
+config/
+db/
+spec/
+docs/
+```
+
+---
+
+## Deployment
+
+- Supports standard Heroku/Dokku-style deployment (`git push dokku ...`)
+- Run database migrations after deploy:  
+  `bin/rails db:migrate`
+- For persistent storage with Docker, map `storage/` to a volume or use S3.
+
+**Environment Checklist:**
+- All required env vars set
+- DB running and linked
+- Storage configured
+- OAuth and Mailgun (or SMTP) set
+
+---
+
+## Contributing
+
+1. Fork the repo and clone your fork.
+2. Create a feature branch: `git checkout -b my-feature`
+3. Run tests and ensure code passes linter.
+4. Open a pull request with a detailed description.
+
+PRs are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) if available.
+
+---
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+## Credits
+
+- Developed by Traverse Area District Library Technology Team
+- Core Authors: [@wjr](https://github.com/wrockwood) and TADL contributors
+- Built with [Ruby on Rails](https://rubyonrails.org/)
+- ChatGPT was used to assist with development.
+
+---
+
+*This project is community-driven and open to other libraries!*
