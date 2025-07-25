@@ -7,31 +7,39 @@
       <h3 class="mb-0">Jobs in Status</h3>
     </div>
     <div class="card-body">
+      <% subtitles = {
+           'Pending'               => 'New jobs requested by patrons',
+           'Information Requested' => 'Waiting on patron reply',
+           'Response Received'     => 'Patron has responded',
+           'Approved'              => 'Queued for printing',
+           'In Progress'           => 'Currently printing',
+           'Ready for pickup'      => 'Awaiting pickup',
+           'Archived'              => 'Finished and closed',
+           'Ongoing'               => 'Staff-only filler jobs, outreach devices',
+           'Cancelled'             => 'Declined by patron',
+           'Rejected'              => 'Violated our terms or impossible',
+           'Abandoned'             => 'Items never picked up'
+         } %>
+
       <div class="row g-3">
         <% Status.order(:position).each do |status| %>
           <% link_scope = %w[archived cancelled rejected abandoned].include?(status.code) ? 'inactive' : 'active' %>
-          <% count      = Job.with_status(status.code).count %>
+          <% count = Job.with_status(status.code).count %>
 
-          <div class="col-6 col-md-4 col-lg-3">
+          <div class="col-6 col-md-4 col-lg-2">
             <%= link_to(
                   rails_admin.index_path(
                     model_name: 'job',
                     scope:      link_scope,
                     query:      '',
-                    f: {
-                      status: {
-                        '0' => {
-                          o: 'like',
-                          v: status.code
-                        }
-                      }
-                    }
+                    f: { status: { '0' => { o: 'like', v: status.code } } }
                   ),
-                  class: "job-status-card card h-100 text-decoration-none #{'border-primary' if count.positive?}"
+                  class: "card h-100 text-decoration-none status-card #{'border-primary' if count.positive?}"
                 ) do %>
-              <div class="card-body text-center p-2">
-                <h6 class="card-title mb-1 text-nowrap"><%= status.name %></h6>
-                <p class="h4 mb-0"><%= count %></p>
+              <div class="card-body d-flex flex-column">
+                <h5 class="status-card-title mb-1"><%= status.name %></h5>
+                <small class="text-muted mb-auto"><%= subtitles[status.name] %></small>
+                <p class="status-card-count display-6 mb-0"><%= count %></p>
               </div>
             <% end %>
           </div>
