@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  get 'errors/not_found'
+  get 'errors/internal_server_error'
+  get 'errors/forbidden'
   # OmniAuth callback for external providers (login)
   match '/auth/:provider/callback', to: 'sessions#create', via: [:get, :post]
 
@@ -63,5 +66,8 @@ Rails.application.routes.draw do
 
   # Inbound mailgun webhooks
   post  '/inbound/mailgun', to: 'inbound#mailgun'
+
+  # Catch-all for unmatched routes (must be last!)
+  match "*path", to: "errors#not_found", via: :all
 end
 
