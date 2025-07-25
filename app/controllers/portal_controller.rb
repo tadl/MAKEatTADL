@@ -61,7 +61,7 @@ class PortalController < ApplicationController
 
     # common attrs
     @job.category = Category.find_by!(name: @type.capitalize)
-    @job.status   = Status.find_by!(code: 'requested')
+    @job.status   = Status.find_by!(code: 'pending')
 
     # on recaptcha failure, re-render correct form
     unless verify_recaptcha(model: @job)
@@ -91,7 +91,7 @@ class PortalController < ApplicationController
     @job    = ScanJob.new(scan_job_params)
     @job.patron   = @patron
     @job.category = Category.find_by!(name: 'Patron')
-    @job.status   = Status.find_by!(code: 'requested')
+    @job.status   = Status.find_by!(code: 'pending')
 
     unless verify_recaptcha(model: @job)
       flash.now[:alert] = @job.errors.full_messages.to_sentence

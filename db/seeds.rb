@@ -57,7 +57,7 @@ end
 ###############################################################################
 
 [
-  { name: "Requested",             code: "requested",               position: 0 },
+  { name: "Pending",               code: "pending",                 position: 0 },
   { name: "Information Requested", code: "information_requested",   position: 1 },
   { name: "Response Received",     code: "response_received",       position: 2 },
   { name: "Approved",              code: "approved",                position: 3 },

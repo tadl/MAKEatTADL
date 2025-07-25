@@ -12,7 +12,7 @@
           <% link_scope = %w[archived cancelled rejected abandoned].include?(status.code) ? 'inactive' : 'active' %>
           <% count      = Job.with_status(status.code).count %>
 
-          <div class="col-sm-6 col-md-4 col-lg-3">
+          <div class="col-6 col-md-4 col-lg-3">
             <%= link_to(
                   rails_admin.index_path(
                     model_name: 'job',
@@ -27,11 +27,11 @@
                       }
                     }
                   ),
-                  class: "card h-100 text-decoration-none #{'border-primary' if count.positive?}"
+                  class: "job-status-card card h-100 text-decoration-none #{'border-primary' if count.positive?}"
                 ) do %>
-              <div class="card-body text-center">
-                <h5 class="card-title mb-1"><%= status.name %></h5>
-                <p class="display-6 mb-0"><%= count %></p>
+              <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1 text-nowrap"><%= status.name %></h6>
+                <p class="h4 mb-0"><%= count %></p>
               </div>
             <% end %>
           </div>
