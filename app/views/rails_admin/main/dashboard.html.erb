@@ -140,7 +140,7 @@
 
     <h2>Statuses Overview</h2>
     <ul>
-      <li><strong>requested</strong> (0): Freshly requested jobs start here; awaiting staff slicing/clarification.</li>
+      <li><strong>pending</strong> (0): New jobs start here; awaiting staff slicing/clarification.</li>
       <li><strong>information_requested</strong> (1): Patron has been given price/weight estimate; awaiting their response.</li>
       <li><strong>response_received</strong> (2): Patron has replied to the estimate; staff to approve or cancel.</li>
       <li><strong>approved</strong> (3): Patron approved estimate; job is queued for printing.</li>
@@ -154,17 +154,17 @@
 
     <div class="accordion" id="lifecycleAccordion">
 
-      <!-- 1. requested → information_requested -->
+      <!-- 1. pending → information_requested -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="heading-requested">
-          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-requested" aria-expanded="true" aria-controls="collapse-requested">
-            1. requested → information_requested
+        <h2 class="accordion-header" id="heading-pending">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-pending" aria-expanded="true" aria-controls="collapse-pending">
+            1. pending → information_requested
           </button>
         </h2>
-        <div id="collapse-requested" class="accordion-collapse collapse show" aria-labelledby="heading-requested" data-bs-parent="#lifecycleAccordion">
+        <div id="collapse-pending" class="accordion-collapse collapse show" aria-labelledby="heading-pending" data-bs-parent="#lifecycleAccordion">
           <div class="accordion-body">
             <ul>
-              <li><strong>Trigger:</strong> Patron submits a new print request (status set to <em>requested</em>).</li>
+              <li><strong>Trigger:</strong> Patron submits a new print request (status set to <em>pending</em>).</li>
               <li><strong>Staff Actions:</strong>
                 <ul>
                   <li>Review model (scale, print type, printability).</li>
