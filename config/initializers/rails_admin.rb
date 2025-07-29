@@ -140,7 +140,9 @@ RailsAdmin.config do |config|
           label 'Print time estimate'
         end
         field :slicer_weight
-        field :slicer_cost
+        field :slicer_cost do
+          label "Estimated cost"
+        end
         field :actual_weight
         field :resin_volume_ml do
           label "Resin Volume (mL)"
@@ -270,6 +272,7 @@ RailsAdmin.config do |config|
           help 'Estimated weight from slicer.'
         end
         field :slicer_cost do
+          label "Estimated cost"
           help 'Estimated cost, derived from estimated weight.'
         end
         field :resin_volume_ml do
