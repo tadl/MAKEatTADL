@@ -369,4 +369,19 @@
       </div>
     </div>
   </div>
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h3 class="mb-0">Automations</h3>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li>When entering <code>slicer_cost</code> and saving a job, the patron will be notified, and status will be changed to <code>information_requested</code></li>
+        <li>When a job is in status <code>information_requested</code> and the patron replies, either by email or via the web conversation UI, the status will change automatically to <code>response_received</code></li>
+        <li>(TODO) When a job is set to <code>cancelled</code>, send a message to the patron notifying them of such. (also TODO: allow resubmission?)</li>
+        <li>When a printer is assigned to a job, the <code>print_type</code> will automatically be set to that of the printer.</li>
+        <li>When a completion date and actual weight are entered and a job is saved, status will be automatically changed to <code>ready_for_pickup</code> and the patron will be notified.</li>
+        <li>When a pickup date is entered and the job is saved, the job status will be changed to <code>archived</code> and (TODO: optional feedback survey)</li>
+      </ul>
+    </div>
+  </div>
 </div>
