@@ -144,4 +144,10 @@ end
   pr.save! if pr.changed?
 end
 
+StaffUser.find_or_create_by!(email: 'robot@tadl.org') do |u|
+  u.name = 'MAKE Robot'
+  u.uid = 'robot'
+  u.admin = false
+end
+
 puts "✅   db:seed complete!"
