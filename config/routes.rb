@@ -70,6 +70,7 @@ Rails.application.routes.draw do
   mount ActiveStorage::Engine => "/rails/active_storage"
 
   # Catch-all for unmatched routes (must be last!)
-  match "*path", to: "errors#not_found", via: :all
+  match "*path", to: "errors#not_found", via: :all,
+    constraints: lambda { |req| !req.path.start_with?("/rails/active_storage") }
 end
 
