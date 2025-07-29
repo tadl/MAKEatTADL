@@ -67,6 +67,8 @@ Rails.application.routes.draw do
   # Inbound mailgun webhooks
   post  '/inbound/mailgun', to: 'inbound#mailgun'
 
+  mount ActiveStorage::Engine => "/rails/active_storage"
+
   # Catch-all for unmatched routes (must be last!)
   match "*path", to: "errors#not_found", via: :all
 end
