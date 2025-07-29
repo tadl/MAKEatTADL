@@ -16,7 +16,7 @@ class Job < ApplicationRecord
 
   belongs_to :printable_model, optional: true
 
-  has_one_attached :model_file
+  has_many_attached :model_files
 
   has_one  :conversation, dependent: :destroy
   after_create :build_conversation!

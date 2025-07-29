@@ -109,18 +109,22 @@ RailsAdmin.config do |config|
         label 'Job Type'
       end
       field :notes
-      field :model_file, :active_storage do
-        label 'Model File'
+      field :model_files, :active_storage do
+        label 'Model Files'
         pretty_value do
-          attachment = bindings[:object].model_file
-          if attachment.attached?
-            blob = attachment.blob
-            # Link to download the file, showing the original filename
-            bindings[:view].link_to \
-              blob.filename.to_s,
-              Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+          attachments = bindings[:object].model_files
+          if attachments.attached?
+            bindings[:view].safe_join(
+              attachments.map do |attachment|
+                blob = attachment.blob
+                bindings[:view].link_to(
+                  blob.filename.to_s,
+                  Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+                )
+              end, "<br>".html_safe
+            )
           else
-            bindings[:view].content_tag(:em, 'No file uploaded')
+            bindings[:view].content_tag(:em, 'No files uploaded')
           end
         end
       end
@@ -217,21 +221,28 @@ RailsAdmin.config do |config|
       field :notes do
         help 'Notes from requestor. Print jobs for Asssitive/Fidget categories will include relevant contact method/info and/or company/organization information here.'
       end
-      field :model_file, :active_storage do
-        label 'Model File'
+      field :model_files, :active_storage do
+        label 'Model Files'
+        html_attributes do
+          { multiple: true }
+        end
         pretty_value do
-          attachment = bindings[:object].model_file
-          if attachment.attached?
-            blob = attachment.blob
-            # Link to download the file, showing the original filename
-            bindings[:view].link_to \
-              blob.filename.to_s,
-              Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+          attachments = bindings[:object].model_files
+          if attachments.attached?
+            bindings[:view].safe_join(
+              attachments.map do |attachment|
+                blob = attachment.blob
+                bindings[:view].link_to(
+                  blob.filename.to_s,
+                  Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
+                )
+              end, "<br>".html_safe
+            )
           else
-            bindings[:view].content_tag(:em, 'No file uploaded')
+            bindings[:view].content_tag(:em, 'No files uploaded')
           end
         end
-        help ''
+        help 'Upload one or more model files as needed'
       end
 
       group :print_fields do
