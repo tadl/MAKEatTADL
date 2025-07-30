@@ -16,7 +16,7 @@
   {{ $contPort := index $parts 2 }}
 
   upstream {{ $.APP }}_{{ $contPort }} {
-  {{- range $.DOKKU_APP_LISTENERS | split " " }}
+  {{- range $.DOKKU_APP_WEB_LISTENERS | split " " }}
     {{- $ip := index (split ":" .) 0 }}
     server {{ $ip }}:{{ $contPort }};
   {{- end }}
