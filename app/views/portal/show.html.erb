@@ -60,15 +60,15 @@
         <div class="col-md-6">
           <% if @job.is_a?(PrintJob) %>
             <h5 class="fw-semibold">Model</h5>
-            <% if @job.model_file.attached? %>
-              <p>
-                <%= link_to @job.model_file.filename,
-                            rails_blob_path(@job.model_file, disposition: 'attachment'),
-                            class: 'text-decoration-none' %>
-              </p>
-              <p>
-                <%= number_to_human_size(@job.model_file.blob.byte_size) %>
-              </p>
+            <% if @job.model_files.attached? %>
+              <% @job.model_files.each do |file| %>
+                <p>
+                  <%= link_to file.filename,
+                              rails_blob_path(file, disposition: 'attachment'),
+                              class: 'text-decoration-none' %>
+                  <span class="ms-2 text-muted"><%= number_to_human_size(file.byte_size) %></span>
+                </p>
+              <% end %>
             <% elsif @job.url.present? %>
               <p>
                 <%= link_to @job.url, @job.url,

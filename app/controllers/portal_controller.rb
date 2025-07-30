@@ -40,6 +40,13 @@ class PortalController < ApplicationController
   def create_print_job
     @type   = params[:type]&.downcase.presence || 'patron'
     @patron = find_or_create_patron
+
+    # PATCH: Accept both model_file (old) and model_files (new)
+    if params[:job][:model_file].present?
+      params[:job][:model_files] ||= []
+      params[:job][:model_files] << params[:job].delete(:model_file)
+    end
+
     @job    = PrintJob.new(print_job_params)
     @job.patron = @patron
 
@@ -245,16 +252,13 @@ class PortalController < ApplicationController
 
   def print_job_params
     params.require(:job).permit(
-      # regular-print fields
-      :model_file,
       :url,
-      # shared
       :filament_color,
       :notes,
       :pickup_location,
-      # fidget-only
       :printable_model_id,
-      :print_type
+      :print_type,
+      model_files: []
     )
   end
 end

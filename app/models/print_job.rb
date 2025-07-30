@@ -28,7 +28,14 @@ class PrintJob < Job
               message: "%{value} is not a valid pickup location"
             }
 
-  validate :url_or_model_file_present, on: :create, if: :patron_request?
+  validate :url_or_model_file_present, on: :create
+
+  def url_or_model_file_present
+    return unless category&.name&.downcase == 'patron'
+    if model_files.blank? && url.blank?
+      errors.add(:base, "Either a model file or a URL is required for patron jobs")
+    end
+  end
 
   def print_time_estimate_hm
     return if print_time_estimate.blank?
