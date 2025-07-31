@@ -4,6 +4,8 @@
 <meta content="NONE,NOARCHIVE" name="robots">
 <meta content="false" name="turbo-prefetch">
 <%= csrf_meta_tag %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
 <% case RailsAdmin::config.asset_source
    when :webpacker %>
   <%= stylesheet_pack_tag "rails_admin", data: {'turbo-track': 'reload'} %>

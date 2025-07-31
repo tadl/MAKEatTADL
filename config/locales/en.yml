@@ -36,6 +36,11 @@ en:
         link: "Open Conversation"
         title: "Conversation for %{object_label}"
         breadcrumb: "Conversation"
+      help:
+        menu: "Help"
+        link: "Open Help"
+        title: "Help Section"
+        breadcrumb: "Help"
   rails_admin:
     conversation:
       menu: "Conversation"
@@ -45,3 +50,8 @@ en:
       placeholder: "Type your message..."
       send: "Send"
       staff_note_only: "Staff note only (don't email patron)"
+    help:
+      menu: "Help"
+      link: "Open Help"
+      title: "Help Section"
+      breadcrumb: "Help"

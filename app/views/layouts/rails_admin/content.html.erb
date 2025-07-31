@@ -19,10 +19,8 @@
   <%= content_for :contextual_tabs %>
 </ul>
 <%= yield %>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
 <script>
-document.addEventListener("turbo:load", function () {
+function initStlStuff() {
   // 1. Details summary toggle for STL previews
   document.querySelectorAll('details[id^="stl-details-"]').forEach(function(details) {
     var summary = details.querySelector("summary");
@@ -33,8 +31,9 @@ document.addEventListener("turbo:load", function () {
       summary.classList.toggle('btn-primary', !details.open);
       summary.classList.toggle('btn-secondary', details.open);
     }
+    // Remove any previous toggle listeners (to prevent duplicate triggers)
+    details.removeEventListener("toggle", updateSummary);
     details.addEventListener("toggle", updateSummary);
-    // Set initial state
     updateSummary();
   });
 
@@ -45,23 +44,19 @@ document.addEventListener("turbo:load", function () {
     container.dataset.loaded = "1";
     var fileUrl = container.dataset.fileUrl;
     if (!fileUrl) {
-      // Fallback: try to find sibling link
       var a = container.previousElementSibling;
       if (a && a.href) fileUrl = a.href;
     }
     if (!fileUrl) return;
 
-    // Wait for THREE/STLLoader
     function initViewer() {
       if (typeof THREE === "undefined" || typeof THREE.STLLoader === "undefined") {
         setTimeout(initViewer, 50);
         return;
       }
-
       // Only render if the STL preview container is visible (details[open])
       var details = container.closest('details');
       if (details && !details.open) {
-        // Wait until details is open before initializing
         var onOpen = function () {
           details.removeEventListener('toggle', onOpen);
           initViewer();
@@ -69,8 +64,6 @@ document.addEventListener("turbo:load", function () {
         details.addEventListener('toggle', onOpen);
         return;
       }
-
-      // If already initialized, don't double-render
       if (container.dataset.rendered) return;
       container.dataset.rendered = "1";
 
@@ -96,6 +89,26 @@ document.addEventListener("turbo:load", function () {
       });
     }
     initViewer();
+  });
+}
+
+// Turbo navigation events—**note the passive=false!**
+document.addEventListener("turbo:load", initStlStuff, { passive: false });
+
+
+document.addEventListener("turbo:before-cache", function() {
+  document.querySelectorAll('input.flatpickr-input').forEach(function(input) {
+    if (input._flatpickr) input._flatpickr.destroy();
+  });
+});
+document.addEventListener("turbo:load", function() {
+  document.querySelectorAll('input.flatpickr-input').forEach(function(input) {
+    if (!input._flatpickr) {
+      flatpickr(input, {
+        dateFormat: "Y-m-d",
+        allowInput: true
+      });
+    }
   });
 });
 </script>

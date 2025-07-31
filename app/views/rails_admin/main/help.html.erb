@@ -1,0 +1,298 @@
+<%# app/views/rails_admin/main/help.html.erb %>
+
+<div class="print-lifecycle container my-4">
+  <h1>3D Print Job Lifecycle</h1>
+  <p>
+    A clear process flow helps both staff and patrons understand the status transitions throughout a 3D print job’s progress.
+  </p>
+  <hr>
+
+  <h2>Statuses Overview</h2>
+  <ul>
+    <li><strong>pending</strong> (0): New jobs start here; awaiting staff review, slicing, or clarification.</li>
+    <li><strong>information_requested</strong> (1): Patron has received price/weight estimates and is awaiting their reply.</li>
+    <li><strong>response_received</strong> (2): Patron responded to estimate; staff reviews for approval or cancellation.</li>
+    <li><strong>approved</strong> (3): Patron approved estimate; job queued for printing.</li>
+    <li><strong>in_progress</strong> (4): Job assigned to printer; printing underway.</li>
+    <li><strong>ready_for_pickup</strong> (5): Print finished, post-processed, weighed, and patron notified.</li>
+    <li><strong>archived</strong> (6): Patron picked up the print; job closed and archived.</li>
+    <li><strong>ongoing</strong> (7): Staff-only filler prints to keep printers active.</li>
+    <li><strong>cancelled</strong> (8): Patron declined estimate or staff cancelled the job.</li>
+    <li><strong>rejected</strong> (9): Job rejected due to issues like unprintable models; not printed.</li>
+    <li><strong>abandoned</strong> (10): Job abandoned by patron or staff; no further action.</li>
+  </ul>
+  <hr>
+
+  <div class="accordion" id="lifecycleAccordion">
+
+    <!-- 1. pending → information_requested -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-pending">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-pending" aria-expanded="true" aria-controls="collapse-pending">
+          1. pending → information_requested
+        </button>
+      </h2>
+      <div id="collapse-pending" class="accordion-collapse collapse show" aria-labelledby="heading-pending" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Patron submits a new print request (status set to <em>pending</em>).</li>
+            <li><strong>Staff Actions:</strong>
+              <ul>
+                <li>Review model for scale, print type, and printability.</li>
+                <li>Slice model to estimate filament weight and print time.</li>
+                <li>Contact patron via conversation if clarification is needed.</li>
+                <li>Record <em>slicer_cost</em> and <em>slicer_weight</em>.</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong>
+              <ul>
+                <li>Send automated estimate message via JobMailer.</li>
+                <li>Update status to <em>information_requested</em>.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. information_requested → response_received -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-info">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-info" aria-expanded="false" aria-controls="collapse-info">
+          2. information_requested → response_received
+        </button>
+      </h2>
+      <div id="collapse-info" class="accordion-collapse collapse" aria-labelledby="heading-info" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Patron replies to estimate message.</li>
+            <li><strong>Staff Actions:</strong>
+              <ul>
+                <li>Review patron’s response.</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong> Status changes to <em>response_received</em>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. response_received → {approved / cancelled} -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-response">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-response" aria-expanded="false" aria-controls="collapse-response">
+          3. response_received → {approved / cancelled}
+        </button>
+      </h2>
+      <div id="collapse-response" class="accordion-collapse collapse" aria-labelledby="heading-response" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Possible Outcomes:</strong>
+              <ul>
+                <li><em>approved</em>: Patron accepts estimate.</li>
+                <li><em>cancelled</em>: Patron declines or staff cancels.</li>
+              </ul>
+            </li>
+            <li><strong>Staff Actions (on approval):</strong>
+              <ul>
+                <li>Update status to <em>approved</em>.</li>
+                <li>Queue job for printing.</li>
+              </ul>
+            </li>
+            <li><strong>Staff Actions (on cancellation):</strong>
+              <ul>
+                <li>Update status to <em>cancelled</em>.</li>
+                <li>Confirm cancellation with patron by sending a message (consider automating this).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. approved → in_progress -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-approved">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-approved" aria-expanded="false" aria-controls="collapse-approved">
+          4. approved → in_progress
+        </button>
+      </h2>
+      <div id="collapse-approved" class="accordion-collapse collapse" aria-labelledby="heading-approved" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Printer becomes available and staff starts the print.</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Assign job to a printer.</li>
+                <li>Update status to <em>in_progress</em>.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. in_progress → ready_for_pickup -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-progress">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-progress" aria-expanded="false" aria-controls="collapse-progress">
+          5. in_progress → ready_for_pickup
+        </button>
+      </h2>
+      <div id="collapse-progress" class="accordion-collapse collapse" aria-labelledby="heading-progress" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Print run completes successfully.</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Post-process (support removal, curing, cleaning).</li>
+                <li>Weigh actual filament (or resin volume).</li>
+                <li>Record completion date and actual weight.</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong>
+              <ul>
+                <li>Update status to <em>ready_for_pickup</em>.</li>
+                <li>Notify patron via JobMailer that job is ready with actual cost.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ready_for_pickup → archived -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-ready">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-ready" aria-expanded="false" aria-controls="collapse-ready">
+          6. ready_for_pickup → archived
+        </button>
+      </h2>
+      <div id="collapse-ready" class="accordion-collapse collapse" aria-labelledby="heading-ready" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Patron picks up the finished print.</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Staff enters Pickup Date.</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong>
+              <ul>
+                <li>Job marked as <em>archived</em>.</li>
+                <li>Optionally send feedback survey or follow-up message.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. ongoing (staff-only) -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-ongoing">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-ongoing" aria-expanded="false" aria-controls="collapse-ongoing">
+          7. ongoing (staff-only)
+        </button>
+      </h2>
+      <div id="collapse-ongoing" class="accordion-collapse collapse" aria-labelledby="heading-ongoing" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Usage:</strong> Internal filler prints when no patron jobs are queued.</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Staff manually assign or create <em>ongoing</em> jobs for assistive/fidget devices or programs.</li>
+                <li>Increment Quantity for each printed object.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. cancelled -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-cancelled">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-cancelled" aria-expanded="false" aria-controls="collapse-cancelled">
+          8. cancelled
+        </button>
+      </h2>
+      <div id="collapse-cancelled" class="accordion-collapse collapse" aria-labelledby="heading-cancelled" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Patron declines during <em>response_received</em> or staff cancels otherwise.</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Update status to <em>cancelled</em>.</li>
+                <li>Retain record for reporting; do not queue or print.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. rejected -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-rejected">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-rejected" aria-expanded="false" aria-controls="collapse-rejected">
+          9. rejected
+        </button>
+      </h2>
+      <div id="collapse-rejected" class="accordion-collapse collapse" aria-labelledby="heading-rejected" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Staff rejects the job after review (e.g., unprintable model or other issues).</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Update status to <em>rejected</em>.</li>
+                <li>Optionally notify patron of rejection.</li>
+                <li>Do not queue for printing.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. abandoned -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-abandoned">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-abandoned" aria-expanded="false" aria-controls="collapse-abandoned">
+          10. abandoned
+        </button>
+      </h2>
+      <div id="collapse-abandoned" class="accordion-collapse collapse" aria-labelledby="heading-abandoned" data-bs-parent="#lifecycleAccordion">
+        <div class="accordion-body">
+          <ul>
+            <li><strong>Trigger:</strong> Job abandoned by patron or staff (e.g., no response or no longer needed).</li>
+            <li><strong>Actions:</strong>
+              <ul>
+                <li>Update status to <em>abandoned</em>.</li>
+                <li>Retain for record-keeping and reporting.</li>
+                <li>Do not queue for printing.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h3 class="mb-0">Automations</h3>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li>When entering <code>slicer_cost</code> and saving a job, the patron will be notified and status changed to <code>information_requested</code>.</li>
+        <li>When a job is <code>information_requested</code> and the patron replies (email or web), the status automatically changes to <code>response_received</code>.</li>
+        <li>(TODO) When a job is <code>cancelled</code>, send a message notifying the patron (and consider allowing resubmission).</li>
+        <li>Assigning a printer automatically sets the job’s <code>print_type</code>.</li>
+        <li>Saving completion date and actual weight changes status to <code>ready_for_pickup</code> and notifies patron.</li>
+        <li>Entering pickup date changes status to <code>archived</code> (with optional feedback or follow-up).</li>
+      </ul>
+    </div>
+  </div>
+</div>

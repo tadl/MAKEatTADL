@@ -1,5 +1,6 @@
 # config/initializers/rails_admin.rb
 require Rails.root.join('lib/rails_admin/config/actions/conversation')
+require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
 
 RailsAdmin.config do |config|
   config.authorize_with :cancancan, Ability
@@ -33,6 +34,7 @@ RailsAdmin.config do |config|
 
   # ─ Actions ────────────────────────────────────────────
   config.actions do
+
     dashboard                     # mandatory
     index                         # mandatory
     new   { except ['StaffUser'] }
@@ -58,6 +60,8 @@ RailsAdmin.config do |config|
         bindings[:controller].current_ability.can?(:destroy, bindings[:abstract_model].model)
       end
     end
+
+    help
   end
 
   # ─────────────────────────────────────────────────────────
@@ -71,6 +75,9 @@ RailsAdmin.config do |config|
     list do
       scopes [:active, :inactive, :ongoing]
       sort_by :created_at
+      field :id do
+        label "Job"
+      end
       field :patron
       field :status, :belongs_to_association do
         label        'Status'
@@ -92,7 +99,9 @@ RailsAdmin.config do |config|
       field :assigned_printer do
         label 'Assigned Printer'
       end
-      field :created_at
+      field :created_at do
+        label "Received"
+      end
     end
 
     show do
