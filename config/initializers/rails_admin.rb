@@ -14,7 +14,7 @@ RailsAdmin.config do |config|
   config.default_items_per_page = 10
 
   # ─ App name & included models ────────────────────────
-  config.main_app_name   = ['MAKE', 'Things at TADL']
+  config.main_app_name   = ['MAKE@TADL', '  Job Management System']
   config.included_models = %w[
     StaffUser
     Patron
@@ -112,20 +112,24 @@ RailsAdmin.config do |config|
       field :model_files, :active_storage do
         label 'Model Files'
         pretty_value do
-          attachments = bindings[:object].model_files
-          if attachments.attached?
-            bindings[:view].safe_join(
-              attachments.map do |attachment|
-                blob = attachment.blob
-                bindings[:view].link_to(
-                  blob.filename.to_s,
-                  Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
-                )
-              end, "<br>".html_safe
-            )
-          else
-            bindings[:view].content_tag(:em, 'No files uploaded')
-          end
+          value.map.with_index do |file, i|
+            file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
+            html_id = "stlviewer-#{i}"
+
+            if File.extname(file.filename.to_s).downcase == ".stl"
+              %Q{
+                <div>
+                  <details id="stl-details-#{i}">
+                    <summary class="btn btn-sm btn-primary ">Show 3D Preview</summary>
+                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width: 400px; height: 300px; border:1px solid #ccc"></div>
+                  </details>
+                  <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
+                </div>
+              }.html_safe
+            else
+              %Q{<div><a href="#{file_url}">#{file.filename}</a></div>}
+            end
+          end.join.html_safe
         end
       end
 

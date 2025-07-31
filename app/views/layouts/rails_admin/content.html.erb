@@ -1,14 +1,7 @@
 <title>
   <%= "#{@abstract_model.try(:pretty_name) || @page_name} | #{[_get_plugin_name[0] || 'Rails', _get_plugin_name[1] || 'Admin'].join(' ')}" %>
 </title>
-<header class="py-2 m-2 border-bottom" data-model="<%= @abstract_model.to_param %>">
-<% if @abstract_model.nil? %>
-  <h1>MAKE Things at TADL</h1>
-<% else %>
-  <h1>
-    <%= @page_name %>
-  </h1>
-<% end %>
+<header class="p-2 m-2" data-model="<%= @abstract_model.to_param %>">
 </header>
 <% flash && flash.each do |key, value| %>
   <div class="<%= flash_alert_class(key) %> alert alert-dismissible">
@@ -26,3 +19,83 @@
   <%= content_for :contextual_tabs %>
 </ul>
 <%= yield %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+<script>
+document.addEventListener("turbo:load", function () {
+  // 1. Details summary toggle for STL previews
+  document.querySelectorAll('details[id^="stl-details-"]').forEach(function(details) {
+    var summary = details.querySelector("summary");
+    if (!summary) return;
+
+    function updateSummary() {
+      summary.textContent = details.open ? "Hide 3D Preview" : "Show 3D Preview";
+      summary.classList.toggle('btn-primary', !details.open);
+      summary.classList.toggle('btn-secondary', details.open);
+    }
+    details.addEventListener("toggle", updateSummary);
+    // Set initial state
+    updateSummary();
+  });
+
+  // 2. For each STL viewer div (init Three.js STL preview)
+  document.querySelectorAll('[id^="stlviewer-"]').forEach(function(container) {
+    // Only initialize if not already loaded
+    if (container.dataset.loaded) return;
+    container.dataset.loaded = "1";
+    var fileUrl = container.dataset.fileUrl;
+    if (!fileUrl) {
+      // Fallback: try to find sibling link
+      var a = container.previousElementSibling;
+      if (a && a.href) fileUrl = a.href;
+    }
+    if (!fileUrl) return;
+
+    // Wait for THREE/STLLoader
+    function initViewer() {
+      if (typeof THREE === "undefined" || typeof THREE.STLLoader === "undefined") {
+        setTimeout(initViewer, 50);
+        return;
+      }
+
+      // Only render if the STL preview container is visible (details[open])
+      var details = container.closest('details');
+      if (details && !details.open) {
+        // Wait until details is open before initializing
+        var onOpen = function () {
+          details.removeEventListener('toggle', onOpen);
+          initViewer();
+        };
+        details.addEventListener('toggle', onOpen);
+        return;
+      }
+
+      // If already initialized, don't double-render
+      if (container.dataset.rendered) return;
+      container.dataset.rendered = "1";
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(75, 400/300, 0.1, 1000);
+      var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setSize(400, 300);
+      container.appendChild(renderer.domElement);
+
+      var loader = new THREE.STLLoader();
+      loader.load(fileUrl, function (geometry) {
+        var material = new THREE.MeshNormalMaterial();
+        var mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+        camera.position.z = 100;
+        function animate() {
+          requestAnimationFrame(animate);
+          mesh.rotation.y += 0.002;
+          mesh.rotation.x += 0.001;
+          renderer.render(scene, camera);
+        }
+        animate();
+      });
+    }
+    initViewer();
+  });
+});
+</script>
