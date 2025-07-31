@@ -1,12 +1,6 @@
 <%# app/views/rails_admin/main/help.html.erb %>
 
 <div class="print-lifecycle container my-4">
-  <h1>3D Print Job Lifecycle</h1>
-  <p>
-    A clear process flow helps both staff and patrons understand the status transitions throughout a 3D print job’s progress.
-  </p>
-  <hr>
-
   <h2>Statuses Overview</h2>
   <ul>
     <li><strong>pending</strong> (0): New jobs start here; awaiting staff review, slicing, or clarification.</li>
@@ -242,7 +236,7 @@
       <div id="collapse-rejected" class="accordion-collapse collapse" aria-labelledby="heading-rejected" data-bs-parent="#lifecycleAccordion">
         <div class="accordion-body">
           <ul>
-            <li><strong>Trigger:</strong> Staff rejects the job after review (e.g., unprintable model or other issues).</li>
+            <li><strong>Trigger:</strong> Staff rejects the job after review (e.g., unprintable model or violates policy).</li>
             <li><strong>Actions:</strong>
               <ul>
                 <li>Update status to <em>rejected</em>.</li>
@@ -265,12 +259,13 @@
       <div id="collapse-abandoned" class="accordion-collapse collapse" aria-labelledby="heading-abandoned" data-bs-parent="#lifecycleAccordion">
         <div class="accordion-body">
           <ul>
-            <li><strong>Trigger:</strong> Job abandoned by patron or staff (e.g., no response or no longer needed).</li>
+            <li><strong>Trigger:</strong> Job abandoned by patron (not picked up within 30 days of completion).</li>
             <li><strong>Actions:</strong>
               <ul>
                 <li>Update status to <em>abandoned</em>.</li>
                 <li>Retain for record-keeping and reporting.</li>
-                <li>Do not queue for printing.</li>
+                <li>Dispose of print appropriately.</li>
+                <li>Bill patron Evergreen account for cost of item.</li>
               </ul>
             </li>
           </ul>
