@@ -18,6 +18,12 @@ class Job < ApplicationRecord
 
   has_many_attached :model_files
 
+  def model_files=(attachables)
+    # RailsAdmin sends [""] if nothing was selected, don't clear files in that case!
+    return if attachables == [""]
+    super(attachables)
+  end
+
   has_one  :conversation, dependent: :destroy
   after_create :build_conversation!
   after_update :archive_if_picked_up, if: :saved_change_to_pickup_date?

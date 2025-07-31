@@ -58,6 +58,7 @@ Rails.application.routes.draw do
   get  '/dashboard',                to: 'portal#dashboard',      as: :dashboard
   get  '/jobs/:id',                 to: 'portal#show',           as: :job
   post '/jobs/:id/conversation',    to: 'portal#create_message', as: :job_conversation
+  patch '/jobs/:id/attach_model_files', to: 'portal#attach_model_files', as: :attach_model_files_job
 
   get "/reports/print", to: "reports#print", as: :print_report
 

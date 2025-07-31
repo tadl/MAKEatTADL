@@ -11,6 +11,23 @@ class PortalController < ApplicationController
   def home
   end
 
+  def attach_model_files
+    @job = Job.find(params[:id])
+    param_key = @job.model_name.param_key # returns "print_job", "scan_job", etc.
+    files = Array(params.dig(param_key, :model_files)).reject(&:blank?)
+
+    Rails.logger.debug "Attach model_files: #{files.inspect}"
+
+    if files.any?
+      @job.model_files.attach(files)
+      flash[:notice] = "Model files attached successfully."
+    else
+      flash[:alert] = "No files selected."
+    end
+
+    redirect_to job_path(@job)
+  end
+
   #
   # PRINT/FIDGET/ASSISTIVE FORM
   #

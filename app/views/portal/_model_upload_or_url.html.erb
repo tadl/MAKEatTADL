@@ -2,8 +2,8 @@
 <div class="card mb-4">
   <div class="card-header"><h4 class="mb-0">Model</h4></div>
   <div class="card-body">
-    <%= label_tag 'job[model_file]', 'Upload a Model File', class: 'form-label' %>
-    <%= file_field_tag 'job[model_file]', accept: '.stl',
+    <%= label_tag 'job[model_files][]', 'Upload a Model File', class: 'form-label' %>
+    <%= file_field_tag 'job[model_files][]', accept: '.stl', multiple: true,
           id: 'job_model_file', class: 'form-control' %>
     <div class="form-text">Allowed file type: STL.</div>
     <br/>
