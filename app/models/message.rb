@@ -7,6 +7,8 @@ class Message < ApplicationRecord
 
   has_many_attached :images
 
+  has_many :notifications, dependent: :destroy
+
   validates :body, presence: true
 
   scope :unread, -> {
