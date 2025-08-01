@@ -1,46 +1,44 @@
+<!-- app/views/rails_admin/main/files.html.erb -->
+
 <div class="card mb-4 shadow-sm">
-  <div class="card-header">
-    <h3 class="mb-0">Manage Files for Job #<%= @job.id %></h3>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h3 class="mb-0">Files for Job #<%= @job.id %></h3>
+    <span class="badge bg-primary text-white"><%= pluralize(@job.model_files.count, "file") %></span>
   </div>
+
   <div class="card-body">
-    <%= form_with model: @job, url: rails_admin.files_path(model_name: 'job', id: @job.id), local: true, multipart: true, method: :post, data: { turbo: false } do |f| %>
-      <div class="mb-3">
-        <%= f.label :model_files, "Upload Model Files" %>
-        <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control" %>
-      </div>
-      <%= f.submit "Attach Files", class: "btn btn-primary" %>
-    <% end %>
 
-    <hr>
-
-    <h4>Existing Files</h4>
+    <!-- Files List -->
     <% if @job.model_files.attached? %>
-      <ul class="list-group">
+      <ul class="list-group mb-4">
         <% @job.model_files.each do |file| %>
-          <li class="list-group-item d-flex align-items-center justify-content-between">
-            <div>
-              <%= link_to file.filename, main_app.rails_blob_path(file, disposition: 'attachment'), class: 'me-3' %>
-              <small class="text-muted"><%= number_to_human_size(file.byte_size) %></small>
+          <li class="list-group-item d-flex align-items-center justify-content-between py-2 px-0 border-0 border-bottom">
+            <div class="d-flex align-items-center flex-grow-1 min-width-0">
+              <i class="bi bi-file-earmark-stl text-primary me-2 fs-5"></i>
+              <span class="text-truncate" style="max-width: 400px;">
+                <%= link_to file.filename, main_app.rails_blob_path(file, disposition: 'attachment'),
+                      class: "fw-semibold text-decoration-none text-dark" %>
+              </span>
+              <span class="ms-3 text-muted small"><%= number_to_human_size(file.byte_size) %></span>
             </div>
-
             <!-- Trigger Modal -->
             <button type="button"
-                    class="btn btn-sm btn-outline-danger"
+                    class="btn btn-sm btn-outline-danger ms-3"
                     data-bs-toggle="modal"
                     data-bs-target="#deleteFileModal_<%= file.id %>">
-              Delete
+              <i class="bi bi-trash"></i>
+              <span class="visually-hidden">Delete</span>
             </button>
-
             <!-- Modal -->
             <div class="modal fade" id="deleteFileModal_<%= file.id %>" tabindex="-1" aria-labelledby="deleteFileModalLabel_<%= file.id %>" aria-hidden="true">
-              <div class="modal-dialog">
+              <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                   <div class="modal-header">
                     <h5 class="modal-title" id="deleteFileModalLabel_<%= file.id %>">Delete file?</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                   </div>
                   <div class="modal-body">
-                    Are you sure you want to delete "<%= file.filename %>"? This cannot be undone.
+                    Are you sure you want to delete <span class="fw-semibold"><%= file.filename %></span>? This cannot be undone.
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -58,7 +56,28 @@
         <% end %>
       </ul>
     <% else %>
-      <p>No files attached yet.</p>
+      <p class="text-muted mb-4">No files attached yet.</p>
     <% end %>
+
+    <!-- Upload Form -->
+    <div class="card bg-light mb-0">
+      <div class="card-body py-3">
+        <%= form_with model: @job, url: rails_admin.files_path(model_name: 'job', id: @job.id), local: true, multipart: true, method: :post, data: { turbo: false } do |f| %>
+          <div class="row g-2 align-items-center">
+            <div class="col-auto">
+              <%= f.label :model_files, "Upload Model Files", class: "form-label mb-0" %>
+            </div>
+            <div class="col">
+              <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control" %>
+            </div>
+            <div class="col-auto">
+              <%= f.submit "Attach Files", class: "btn btn-primary" %>
+            </div>
+          </div>
+          <div class="form-text ms-1">You can upload one or more STL files.</div>
+        <% end %>
+      </div>
+    </div>
+
   </div>
 </div>
