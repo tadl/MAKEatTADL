@@ -41,6 +41,11 @@ en:
         link: "Open Help"
         title: "Help Section"
         breadcrumb: "Help"
+      files:
+        menu: "Files"
+        link: "Files"
+        title: "Files for %{object_label}"
+        breadcrumb: "Files"
   rails_admin:
     conversation:
       menu: "Conversation"
@@ -55,3 +60,8 @@ en:
       link: "Open Help"
       title: "Help Section"
       breadcrumb: "Help"
+    files:
+      menu: "Files"
+      link: "Open Files"
+      title: "Files Section"
+      breadcrumb: "Files"

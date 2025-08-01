@@ -1,6 +1,7 @@
 # config/initializers/rails_admin.rb
 require Rails.root.join('lib/rails_admin/config/actions/conversation')
 require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
+require Rails.root.join('lib/rails_admin/config/actions/files')
 
 RailsAdmin.config do |config|
   config.authorize_with :cancancan, Ability
@@ -53,6 +54,10 @@ RailsAdmin.config do |config|
       visible do
         bindings[:controller].current_ability.can?(:update, bindings[:abstract_model].model)
       end
+    end
+
+    files do
+      only ['Job']
     end
 
     delete do
@@ -234,28 +239,8 @@ RailsAdmin.config do |config|
       field :notes do
         help 'Notes from requestor. Print jobs for Asssitive/Fidget categories will include relevant contact method/info and/or company/organization information here.'
       end
-      field :model_files, :active_storage do
-        label 'Model Files'
-        html_attributes do
-          { multiple: true }
-        end
-        pretty_value do
-          attachments = bindings[:object].model_files
-          if attachments.attached?
-            bindings[:view].safe_join(
-              attachments.map do |attachment|
-                blob = attachment.blob
-                bindings[:view].link_to(
-                  blob.filename.to_s,
-                  Rails.application.routes.url_helpers.rails_blob_path(attachment, disposition: 'attachment', only_path: true)
-                )
-              end, "<br>".html_safe
-            )
-          else
-            bindings[:view].content_tag(:em, 'No files uploaded')
-          end
-        end
-        help 'Upload one or more model files as needed'
+      field :model_files do
+        visible false
       end
 
       group :print_fields do

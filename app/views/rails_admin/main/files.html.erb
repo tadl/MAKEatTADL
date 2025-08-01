@@ -1,0 +1,64 @@
+<div class="card mb-4 shadow-sm">
+  <div class="card-header">
+    <h3 class="mb-0">Manage Files for Job #<%= @job.id %></h3>
+  </div>
+  <div class="card-body">
+    <%= form_with model: @job, url: rails_admin.files_path(model_name: 'job', id: @job.id), local: true, multipart: true, method: :post, data: { turbo: false } do |f| %>
+      <div class="mb-3">
+        <%= f.label :model_files, "Upload Model Files" %>
+        <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control" %>
+      </div>
+      <%= f.submit "Attach Files", class: "btn btn-primary" %>
+    <% end %>
+
+    <hr>
+
+    <h4>Existing Files</h4>
+    <% if @job.model_files.attached? %>
+      <ul class="list-group">
+        <% @job.model_files.each do |file| %>
+          <li class="list-group-item d-flex align-items-center justify-content-between">
+            <div>
+              <%= link_to file.filename, main_app.rails_blob_path(file, disposition: 'attachment'), class: 'me-3' %>
+              <small class="text-muted"><%= number_to_human_size(file.byte_size) %></small>
+            </div>
+
+            <!-- Trigger Modal -->
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteFileModal_<%= file.id %>">
+              Delete
+            </button>
+
+            <!-- Modal -->
+            <div class="modal fade" id="deleteFileModal_<%= file.id %>" tabindex="-1" aria-labelledby="deleteFileModalLabel_<%= file.id %>" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="deleteFileModalLabel_<%= file.id %>">Delete file?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    Are you sure you want to delete "<%= file.filename %>"? This cannot be undone.
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <%= button_to rails_admin.files_path(model_name: 'job', id: @job.id, file_id: file.id),
+                          method: :delete,
+                          form: { class: "d-inline" },
+                          class: "btn btn-danger" do %>
+                      Yes, Delete
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>No files attached yet.</p>
+    <% end %>
+  </div>
+</div>
