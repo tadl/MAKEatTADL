@@ -22,45 +22,129 @@
       <div class="row g-4 flex-md-row flex-column">
         <!-- LEFT: Metadata card -->
         <div class="col-md-6 mb-3 mb-md-0">
-          <div class="bg-light rounded-3 shadow-sm h-100 px-4 py-3">
-            <table class="table table-borderless mb-0 align-middle">
+          <div class="bg-light rounded-3 shadow-sm h-100 px-1 py-1">
+            <table class="table table-borderless align-middle mb-0">
               <tbody>
-                <% info = [] %>
-                <% info << ['<i class="bi bi-calendar3"></i> Submitted', @job.created_at.strftime("%b %-d, %Y %l:%M %p")] %>
+                <!-- Submitted -->
+                <tr>
+                  <th class="w-50 text-secondary fw-semibold" style="min-width: 160px;">
+                    <i class="bi bi-calendar3 me-1"></i> Submitted
+                  </th>
+                  <td class="fw-bold"><%= @job.created_at.strftime("%b %-d, %Y %l:%M %p") %></td>
+                </tr>
+                <!-- Pickup Location -->
                 <% if (loc = PickupLocation.find_by(code: @job.pickup_location)) %>
-                  <% info << ['<i class="bi bi-geo-alt"></i> Pickup Location', loc.name] %>
-                <% elsif @job.pickup_location.present? %>
-                  <% info << ['<i class="bi bi-geo"></i> Pickup Location', @job.pickup_location.humanize] %>
-                <% end %>
-
-                <% if @job.is_a?(PrintJob) %>
-                  <% info << ['<i class="bi bi-award"></i> Print Type', @job.print_type&.name]          if @job.print_type %>
-                  <% info << ['<i class="bi bi-droplet-half"></i> Filament Color', @job.filament_color]        if @job.filament_color.present? %>
-                  <% info << ['<i class="bi bi-clock"></i> Est. Print Time', "#{@job.print_time_estimate_hm} hr:min"] if @job.print_time_estimate.present? %>
-                  <% info << ['<i class="bi bi-bag"></i> Slicer Weight', "#{@job.slicer_weight} g"]     if @job.slicer_weight.present? %>
-                  <% info << ['<i class="bi bi-currency-dollar"></i> Slicer Cost', number_to_currency(@job.slicer_cost)] if @job.slicer_cost.present? %>
-                  <% info << ['<i class="bi bi-scale"></i> Actual Weight', "#{@job.actual_weight} g"]     if @job.actual_weight.present? %>
-                  <% info << ['<i class="bi bi-currency-dollar"></i> Actual Cost', number_to_currency(@job.actual_cost)] if @job.actual_cost.present? %>
-                  <% info << ['<i class="bi bi-calendar-check"></i> Completed On', @job.completion_date.strftime("%b %-d, %Y")] if @job.completion_date.present? %>
-                <% else %>
-                  <% info << ['<i class="bi bi-shield-check"></i> Spray OK?', @job.spray_ok? ? 'Yes' : 'No'] %>
-                <% end %>
-
-                <% info << ['<i class="bi bi-printer"></i> Assigned Printer', @job.assigned_printer.printer_model] if @job.assigned_printer %>
-                <% info << ['<i class="bi bi-chat-left-text"></i> Notes', @job.notes]           if @job.notes.present? %>
-
-                <% info.each do |label, value| %>
                   <tr>
-                    <th class="w-50 fw-normal text-secondary align-middle py-2" style="min-width: 120px;">
-                      <%= raw label %>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-geo-alt me-1"></i> Pickup Location
                     </th>
-                    <td class="align-middle py-2">
-                      <% if value.present? %>
-                        <span class="fw-semibold"><%= value %></span>
-                      <% else %>
-                        <span class="text-muted">—</span>
-                      <% end %>
-                    </td>
+                    <td class="fw-bold"><%= loc.name %></td>
+                  </tr>
+                <% elsif @job.pickup_location.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-geo me-1"></i> Pickup Location
+                    </th>
+                    <td class="fw-bold"><%= @job.pickup_location.humanize %></td>
+                  </tr>
+                <% end %>
+                <!-- Print Type (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.print_type %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-award me-1"></i> Print Type
+                    </th>
+                    <td class="fw-bold"><%= @job.print_type.name %></td>
+                  </tr>
+                <% end %>
+                <!-- Filament Color (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.filament_color.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-droplet-half me-1"></i> Filament Color
+                    </th>
+                    <td class="fw-bold"><%= @job.filament_color %></td>
+                  </tr>
+                <% end %>
+                <!-- Est. Print Time (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.print_time_estimate.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-clock me-1"></i> Est. Print Time
+                    </th>
+                    <td class="fw-bold"><%= "#{@job.print_time_estimate_hm} hr:min" %></td>
+                  </tr>
+                <% end %>
+                <!-- Slicer Weight (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.slicer_weight.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-bag me-1"></i> Slicer Weight
+                    </th>
+                    <td class="fw-bold"><%= "#{@job.slicer_weight} g" %></td>
+                  </tr>
+                <% end %>
+                <!-- Slicer Cost (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.slicer_cost.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-currency-dollar me-1"></i> Slicer Cost
+                    </th>
+                    <td class="fw-bold"><%= number_to_currency(@job.slicer_cost) %></td>
+                  </tr>
+                <% end %>
+                <!-- Actual Weight (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.actual_weight.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-bag me-1"></i> Actual Weight
+                    </th>
+                    <td class="fw-bold"><%= "#{@job.actual_weight} g" %></td>
+                  </tr>
+                <% end %>
+                <!-- Actual Cost (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.actual_cost.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-currency-dollar me-1"></i> Actual Cost
+                    </th>
+                    <td class="fw-bold"><%= number_to_currency(@job.actual_cost) %></td>
+                  </tr>
+                <% end %>
+                <!-- Completed On (PrintJob only) -->
+                <% if @job.is_a?(PrintJob) && @job.completion_date.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-calendar-check me-1"></i> Completed On
+                    </th>
+                    <td class="fw-bold"><%= @job.completion_date.strftime("%b %-d, %Y") %></td>
+                  </tr>
+                <% end %>
+                <!-- Spray OK? (ScanJob only) -->
+                <% if @job.is_a?(ScanJob) %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-shield-check me-1"></i> Spray OK?
+                    </th>
+                    <td class="fw-bold"><%= @job.spray_ok? ? 'Yes' : 'No' %></td>
+                  </tr>
+                <% end %>
+                <!-- Assigned Printer -->
+                <% if @job.assigned_printer %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-printer me-1"></i> Assigned Printer
+                    </th>
+                    <td class="fw-bold"><%= @job.assigned_printer.printer_model %></td>
+                  </tr>
+                <% end %>
+                <!-- Notes -->
+                <% if @job.notes.present? %>
+                  <tr>
+                    <th class="text-secondary fw-semibold">
+                      <i class="bi bi-chat-left-text me-1"></i> Notes
+                    </th>
+                    <td class="fw-bold"><%= @job.notes %></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -97,19 +181,22 @@
               <p class="text-muted">No model provided.</p>
             <% end %>
 
-            <!-- Upload form -->
-            <details class="mb-2 mt-3">
-              <summary class="btn btn-outline-secondary btn-sm rounded-pill px-3" style="cursor: pointer;">
-                <i class="bi bi-upload"></i> Upload Model Files
-              </summary>
-              <div class="mt-3">
-                <%= form_with model: @job, url: attach_model_files_job_path(@job), local: true, multipart: true, method: :patch do |f| %>
-                  <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control form-control-sm mb-2" %>
-                  <div class="form-text mb-2">You can upload one or more STL files.</div>
-                  <%= f.submit "Attach Files", class: "btn btn-sm btn-secondary rounded-pill px-3" %>
-                <% end %>
-              </div>
-            </details>
+            <% allowed_statuses = %w[pending information_requested] %>
+            <% if allowed_statuses.include?(@job.status.code) %>
+              <!-- Upload form -->
+              <details class="mb-2 mt-3">
+                <summary class="btn btn-outline-secondary btn-sm rounded-pill px-3" style="cursor: pointer;">
+                  <i class="bi bi-upload"></i> Upload Model Files
+                </summary>
+                <div class="mt-3">
+                  <%= form_with model: @job, url: attach_model_files_job_path(@job), local: true, multipart: true, method: :patch do |f| %>
+                    <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control form-control-sm mb-2" %>
+                    <div class="form-text mb-2">You can upload one or more STL files.</div>
+                    <%= f.submit "Attach Files", class: "btn btn-sm btn-primary rounded-pill px-3" %>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
           </div>
         </div>
       </div>

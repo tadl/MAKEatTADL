@@ -1,16 +1,24 @@
 # app/helpers/portal_helper.rb
 module PortalHelper
+  include Pagy::Frontend
+
   def bootstrap_status_badge(status)
-    klass = case status.code
-    when 'pending'          then 'bg-warning text-dark'
-    when 'info_requested'   then 'bg-danger text-white'
-    when 'queued'           then 'bg-info text-white'
-    when 'in_progress'      then 'bg-primary text-white'
-    when 'ready_for_pickup' then 'bg-success text-white'
-    when 'archived'         then 'bg-secondary text-white'
-    when 'ongoing'          then 'bg-light text-dark'
-    else                         'bg-dark text-white'
-    end
+    # Define status->class mapping
+    badge_classes = {
+      'pending'             => 'bg-warning text-dark',
+      'information_requested'=> 'bg-danger text-white',
+      'response_received'   => 'bg-info text-white',
+      'approved'            => 'bg-dark text-white',
+      'in_progress'         => 'bg-primary text-white',
+      'ready_for_pickup'    => 'bg-success text-white',
+      'archived'            => 'bg-secondary text-white',
+      'ongoing'             => 'bg-light text-dark',
+      'cancelled'           => 'bg-secondary text-white',
+      'rejected'            => 'bg-danger text-white',
+      'abandoned'           => 'bg-light text-muted',
+    }
+
+    klass = badge_classes[status.code] || 'bg-dark text-white'
 
     content_tag :span, status.name, class: "badge #{klass} px-3 py-2"
   end

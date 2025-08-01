@@ -86,6 +86,6 @@ gem 'bootstrap', '~> 5.3'
 
 gem 'recaptcha', require: 'recaptcha/rails'
 
-gem 'kaminari'
-gem 'kaminari-bootstrap', '~> 3.0.1'
+gem 'pagy'
+
 gem 'audited', '~> 5.2'

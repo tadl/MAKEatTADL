@@ -48,9 +48,11 @@
         </table>
       </div>
     </div>
-    <div class="mt-4">
-      <%= paginate @jobs %>
-    </div>
+    <% if @pagy.pages > 1 %>
+      <div class="mt-4">
+        <%= raw pagy_bootstrap_nav(@pagy) %>
+      </div>
+    <% end %>
   <% else %>
     <div class="no-jobs text-center py-16">
       <p class="text-lg mb-4">You have no jobs yet.</p>

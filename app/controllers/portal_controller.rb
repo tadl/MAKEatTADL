@@ -1,5 +1,6 @@
 # app/controllers/portal_controller.rb
 class PortalController < ApplicationController
+  include Pagy::Backend
   helper :portal
   layout 'application'
 
@@ -158,9 +159,13 @@ class PortalController < ApplicationController
   end
 
   # Patron dashboard (list of all jobs)
-  def dashboard
-    @jobs = @patron.jobs.order(created_at: :desc).page(params[:page]).per(10)
-  end
+def dashboard
+  Rails.logger.warn "Pagy VERSION: #{Pagy::VERSION}"
+  Rails.logger.warn "Pagy DEFAULTS: #{Pagy::DEFAULT.inspect}"
+  @pagy, @jobs = pagy(@patron.jobs.order(created_at: :desc), limit: 10, items: 10)
+  Rails.logger.warn "JOBS IS A: #{@jobs.class}, SIZE: #{@jobs.size}, IDS: #{@jobs.map(&:id)}"
+  Rails.logger.warn "PAGY: #{@pagy.inspect}"
+end
 
   # Show a single job (and its messages)
   def show
