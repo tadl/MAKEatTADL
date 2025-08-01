@@ -5,7 +5,7 @@ require Rails.root.join('lib/rails_admin/config/actions/files')
 
 RailsAdmin.config do |config|
   config.authorize_with :cancancan, Ability
-  # ─ Authentication & inheritance ───────────────────────
+  # Authentication & inheritance
   config.parent_controller      = '::ApplicationController'
   config.authenticate_with do
     redirect_to '/auth/google_oauth2' unless current_staff_user
@@ -15,7 +15,7 @@ RailsAdmin.config do |config|
   config.asset_source           = :sprockets
   config.default_items_per_page = 10
 
-  # ─ App name & included models ────────────────────────
+  # App name & included models
   config.main_app_name   = ['MAKE@TADL', '  Job Management System']
   config.included_models = %w[
     StaffUser
@@ -33,45 +33,37 @@ RailsAdmin.config do |config|
     Audited::Audit
   ]
 
-  # ─ Actions ────────────────────────────────────────────
+  # Actions
   config.actions do
 
-    dashboard                     # mandatory
-    index                         # mandatory
+    dashboard
+    index
     new   { except ['StaffUser'] }
     export
     bulk_delete do
       visible { bindings[:controller].current_staff_user.admin? }
     end
     show
-
-    # custom Conversation button on Jobs
     conversation do
       only ['Job']
     end
-
     edit do
       visible do
         bindings[:controller].current_ability.can?(:update, bindings[:abstract_model].model)
       end
     end
-
     files do
       only ['Job']
     end
-
     delete do
       visible do
         bindings[:controller].current_ability.can?(:destroy, bindings[:abstract_model].model)
       end
     end
-
     help
   end
 
-  # ─────────────────────────────────────────────────────────
-  #   Management (only Jobs)
-  # ─────────────────────────────────────────────────────────
+  #   Management (Jobs and Patrons)
   config.model 'Job' do
     navigation_label 'Management'
     weight           100
@@ -315,9 +307,60 @@ RailsAdmin.config do |config|
     end
   end
 
-  # ─────────────────────────────────────────────────────────
+  config.model 'Patron' do
+    navigation_label 'Management'
+    weight           110
+    label_plural     'Patrons'
+    object_label_method :name
+
+    list do
+      field :id
+      field :email
+      field :name
+      field :jobs
+    end
+
+    show do
+      fields :id, :email, :name
+
+      field :jobs, :has_many_association do
+        pretty_value do
+          bindings[:object].jobs.map do |job|
+            bindings[:view].link_to(
+              "##{job.id} (#{job.type.demodulize})",
+              bindings[:view].rails_admin.show_path(
+                model_name: 'job',
+                id:         job.id
+              )
+            )
+          end.join(', ').html_safe
+        end
+        visible do
+          true
+        end
+      end
+
+      # All other fields only visible to admins
+      fields :access_token, :token_sent_at, :audits do
+        visible do
+          bindings[:controller].current_staff_user.admin?
+        end
+      end
+    end
+
+    edit do
+      field :name
+      field :email
+
+      fields :access_token, :token_sent_at, :jobs, :audits do
+        visible do
+          bindings[:controller].current_staff_user.admin?
+        end
+      end
+    end
+  end
+
   #   Form Options (for your public webforms)
-  # ─────────────────────────────────────────────────────────
   config.model 'FilamentColor' do
     visible          { bindings[:controller].current_staff_user.admin? }
     navigation_label 'Form Options'
@@ -410,9 +453,7 @@ RailsAdmin.config do |config|
     end
   end
 
-  # ─────────────────────────────────────────────────────────
   #   Admin (everything staff/admin manage)
-  # ─────────────────────────────────────────────────────────
   config.model 'Audited::Audit' do
     visible          { bindings[:controller].current_staff_user.admin? }
     navigation_label 'Admin'
@@ -431,7 +472,8 @@ RailsAdmin.config do |config|
   end
 
   config.model 'Printer' do
-    visible          { bindings[:controller].current_staff_user.admin? }
+    visible { bindings[:controller].current_staff_user.admin? }
+
     navigation_label 'Admin'
     weight           300
     label_plural     'Printers'
@@ -534,49 +576,6 @@ RailsAdmin.config do |config|
       field(:name)  { read_only true }
       field(:email) { read_only true }
       field :admin
-    end
-  end
-
-  config.model 'Patron' do
-    visible          { bindings[:controller].current_staff_user.admin? }
-    navigation_label 'Admin'
-    weight           330
-    label_plural     'Patrons'
-    object_label_method :name
-
-    # ─── SHOW ───────────────────────────────────────────────
-    show do
-      include_all_fields
-
-      # Only admins see everything. Non-admins see just name, email, jobs:
-      fields.each do |field|
-        field.visible do
-          bindings[:controller].current_staff_user.admin? ||
-            [:name, :email, :jobs].include?(field.name)
-        end
-      end
-
-      # Render the jobs association as links back to each job’s show
-      field :jobs, :has_many_association do
-        pretty_value do
-          bindings[:object].jobs.map do |job|
-            bindings[:view].link_to(
-              "##{job.id} (#{job.type.demodulize})",
-              bindings[:view].rails_admin.show_path(
-                model_name: 'job',
-                id:         job.id
-              )
-            )
-          end.join(', ').html_safe
-        end
-      end
-    end
-
-    list do
-      field :id
-      field :email
-      field :name
-      field :jobs
     end
   end
 
