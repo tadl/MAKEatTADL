@@ -1,5 +1,56 @@
 <!-- app/views/rails_admin/main/files.html.erb -->
 
+<style>
+  /* Make file links stand out and show hover cursor */
+  .file-link {
+    display: inline-block;
+    max-width: 400px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    color: #212529; /* Bootstrap dark text */
+    transition: color 0.2s ease;
+  }
+
+  .file-link:hover, 
+  .file-link:focus {
+    color: #0d6efd; /* Bootstrap primary blue */
+    text-decoration: underline;
+    cursor: pointer;
+    outline: none;
+  }
+
+  /* Icon sizing and spacing */
+  .file-icon {
+    font-size: 1.5rem;
+    color: #0d6efd;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* Flex container to align file info */
+  .file-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  /* File size styling */
+  .file-size {
+    color: #6c757d; /* Bootstrap muted */
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  /* Delete button tweaks */
+  .btn-outline-danger {
+    flex-shrink: 0;
+  }
+</style>
+
 <div class="card mb-4 shadow-sm">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h3 class="mb-0">Files for Job #<%= @job.id %></h3>
@@ -8,28 +59,26 @@
 
   <div class="card-body">
 
-    <!-- Files List -->
     <% if @job.model_files.attached? %>
       <ul class="list-group mb-4">
         <% @job.model_files.each do |file| %>
           <li class="list-group-item d-flex align-items-center justify-content-between py-2 px-0 border-0 border-bottom">
-            <div class="d-flex align-items-center flex-grow-1 min-width-0">
-              <i class="bi bi-file-earmark-stl text-primary me-2 fs-5"></i>
-              <span class="text-truncate" style="max-width: 400px;">
-                <%= link_to file.filename, main_app.rails_blob_path(file, disposition: 'attachment'),
-                      class: "fw-semibold text-decoration-none text-dark" %>
-              </span>
-              <span class="ms-3 text-muted small"><%= number_to_human_size(file.byte_size) %></span>
+            <div class="file-item-content">
+              <i class="bi bi-file-earmark-stl file-icon"></i>
+              <%= link_to main_app.rails_blob_path(file, disposition: 'attachment'), class: "file-link", title: file.filename.to_s do %>
+                <%= file.filename.to_s %>
+              <% end %>
+              <span class="file-size ms-auto"><%= number_to_human_size(file.byte_size) %></span>
             </div>
-            <!-- Trigger Modal -->
             <button type="button"
                     class="btn btn-sm btn-outline-danger ms-3"
                     data-bs-toggle="modal"
-                    data-bs-target="#deleteFileModal_<%= file.id %>">
+                    data-bs-target="#deleteFileModal_<%= file.id %>"
+                    aria-label="Delete <%= file.filename %>">
               <i class="bi bi-trash"></i>
-              <span class="visually-hidden">Delete</span>
             </button>
-            <!-- Modal -->
+
+            <!-- Delete Modal -->
             <div class="modal fade" id="deleteFileModal_<%= file.id %>" tabindex="-1" aria-labelledby="deleteFileModalLabel_<%= file.id %>" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -38,7 +87,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                   </div>
                   <div class="modal-body">
-                    Are you sure you want to delete <span class="fw-semibold"><%= file.filename %></span>? This cannot be undone.
+                    Are you sure you want to delete <strong><%= file.filename %></strong>? This cannot be undone.
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -59,7 +108,6 @@
       <p class="text-muted mb-4">No files attached yet.</p>
     <% end %>
 
-    <!-- Upload Form -->
     <div class="card bg-light mb-0">
       <div class="card-body py-3">
         <%= form_with model: @job, url: rails_admin.files_path(model_name: 'job', id: @job.id), local: true, multipart: true, method: :post, data: { turbo: false } do |f| %>
@@ -78,6 +126,5 @@
         <% end %>
       </div>
     </div>
-
   </div>
 </div>
