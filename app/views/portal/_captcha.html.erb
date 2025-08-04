@@ -1,11 +1,22 @@
 <!-- app/views/portal/_captcha.html.erb -->
-<div class="card mb-4">
-  <div class="card-header"><h4 class="mb-0">Verification</h4></div>
-  <div class="card-body">
-    <%= recaptcha_tags %>
-    <% if defined?(@job) && @job.errors[:recaptcha].present? %>
-      <div class="text-danger small mt-1"><%= @job.errors[:recaptcha].join(', ') %></div>
-    <% end %>
-    <span class="help-text">Help us keep automated submissions out.</span>
-  </div>
-</div>
+<%= hidden_field_tag 'g-recaptcha-response', '', id: 'g-recaptcha-response' %>
+<% site_key = ENV['RECAPTCHA_SITE_KEY'] %>
+<script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      grecaptcha.ready(function() {
+        grecaptcha.execute('<%= site_key %>', {action: 'submit'}).then(function(token) {
+          document.getElementById('g-recaptcha-response').value = token;
+          form.submit();
+        });
+      });
+    });
+  });
+</script>

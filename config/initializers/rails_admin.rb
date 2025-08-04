@@ -72,6 +72,22 @@ RailsAdmin.config do |config|
     list do
       scopes [:active, :inactive, :ongoing]
       sort_by :created_at
+      field :chevron, :string do
+        label ''
+        sortable false
+        searchable false
+        formatted_value do
+          view = bindings[:view]
+          job = bindings[:object]
+          link = view.rails_admin.edit_path(model_name: 'job', id: job.id) # or .show_path for show page
+          view.link_to(
+            'Edit <i class="bi bi-chevron-right"></i>'.html_safe,
+            link,
+            class: 'btn btn-primary btn-sm px-2',
+            title: 'Edit this job'
+          )
+        end
+      end
       field :id do
         label "Job"
       end
