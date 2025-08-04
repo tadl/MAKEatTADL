@@ -65,8 +65,8 @@
   <body>
     <div class="email-wrapper">
       <div class="email-header">
-        <% email_host = ENV.fetch("APP_URL", "https://make.tadl.org") %>
-        <img src="<%= "#{email_host}/assets/tadl-logo-email.png" %>"
+        <% logo_host = ENV.fetch("APP_URL") %>
+        <img src="<%= "#{logo_host}/tadl-logo-email.png" %>"
              alt="TADL Logo"
              width="200"
              style="display:block; margin:0 auto;">
