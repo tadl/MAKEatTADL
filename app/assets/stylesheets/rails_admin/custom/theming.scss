@@ -1,0 +1,120 @@
+// app/assets/stylesheets/rails_admin/custom.scss
+
+// ---- SIDEBAR ----
+.sidebar, .sidebar-nav {
+  background: #f5f6fa !important;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.03);
+}
+
+// Sidebar nav text
+.nav > li > a {
+//  color: #21428d !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+
+// Sidebar link hover
+.sidebar .nav > li > a:hover {
+  background: #e6ecfa;
+//  color: #21428d !important;
+}
+
+// Sidebar active state
+.sidebar .nav > li.active > a,
+.sidebar .nav > li > a.active {
+  background: #21428d !important;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+// Sidebar section headers
+.sidebar .nav-header {
+  color: #888;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+
+// ---- MAIN CONTENT ----
+.content {
+  background: #fff !important;
+  border-radius: 16px;
+  margin-top: 24px;
+  padding: 24px 20px;
+}
+
+// ---- BUTTONS ----
+.btn-primary, .btn-danger {
+  border-radius: 6px;
+  font-weight: 600;
+}
+.btn-info, .btn-info:focus, .btn-info:hover {
+  background: #21428d !important;
+  color: #fff !important;
+  border-radius: 6px;
+  border: none;
+  box-shadow: 0 1px 6px rgba(33,66,141,0.08);
+  font-weight: 600;
+}
+
+// ---- TABLES ----
+table th {
+  background: #e9ecef;
+  font-weight: bold;
+}
+.table td, .table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 15px;
+}
+// Table row hover
+.table > tbody > tr:hover {
+  background: #f0f4fa !important;
+  transition: background 0.2s;
+}
+
+// ---- ACTION ICONS ----
+.ra-table .icon,
+.table .icon,
+.table .fa, 
+.ra-table .fa {
+  font-size: 1.15rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0 0px;
+}
+
+// ---- FORMS ----
+.form-horizontal {
+  background: #fafbfc;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(33,66,141,0.05);
+  padding: 20px;
+}
+
+// ---- HEADER / NAVBAR ----
+.navbar {
+  background: #21428d !important;
+  color: #fff;
+}
+.navbar .navbar-brand {
+  color: #fff !important;
+}
+
+// Navbar avatar tweaks
+.navbar .avatar, .navbar .gravatar {
+  border-radius: 50% !important;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(33,66,141,0.08);
+  background: #e9ecef;
+}
+
+// ---- GENERAL INTERACTIONS ----
+* {
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}

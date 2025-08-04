@@ -44,13 +44,13 @@ RailsAdmin.config do |config|
       visible { bindings[:controller].current_staff_user.admin? }
     end
     show
-    conversation do
-      only ['Job']
-    end
     edit do
       visible do
         bindings[:controller].current_ability.can?(:update, bindings[:abstract_model].model)
       end
+    end
+    conversation do
+      only ['Job']
     end
     files do
       only ['Job']
@@ -102,29 +102,10 @@ RailsAdmin.config do |config|
           end
         end
       end
-      field :assigned_printer do
-        label 'Assigned Printer'
-      end
       field :created_at do
         label "Received"
         pretty_value do
           value&.in_time_zone('America/Detroit')&.strftime("%b %-d, %Y %-l:%M%P")
-        end
-      end
-      field :chevron, :string do
-        label ''
-        sortable false
-        searchable false
-        formatted_value do
-          view = bindings[:view]
-          job = bindings[:object]
-          link = view.rails_admin.edit_path(model_name: 'job', id: job.id) # or .show_path for show page
-          view.link_to(
-            'Edit <i class="bi bi-chevron-right"></i>'.html_safe,
-            link,
-            class: 'btn btn-primary btn-sm px-2',
-            title: 'Edit this job'
-          )
         end
       end
     end
