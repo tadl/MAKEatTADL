@@ -1,7 +1,7 @@
 # config/initializers/omniauth.rb
 
 # allow both GET and POST
-OmniAuth.config.allowed_request_methods = [:post, :get]
+OmniAuth.config.allowed_request_methods = [:post]
 
 if Rails.env.production?
   # build the callback URL from env vars or use sensible fallbacks

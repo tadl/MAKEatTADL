@@ -3,7 +3,9 @@ Rails.application.routes.draw do
   get 'errors/internal_server_error'
   get 'errors/forbidden'
   # OmniAuth callback for external providers (login)
-  match '/auth/:provider/callback', to: 'sessions#create', via: [:get, :post]
+  get '/auth/:provider/callback', to: 'sessions#create'
+
+  get '/admin/login', to: 'sessions#choose_login'
 
   # Sign out route
   delete '/logout', to: 'sessions#destroy', as: :logout

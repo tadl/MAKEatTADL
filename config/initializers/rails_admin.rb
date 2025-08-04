@@ -8,7 +8,9 @@ RailsAdmin.config do |config|
   # Authentication & inheritance
   config.parent_controller      = '::ApplicationController'
   config.authenticate_with do
-    redirect_to '/auth/google_oauth2' unless current_staff_user
+    unless current_staff_user
+      redirect_to '/admin/login'
+    end
   end
   config.current_user_method(&:current_staff_user)
 
