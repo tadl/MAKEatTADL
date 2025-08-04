@@ -1,9 +1,17 @@
-<!-- app/views/portal/_captcha.html.erb -->
 <%= hidden_field_tag 'g-recaptcha-response', '', id: 'g-recaptcha-response' %>
 <% site_key = ENV['RECAPTCHA_SITE_KEY'] %>
 <script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>"></script>
 
 <script>
+  // Helper function to wait for grecaptcha
+  function onGrecaptchaReady(callback) {
+    if (typeof grecaptcha !== 'undefined') {
+      callback();
+    } else {
+      setTimeout(function() { onGrecaptchaReady(callback); }, 100);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('form');
     if (!form) return;
@@ -11,10 +19,13 @@
     form.addEventListener('submit', function(event) {
       event.preventDefault();
 
-      grecaptcha.ready(function() {
-        grecaptcha.execute('<%= site_key %>', {action: 'submit'}).then(function(token) {
-          document.getElementById('g-recaptcha-response').value = token;
-          form.submit();
+      // Call grecaptcha ONLY after it's loaded!
+      onGrecaptchaReady(function() {
+        grecaptcha.ready(function() {
+          grecaptcha.execute('<%= site_key %>', {action: 'submit'}).then(function(token) {
+            document.getElementById('g-recaptcha-response').value = token;
+            form.submit();
+          });
         });
       });
     });
