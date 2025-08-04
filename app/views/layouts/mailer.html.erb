@@ -65,7 +65,11 @@
   <body>
     <div class="email-wrapper">
       <div class="email-header">
-        <img src="<%= image_url('tadl-logo-email.png', host: Rails.application.config.action_mailer.default_url_options[:host], protocol: Rails.application.config.action_mailer.default_url_options[:protocol]) %>" alt="TADL Logo" width="200" style="display:block; margin:0 auto;">
+        <% email_host = ENV.fetch("APP_URL", "https://make.tadl.org") %>
+        <img src="<%= "#{email_host}/assets/tadl-logo-email.png" %>"
+             alt="TADL Logo"
+             width="200"
+             style="display:block; margin:0 auto;">
       </div>
       <div class="email-body">
         <%= yield %>
