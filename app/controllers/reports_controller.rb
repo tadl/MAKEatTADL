@@ -1,5 +1,4 @@
 # app/controllers/reports_controller.rb
-
 class ReportsController < ApplicationController
   before_action :authenticate_staff!
 
@@ -32,7 +31,9 @@ class ReportsController < ApplicationController
     pm_count       = completed.where.not(printable_model_id: nil).distinct.count(:printable_model_id)
     jobs_without_pm = completed.where(printable_model_id: nil)
     urls           = jobs_without_pm.pluck(:url).reject(&:blank?)
-    files          = jobs_without_pm.select { |j| j.model_file.attached? }.map { |j| j.model_file.filename.to_s }
+
+    files = jobs_without_pm.flat_map { |j| j.model_files.attached? ? j.model_files.map { |f| f.filename.to_s } : [] }
+
     @unique_designs = pm_count + (urls + files).uniq.size
 
     @filament_grams = fdm_scope.sum(:actual_weight).to_i
@@ -42,10 +43,8 @@ class ReportsController < ApplicationController
       .group("DATE(completion_date)")
       .sum(:actual_weight)
 
-    # Most requested filament color
     @popular_filament = completed.group(:filament_color).order('count_id DESC').count(:id).first&.first
 
-    # Print jobs per day for chart
     @prints_per_day = PrintJob
       .where.not(completion_date: nil)
       .group("DATE(completion_date)")
@@ -57,7 +56,6 @@ class ReportsController < ApplicationController
       .group(:filament_color)
       .count
 
-    # Category breakdown
     @category_counts = jobs.joins(:category).group('categories.name').count
 
     respond_to do |format|
