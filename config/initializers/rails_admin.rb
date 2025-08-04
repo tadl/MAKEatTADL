@@ -429,16 +429,59 @@ RailsAdmin.config do |config|
       field :position
       field :category
       field :notes
-
       field :model_file, :active_storage do
         label 'Model File (STL)'
         help  'Attach the .stl file for this model'
+        pretty_value do
+          if value&.attached?
+            file_url = Rails.application.routes.url_helpers.rails_blob_url(value, only_path: true)
+            %Q{
+              <div class="mb-2">
+                Currently attached: <a href="#{file_url}">#{value.filename}</a>
+              </div>
+            }.html_safe
+          else
+            '<span class="text-muted">(No file attached)</span>'.html_safe
+          end
+        end
       end
-
       field :preview_image , :active_storage do
         label 'Photo'
         help  'Attach a PNG/JPG preview for this model'
       end
+    end
+    show do
+      field :name
+      field :code
+      field :category
+      field :notes
+      field :model_file, :active_storage do
+        label 'Model File (STL)'
+        pretty_value do
+          if value.present?
+            file = value
+            file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
+            html_id = "stlviewer-#{file.id}"
+
+            if File.extname(file.filename.to_s).downcase == ".stl"
+              %Q{
+                <div>
+                  <details id="stl-details-#{file.id}">
+                    <summary class="btn btn-sm btn-primary">Show 3D Preview</summary>
+                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width: 400px; height: 300px; border:1px solid #ccc"></div>
+                  </details>
+                  <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
+                </div>
+              }.html_safe
+            else
+              %Q{<div><a href="#{file_url}">#{file.filename}</a></div>}.html_safe
+            end
+          else
+            "(none)"
+          end
+        end
+      end
+      field :preview_image
     end
   end
 
