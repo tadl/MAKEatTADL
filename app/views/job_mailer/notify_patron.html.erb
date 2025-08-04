@@ -1,31 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    /* you can inline your styles here */
-  </style>
-</head>
-<body>
-  <p>Hello <%= @patron.name %>,</p>
+<p style="font-size:1.12em; margin-bottom:1.2em;">
+  Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
+</p>
 
-  <p>
-    You’ve got a new message about your
-    <%= @job.is_a?(PrintJob) ? "print" : "scan" %> job
-    <strong>#<%= @job.id %></strong>:
-  </p>
+<p style="margin-bottom:1em;">
+  You’ve got a new message about your
+  <%= @job.is_a?(PrintJob) ? "print" : "scan" %> job
+  <strong>#<%= @job.id %></strong>:
+</p>
 
-  <blockquote style="border-left: 4px solid #ccc; padding-left: 1rem; color: #555;">
-    <%= simple_format(@message.body) %>
-  </blockquote>
+<blockquote style="border-left: 4px solid #21428d; padding-left: 1rem; color: #333; margin:0 0 2em 0;">
+  <%= simple_format(@message.body) %>
+</blockquote>
 
-  <p>
-    You can reply or view the full conversation here:<br>
-    <a href="<%= @url %>" style="display: inline-block; background: #2563eb; color: #fff; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
-      View your conversation
-    </a>
-  </p>
+<p style="margin-bottom:2em;">
+  You can reply or view the full conversation here:<br>
+  <a href="<%= @url %>" class="btn">View your conversation</a>
+</p>
 
-  <p>— Your TADL Makerspace</p>
-</body>
-</html>
+<p style="color:#444;">— Your MAKE@TADL Team</p>

@@ -1,11 +1,8 @@
-Hello <%= @patron.name %>,
+Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
 
-Thank you for submitting your <%= @job.is_a?(PrintJob) ? '3D print' : 'scan' %> job request (#<%= @job.id %>) to the TADL Makerspace Portal. We’ve received your submission and will begin processing it shortly.
+Thank you for submitting your <%= @job.is_a?(PrintJob) ? '3D print' : 'scan' %> job request (#<%= @job.id %>) to MAKE@TADL. We've received your submission and will begin processing it soon.
 
-You can view its status or continue the conversation here:
+You can check the status or reply to staff using this link:
 <%= @url %>
 
-If you need anything else, just reply to this email and we’ll get right back to you.
-
-Thanks,
-The TADL Makerspace Team
+— The MAKE@TADL Team

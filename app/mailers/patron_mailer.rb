@@ -3,6 +3,6 @@ class PatronMailer < ApplicationMailer
     @patron = patron
     @url = dashboard_url(token: patron.access_token)
 
-    mail to: @patron.email, subject: "Your Login Link for MAKE at TADL"
+    mail to: @patron.email, subject: "Your Login Link for MAKE@TADL"
   end
 end

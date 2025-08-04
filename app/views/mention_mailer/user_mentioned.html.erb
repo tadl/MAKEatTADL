@@ -1,16 +1,15 @@
-<h1>You’ve been mentioned by <%= @message.author.name %></h1>
-<p>
-  In the conversation for <strong>Job #<%= @job.id %></strong>,
-  <%= @message.author.name %> wrote:
+<p style="font-size:1.13em; margin-bottom:1.2em;">
+  Hi <%= @staff_user.name %>,
 </p>
 
-<blockquote><%= simple_format(@message.body) %></blockquote>
+<p style="margin-bottom:1em;">
+  You were mentioned in a message on Job <strong>#<%= @job.id %></strong> in MAKE@TADL:
+</p>
 
-<p>
-  <%= link_to "View the conversation", rails_admin.url_for(
-      controller: 'rails_admin/main',
-      action:     'conversation',
-      model_name: 'job',
-      id:         @job.id
-    ) %>
+<blockquote style="border-left: 4px solid #21428d; padding-left: 1rem; color: #333; margin:0 0 2em 0;">
+  <%= simple_format(@message.body) %>
+</blockquote>
+
+<p style="margin-bottom:2em;">
+  <a href="<%= job_url(@job) %>" class="btn">View This Job</a>
 </p>

@@ -1,12 +1,9 @@
-You’ve been mentioned by <%= @message.author.name %>
+Hi <%= @staff_user.name %>,
 
-In the conversation for Job #<%= @job.id %>, <%= @message.author.name %> wrote:
+You were mentioned in a message on Job ##<%= @job.id %> in MAKE@TADL:
 
-<%= simple_format(@message.body) %>
+---
+<%= @message.body %>
+---
 
-<%= link_to "View the conversation", rails_admin.url_for(
-    controller: 'rails_admin/main',
-    action:     'conversation',
-    model_name: 'job',
-    id:         @job.id
-  ) %>
+View this job: <%= job_url(@job) %>

@@ -1,14 +1,19 @@
-<p>Hello <%= @patron.name %>,</p>
-
-<p>Thank you for submitting your <strong><%= @job.is_a?(PrintJob) ? '3D print' : 'scan' %> job request</strong> (<strong>#<%= @job.id %></strong>) to the MAKE at TADL Portal. We’ve received your submission and will begin processing it shortly.</p>
-
-<p>To view the status of your request, or ask follow-up questions, reply directly to this email, or click the button below:</p>
-
-<p>
-  <a href="<%= @url %>" style="display:inline-block;background-color:#2563EB;color:#FFFFFF;padding:0.5rem 1rem;text-decoration:none;border-radius:4px;">
-    View Your Job Request
-  </a>
+<p style="font-size:1.12em; margin-bottom:1.5em;">
+  Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
 </p>
 
-<p>Thanks,<br>
-The TADL Makers Team</p>
+<p style="margin-bottom:1.5em;">
+  Thank you for submitting your
+  <strong><%= @job.is_a?(PrintJob) ? '3D print' : 'scan' %> job request</strong>
+  (<strong> #<%= @job.id %></strong>) to MAKE@TADL. We've received your submission and will begin processing it soon.
+</p>
+
+<p style="margin-bottom:1.5em;">
+  You can check the status of your request or reply to our staff any time by clicking below:
+</p>
+
+<p style="margin-bottom:2em;">
+  <a href="<%= @url %>" class="btn">View Your Job Request</a>
+</p>
+
+<p style="color:#444;">— The MAKE@TADL Team</p>

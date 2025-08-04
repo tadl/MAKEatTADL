@@ -1,31 +1,13 @@
-<!-- app/views/patron_mailer/access_link.html.erb -->
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    /* tweak inline styles as you like */
-    .btn {
-      display: inline-block;
-      background: #2563eb;
-      color: #fff !important;
-      padding: 0.5rem 1rem;
-      text-decoration: none;
-      border-radius: 4px;
-    }
-  </style>
-</head>
-<body>
-  <p>Hello <%= @patron.name %>,</p>
+<p style="font-size:1.12em; margin-bottom:1.5em;">
+  Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
+</p>
 
-  <p>Thanks for your request! You can view your job status (or submit new ones) by clicking the button below: We will reach out shortly with estimates for cost and time to complete.</p>
+<p style="margin-bottom:1.5em;">
+  Thanks for your request! You can view your job status, manage requests, and submit new jobs by clicking below. We'll be in touch soon with estimates for cost and completion time.
+</p>
 
-  <p>
-    <a href="<%= @url %>" class="btn">
-      View your dashboard
-    </a>
-  </p>
+<p style="margin-bottom:2em;">
+  <a href="<%= @url %>" class="btn">View your dashboard</a>
+</p>
 
-  <p>— Your TADL Makerspace</p>
-</body>
-</html>
+<p style="color:#444;">— Your MAKE@TADL Team</p>

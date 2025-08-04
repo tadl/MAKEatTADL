@@ -1,7 +1,7 @@
-Hello <%= @patron.name %>,
+Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
 
-Thanks for your request! You can view your job status (or submit new ones) by clicking the button below: We will reach out shortly with estimates for cost and time to complete.
+Thanks for your request! You can view your job status, manage requests, and submit new jobs using the link below. We'll be in touch soon with cost and completion estimates.
 
 <%= @url %>
 
-— Your TADL Makerspace
+— Your MAKE@TADL Team

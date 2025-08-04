@@ -2,8 +2,8 @@
 class ApplicationMailer < ActionMailer::Base
   MAIL_DOMAIN = ENV.fetch("MAILGUN_DOMAIN")
 
-  default from:     "TADL Makerspace <make@#{MAIL_DOMAIN}>"
-  default reply_to: "TADL Makerspace <make@#{MAIL_DOMAIN}>"
+  default from:     "MAKE at TADL <make@#{MAIL_DOMAIN}>"
+  default reply_to: "MAKE at TADL <make@#{MAIL_DOMAIN}>"
   layout "mailer"
 
   def self.default_url_options

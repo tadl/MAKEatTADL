@@ -1,4 +1,4 @@
-Hello <%= @patron.name %>,
+Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
 
 You’ve got a new message about your <%= @job.is_a?(PrintJob) ? "print" : "scan" %> job ##<%= @job.id %>:
 
@@ -7,6 +7,6 @@ You’ve got a new message about your <%= @job.is_a?(PrintJob) ? "print" : "scan
 ---
 
 You can reply or view the full conversation here:
-<%= @portal_link %>
+<%= @url %>
 
-— Your TADL Makerspace
+— Your MAKE@TADL Team
