@@ -72,22 +72,6 @@ RailsAdmin.config do |config|
     list do
       scopes [:active, :inactive, :ongoing]
       sort_by :created_at
-      field :chevron, :string do
-        label ''
-        sortable false
-        searchable false
-        formatted_value do
-          view = bindings[:view]
-          job = bindings[:object]
-          link = view.rails_admin.edit_path(model_name: 'job', id: job.id) # or .show_path for show page
-          view.link_to(
-            'Edit <i class="bi bi-chevron-right"></i>'.html_safe,
-            link,
-            class: 'btn btn-primary btn-sm px-2',
-            title: 'Edit this job'
-          )
-        end
-      end
       field :id do
         label "Job"
       end
@@ -108,12 +92,40 @@ RailsAdmin.config do |config|
         filter_options { [['Print','PrintJob'], ['Scan','ScanJob']] }
         pretty_value   { value == 'PrintJob' ? 'Print' : 'Scan' }
       end
-      field :pickup_location
+      field :pickup_location do
+        label 'Pickup Location'
+        pretty_value do
+          if value.present?
+            PickupLocation.find_by(code: value)&.name || value.humanize
+          else
+            ''
+          end
+        end
+      end
       field :assigned_printer do
         label 'Assigned Printer'
       end
       field :created_at do
         label "Received"
+        pretty_value do
+          value&.in_time_zone('America/Detroit')&.strftime("%b %-d, %Y %-l:%M%P")
+        end
+      end
+      field :chevron, :string do
+        label ''
+        sortable false
+        searchable false
+        formatted_value do
+          view = bindings[:view]
+          job = bindings[:object]
+          link = view.rails_admin.edit_path(model_name: 'job', id: job.id) # or .show_path for show page
+          view.link_to(
+            'Edit <i class="bi bi-chevron-right"></i>'.html_safe,
+            link,
+            class: 'btn btn-primary btn-sm px-2',
+            title: 'Edit this job'
+          )
+        end
       end
     end
 
