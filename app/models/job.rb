@@ -1,4 +1,3 @@
-# app/models/job.rb
 class Job < ApplicationRecord
   audited
   belongs_to :patron
@@ -16,6 +15,10 @@ class Job < ApplicationRecord
 
   belongs_to :printable_model, optional: true
 
+  # Staff tracking
+  belongs_to :started_by,  class_name: 'StaffUser', optional: true
+  belongs_to :finished_by, class_name: 'StaffUser', optional: true
+
   has_many_attached :model_files
 
   def model_files=(attachables)
@@ -30,14 +33,20 @@ class Job < ApplicationRecord
 
   validates :status, presence: true
 
+  # Track start/finish events when status changes
+  before_update :track_start_and_finish, if: :will_save_change_to_status_id?
+
+  # Scopes for status filtering
   scope :with_status, ->(code) {
     joins(:status).where(statuses: { code: code })
   }
-
   scope :active,   -> { joins(:status).where.not(statuses: { code: %w[archived cancelled rejected abandoned] }) }
   scope :inactive, -> { joins(:status).where(statuses:     { code: %w[archived cancelled rejected abandoned] }) }
+  scope :ongoing,  -> { with_status('ongoing') }
 
-  scope :ongoing, -> { with_status('ongoing') }
+  # Flexible date-range scopes for stats
+  scope :started_between,  ->(start_time, end_time) { where(started_at:  start_time..end_time) }
+  scope :finished_between, ->(start_time, end_time) { where(finished_at: start_time..end_time) }
 
   private
 
@@ -49,6 +58,20 @@ class Job < ApplicationRecord
     if pickup_date.present?
       archived = Status.find_by!(code: 'archived')
       update_column(:status_id, archived.id)
+    end
+  end
+
+  def track_start_and_finish
+    new_code = Status.find(status_id).code
+
+    if new_code == 'in_progress' && started_by_id.nil?
+      self.started_by  = Current.staff_user
+      self.started_at  = Time.current
+    end
+
+    if new_code == 'ready_for_pickup' && finished_by_id.nil?
+      self.finished_by = Current.staff_user
+      self.finished_at = Time.current
     end
   end
 end

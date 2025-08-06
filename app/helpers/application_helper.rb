@@ -11,11 +11,6 @@ module ApplicationHelper
     ]
   }.freeze
 
-  # Pages where we hide only the breadcrumb (but still show logout)
-  REPORT_PRINT_ACTIONS = {
-    'reports' => %w[print]
-  }.freeze
-
   # Returns an Array of crumb hashes: { name:, path: (optional) }
   def breadcrumb_items
     return [] if PUBLIC_PAGES[controller_name]&.include?(action_name)
@@ -38,8 +33,7 @@ module ApplicationHelper
 
   # Should we hide the breadcrumb entirely?
   def hide_breadcrumb?
-    PUBLIC_PAGES[controller_name]&.include?(action_name) ||
-      REPORT_PRINT_ACTIONS[controller_name]&.include?(action_name)
+    PUBLIC_PAGES[controller_name]&.include?(action_name)
   end
 
   # Should we hide the logout button?

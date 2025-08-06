@@ -19,14 +19,6 @@
     </li>
   <% end %>
 
-  <li class="nav-item reports_root_link">
-    <%= link_to "Reports",
-                "/reports/print",
-                class: "nav-link",
-                target: "_blank",
-                data: { turbo: false } %>
-  </li>
-
   <% if _current_user %>
     <% if (user_edit = edit_user_link) %>
       <li class="nav-item edit_user_root_link">

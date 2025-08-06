@@ -1,0 +1,303 @@
+<%
+  today        = Date.current
+  yesterday    = (today - 1.day)..(today - 1.day)
+  last_7_days  = (today - 6.days)..today
+  last_30_days = (today - 29.days)..today
+  curr_month   = today.beginning_of_month..today
+  prev_month   = (today - 1.month).beginning_of_month..(today - 1.month).end_of_month
+  curr_year    = today.beginning_of_year..today
+  prev_year    = today.last_year.beginning_of_year..today.last_year.end_of_year
+
+  start_date   = params[:start].present? ? Date.parse(params[:start]) : curr_month.begin
+  end_date     = params[:end].present?   ? Date.parse(params[:end])   : curr_month.end
+
+  report = PrintJobReport.new(start_date: start_date, end_date: end_date)
+
+  # Leaderboards using Job model's staff tracking
+  stats_started  = Job.started_between(start_date.beginning_of_day, end_date.end_of_day).group(:started_by_id).count
+  stats_finished = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:finished_by_id).count
+  stats_printer  = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:assigned_printer_id).count
+
+  # Chart data pre-processing
+  prints_per_day = report.prints_per_day
+  filament_per_day = report.filament_per_day
+  filament_color_counts = report.filament_color_counts
+
+  sorted_print_dates = prints_per_day.keys.sort
+  sorted_print_labels = sorted_print_dates.map { |d| d.strftime("%b %-d") }
+  sorted_print_values = sorted_print_dates.map { |d| prints_per_day[d] }
+
+  sorted_filament_dates = filament_per_day.keys.sort
+  sorted_filament_labels = sorted_filament_dates.map { |d| d.strftime("%b %-d") }
+  sorted_filament_values = sorted_filament_dates.map { |d| filament_per_day[d] }
+
+  filament_color_labels = filament_color_counts.keys.map(&:titleize)
+  filament_color_values = filament_color_counts.values
+%>
+
+<div class="card mb-4">
+  <div class="card-header bg-light">
+    <h3 class="mb-0">
+      3D Print Stats
+      <small class="text-muted">
+        (<%= start_date.strftime("%Y-%m-%d") %> to <%= end_date.strftime("%Y-%m-%d") %>)
+      </small>
+    </h3>
+  </div>
+  <div class="card-body">
+
+    <%= form_with url: rails_admin.dashboard_path, method: :get, local: true, class: "form-inline mb-3" do %>
+      <label class="mr-2 font-weight-bold">Start:</label>
+      <%= date_field_tag :start, start_date, class: "form-control mr-2" %>
+      <label class="mr-2 font-weight-bold">End:</label>
+      <%= date_field_tag :end, end_date, class: "form-control mr-2" %>
+      <%= submit_tag "Apply", class: "btn btn-primary btn-sm mr-2" %>
+      <%= link_to "Yesterday", rails_admin.dashboard_path(start: yesterday.begin, end: yesterday.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Last 7 Days", rails_admin.dashboard_path(start: last_7_days.begin, end: last_7_days.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Last 30 Days", rails_admin.dashboard_path(start: last_30_days.begin, end: last_30_days.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Current Month", rails_admin.dashboard_path(start: curr_month.begin, end: curr_month.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Previous Month", rails_admin.dashboard_path(start: prev_month.begin, end: prev_month.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Current Year", rails_admin.dashboard_path(start: curr_year.begin, end: curr_year.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Previous Year", rails_admin.dashboard_path(start: prev_year.begin, end: prev_year.end), class: "btn btn-outline-secondary btn-sm" %>
+    <% end %>
+
+    <table class="table table-bordered mb-4">
+      <tbody>
+        <tr>
+          <th>Orders</th>
+          <td>
+            <%= report.orders_count %> total
+            (<%= report.resin_count %> resin, <%= report.fdm_count %> FDM, <%= report.multiple_count %> multi-color);
+            <%= report.cancelled_count %> cancelled
+          </td>
+        </tr>
+        <tr>
+          <th>Individuals</th>
+          <td><%= report.distinct_patrons %> distinct patrons</td>
+        </tr>
+        <tr>
+          <th>Total Prints</th>
+          <td><%= report.total_quantity %></td>
+        </tr>
+        <tr>
+          <th>Unique Designs</th>
+          <td><%= report.unique_designs %></td>
+        </tr>
+        <tr>
+          <th>Filament Used</th>
+          <td><%= number_with_delimiter(report.filament_grams) %> g</td>
+        </tr>
+        <tr>
+          <th>Resin Used</th>
+          <td><%= number_with_delimiter(report.resin_ml) %> mL</td>
+        </tr>
+        <tr>
+          <th>Most Popular Filament Color</th>
+          <td>
+            <% if report.popular_filament.present? %>
+              <%= report.popular_filament.titleize %>
+            <% else %>
+              (none this period)
+            <% end %>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="row g-4 mb-4">
+      <!-- Jobs Started by Staff -->
+      <div class="col-12 col-md-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">Jobs Started by Staff</div>
+          <div class="card-body p-2">
+            <% if stats_started.any? %>
+              <ul class="list-group list-group-flush">
+                <% stats_started.each do |staff_id, count| %>
+                  <% staff = StaffUser.find_by(id: staff_id) %>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <%= staff&.name || "Unknown" %>
+                    <span class="badge bg-primary rounded-pill"><%= count %></span>
+                  </li>
+                <% end %>
+              </ul>
+            <% else %>
+              <div class="text-muted">No jobs started in this period.</div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      <!-- Jobs Finished by Staff -->
+      <div class="col-12 col-md-4">
+        <div class="card h-100">
+          <div class="card-header bg-success text-white">Jobs Finished by Staff</div>
+          <div class="card-body p-2">
+            <% if stats_finished.any? %>
+              <ul class="list-group list-group-flush">
+                <% stats_finished.each do |staff_id, count| %>
+                  <% staff = StaffUser.find_by(id: staff_id) %>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <%= staff&.name || "Unknown" %>
+                    <span class="badge bg-success rounded-pill"><%= count %></span>
+                  </li>
+                <% end %>
+              </ul>
+            <% else %>
+              <div class="text-muted">No jobs finished in this period.</div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      <!-- Jobs Completed by Printer -->
+      <div class="col-12 col-md-4">
+        <div class="card h-100">
+          <div class="card-header bg-info text-white">Jobs Completed by Printer</div>
+          <div class="card-body p-2">
+            <% if stats_printer.any? %>
+              <ul class="list-group list-group-flush">
+                <% stats_printer.each do |printer_id, count| %>
+                  <% printer = Printer.find_by(id: printer_id) %>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <%= printer&.name || "Unknown" %>
+                    <span class="badge bg-info rounded-pill"><%= count %></span>
+                  </li>
+                <% end %>
+              </ul>
+            <% else %>
+              <div class="text-muted">No jobs completed by printer in this period.</div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Counts Table -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h3 class="mb-0">Prints by Category</h3>
+      </div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="text-end"># of Jobs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% report.category_counts.each do |name, count| %>
+              <tr>
+                <td><%= name %></td>
+                <td class="text-end"><%= count %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="card mb-4">
+      <div class="row g-0 align-items-stretch">
+        <div class="col-lg-8">
+          <div class="p-2 d-flex flex-column h-100 justify-content-between">
+            <div>
+              <canvas id="printsPerDayChart" height="100"></canvas>
+            </div>
+            <div class="mt-4">
+              <canvas id="filamentPerDayChart" height="100"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 border-start">
+          <div class="p-2 h-100 d-flex flex-column justify-content-center align-items-center">
+            <canvas id="filamentColorChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="card-footer text-end">
+    <small>Stats auto-refresh each time you open or filter the dashboard.</small>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+const chartColors = [
+  "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
+  "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"
+];
+
+// Prints per Day Line Chart
+new window.Chart(document.getElementById('printsPerDayChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: <%= raw sorted_print_labels.to_json %>,
+    datasets: [{
+      label: 'Prints per Day',
+      data: <%= raw sorted_print_values.to_json %>,
+      borderColor: '#3a8ee6',
+      backgroundColor: 'rgba(54, 162, 235, 0.10)',
+      borderWidth: 2,
+      pointRadius: 2,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Prints per Day' },
+      legend: { display: false }
+    },
+    scales: { y: { beginAtZero: true, precision: 0 } }
+  }
+});
+
+// Filament Used Per Day Line Chart
+new window.Chart(document.getElementById('filamentPerDayChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: <%= raw sorted_filament_labels.to_json %>,
+    datasets: [{
+      label: 'Filament Used (g)',
+      data: <%= raw sorted_filament_values.to_json %>,
+      borderColor: '#3ad29f',
+      backgroundColor: 'rgba(58,210,159,0.10)',
+      borderWidth: 2,
+      pointRadius: 2,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Filament Used Per Day (g)' },
+      legend: { display: false }
+    },
+    scales: { y: { beginAtZero: true, precision: 0 } }
+  }
+});
+
+// Filament Color Pie Chart
+new window.Chart(document.getElementById('filamentColorChart').getContext('2d'), {
+  type: 'pie',
+  data: {
+    labels: <%= raw filament_color_labels.to_json %>,
+    datasets: [{
+      data: <%= raw filament_color_values.to_json %>,
+      backgroundColor: chartColors
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' },
+      title: { display: true, text: 'Filament Color Popularity' }
+    }
+  }
+});
+</script>

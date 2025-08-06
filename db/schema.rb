@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_07_29_220241) do
+ActiveRecord::Schema[7.1].define(version: 2025_08_06_142553) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -114,10 +114,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_07_29_220241) do
     t.integer "quantity"
     t.date "pickup_date"
     t.datetime "last_pickup_reminder_sent_at"
+    t.bigint "started_by_id"
+    t.bigint "finished_by_id"
+    t.datetime "started_at", precision: nil
+    t.datetime "finished_at", precision: nil
     t.index ["assigned_printer_id"], name: "index_jobs_on_assigned_printer_id"
     t.index ["category_id"], name: "index_jobs_on_category_id"
+    t.index ["finished_by_id"], name: "index_jobs_on_finished_by_id"
     t.index ["patron_id"], name: "index_jobs_on_patron_id"
     t.index ["printable_model_id"], name: "index_jobs_on_printable_model_id"
+    t.index ["started_by_id"], name: "index_jobs_on_started_by_id"
     t.index ["status_id"], name: "index_jobs_on_status_id"
   end
 
@@ -245,6 +251,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_07_29_220241) do
   add_foreign_key "jobs", "patrons"
   add_foreign_key "jobs", "printable_models"
   add_foreign_key "jobs", "printers", column: "assigned_printer_id"
+  add_foreign_key "jobs", "staff_users", column: "finished_by_id"
+  add_foreign_key "jobs", "staff_users", column: "started_by_id"
   add_foreign_key "jobs", "statuses"
   add_foreign_key "messages", "conversations"
   add_foreign_key "notifications", "messages"

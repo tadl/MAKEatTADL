@@ -62,8 +62,6 @@ Rails.application.routes.draw do
   post '/jobs/:id/conversation',    to: 'portal#create_message', as: :job_conversation
   patch '/jobs/:id/attach_model_files', to: 'portal#attach_model_files', as: :attach_model_files_job
 
-  get "/reports/print", to: "reports#print", as: :print_report
-
   # Health check endpoint
   get '/up', to: 'rails/health#show', as: :rails_health_check
 
