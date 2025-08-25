@@ -80,7 +80,7 @@ class PortalController < ApplicationController
       if (pm_id = params.dig(:job, :printable_model_id)).present?
         pm = PrintableModel.find(pm_id)
         @job.printable_model = pm
-        @job.model_file.attach(pm.model_file.blob) if pm.model_file.attached?
+        @job.model_files.attach(pm.model_file.blob) if pm.model_file.attached?
       end
     end
 
@@ -158,13 +158,9 @@ class PortalController < ApplicationController
   end
 
   # Patron dashboard (list of all jobs)
-def dashboard
-  Rails.logger.warn "Pagy VERSION: #{Pagy::VERSION}"
-  Rails.logger.warn "Pagy DEFAULTS: #{Pagy::DEFAULT.inspect}"
-  @pagy, @jobs = pagy(@patron.jobs.order(created_at: :desc), limit: 10, items: 10)
-  Rails.logger.warn "JOBS IS A: #{@jobs.class}, SIZE: #{@jobs.size}, IDS: #{@jobs.map(&:id)}"
-  Rails.logger.warn "PAGY: #{@pagy.inspect}"
-end
+  def dashboard
+    @pagy, @jobs = pagy(@patron.jobs.order(created_at: :desc), limit: 10, items: 10)
+  end
 
   # Show a single job (and its messages)
   def show

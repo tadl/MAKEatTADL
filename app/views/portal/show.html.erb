@@ -152,13 +152,18 @@
           </div>
         </div>
 
-        <!-- RIGHT: Model Files Card -->
+        <!-- RIGHT: Model Files/URL Card -->
         <div class="col-md-6">
           <div class="p-3 rounded-3 border bg-light shadow-sm h-100">
             <h5 class="fw-semibold mb-3">
-              <i class="bi bi-file-earmark-arrow-down me-1"></i> Model Files
+              <i class="bi bi-file-earmark-arrow-down me-1"></i> Model
             </h5>
-            <% if @job.model_files.attached? %>
+
+            <% has_files = @job.model_files.attached? %>
+            <% has_url   = @job.url.present? %>
+
+            <% if has_files %>
+              <h6 class="mb-2">Files</h6>
               <ul class="list-group list-group-flush mb-3">
                 <% @job.model_files.each do |file| %>
                   <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 bg-transparent border-0 border-bottom">
@@ -173,11 +178,16 @@
                   </li>
                 <% end %>
               </ul>
-            <% elsif @job.url.present? %>
-              <p>
+            <% end %>
+
+            <% if has_url %>
+              <h6 class="mb-2 <%= 'mt-3' if has_files %>">URL</h6>
+              <p class="mb-0">
                 <%= link_to @job.url, @job.url, target: '_blank', rel: 'noopener', class: 'text-decoration-none' %>
               </p>
-            <% else %>
+            <% end %>
+
+            <% unless has_files || has_url %>
               <p class="text-muted">No model provided.</p>
             <% end %>
 
