@@ -1,33 +1,58 @@
+<!-- app/views/portal/_captcha.html.erb -->
 <%= hidden_field_tag 'g-recaptcha-response', '', id: 'g-recaptcha-response' %>
 <% site_key = ENV['RECAPTCHA_SITE_KEY'] %>
-<script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>"></script>
+<script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>" defer></script>
 
 <script>
-  // Helper function to wait for grecaptcha
-  function onGrecaptchaReady(callback) {
-    if (typeof grecaptcha !== 'undefined') {
-      callback();
+(function() {
+  const thisScript = document.currentScript;
+
+  function onReady(cb) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", cb, { once: true });
     } else {
-      setTimeout(function() { onGrecaptchaReady(callback); }, 100);
+      cb();
     }
+    document.addEventListener("turbo:load", cb, { once: true });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const form = document.querySelector('form');
-    if (!form) return;
+  function whenGrecaptchaReady(cb) {
+    if (typeof grecaptcha !== "undefined") cb();
+    else setTimeout(() => whenGrecaptchaReady(cb), 100);
+  }
 
-    form.addEventListener('submit', function(event) {
-      event.preventDefault();
+  onReady(() => {
+    const form = thisScript.closest && thisScript.closest("form");
+    if (!form || form.dataset.recaptchaBound === "1") return;
+    form.dataset.recaptchaBound = "1";
 
-      // Call grecaptcha ONLY after it's loaded!
-      onGrecaptchaReady(function() {
-        grecaptcha.ready(function() {
-          grecaptcha.execute('<%= site_key %>', {action: 'submit'}).then(function(token) {
-            document.getElementById('g-recaptcha-response').value = token;
-            form.submit();
-          });
+    form.addEventListener("submit", (e) => {
+      if (form.dataset.recaptchaDone === "1") return; // already have a token
+      e.preventDefault();
+
+      whenGrecaptchaReady(() => {
+        grecaptcha.ready(() => {
+          grecaptcha.execute("<%= site_key %>", { action: "submit" })
+            .then((token) => {
+              let input = form.querySelector("#g-recaptcha-response") ||
+                          form.querySelector('[name="g-recaptcha-response"]');
+              if (!input) {
+                input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "g-recaptcha-response";
+                input.id   = "g-recaptcha-response";
+                form.appendChild(input);
+              }
+              input.value = token;
+
+              form.dataset.recaptchaDone = "1";
+              if (form.requestSubmit) form.requestSubmit();
+              else form.submit();
+            })
+            .catch(() => alert("reCAPTCHA couldn’t load. Please try again."));
         });
       });
-    });
+    }, { passive: false });
   });
+})();
 </script>
