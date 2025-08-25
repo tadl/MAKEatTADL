@@ -159,7 +159,16 @@ RailsAdmin.config do |config|
           filterable     true
           associated_collection_scope { ->(scope){ scope.order(:position) } }
         end
-        field :url
+        field :url do
+          label 'URL'
+          pretty_value do
+            if value.present?
+              bindings[:view].link_to(value, value, target: '_blank', rel: 'noopener')
+            else
+              bindings[:view].content_tag(:span, '(none)', class: 'text-muted')
+            end
+          end
+        end
         field :filament_color
         field :print_time_estimate_hm do
           label 'Print time estimate'
@@ -265,6 +274,7 @@ RailsAdmin.config do |config|
         field :url do
           label 'URL'
           help 'A URL is provided by the requestor when a model file is not.'
+          partial 'url_with_open'
         end
         field :filament_color, :enum do
           enum          { FilamentColor.order(:name).pluck(:name, :code) }
