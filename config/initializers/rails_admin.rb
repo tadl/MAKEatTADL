@@ -176,6 +176,13 @@ RailsAdmin.config do |config|
         field :slicer_weight
         field :slicer_cost do
           label "Estimated cost"
+          formatted_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
+          # And in case RailsAdmin falls back to pretty_value anywhere:
+          pretty_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
         end
         field :actual_weight
         field :resin_volume_ml do
@@ -295,7 +302,15 @@ RailsAdmin.config do |config|
         end
         field :slicer_cost do
           label "Estimated cost"
-          help 'Estimated cost, derived from estimated weight.'
+          read_only true
+          help 'Auto-calculate4d from weight estimate.'
+          formatted_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
+          # And in case RailsAdmin falls back to pretty_value anywhere:
+          pretty_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
         end
         field :resin_volume_ml do
           label "Resin Volume (mL)"
