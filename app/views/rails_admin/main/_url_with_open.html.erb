@@ -1,0 +1,20 @@
+<div class="input-group">
+  <%= form.text_field field.method_name,
+        class: 'form-control',
+        placeholder: 'https://example.com/model',
+        value: form.object.send(field.method_name) %>
+  <button type="button" class="btn btn-outline-primary"
+          onclick="(function(group){
+            var input = group.querySelector('input');
+            if(!input) return;
+            var v = (input.value || '').trim();
+            if(!v) return;
+            if(!/^https?:\/\//i.test(v)) { v = 'https://' + v; }
+            window.open(v, '_blank', 'noopener');
+          })(this.closest('.input-group'));">
+    Open
+  </button>
+</div>
+<% if field.help.present? %>
+  <p class="help-block"><%= field.help %></p>
+<% end %>
