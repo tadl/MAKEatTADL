@@ -3,8 +3,12 @@ Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
 You’ve got a new message about your <%= @job.is_a?(PrintJob) ? "print" : "scan" %> job ##<%= @job.id %>:
 
 ---
-<%= @message.body %>
+<%= (@message.body.presence || "(no text)") %>
 ---
+
+<% if @message.images.attached? %>
+This message includes <%= pluralize(@message.images.size, "image") %>. You can view <%= @message.images.size == 1 ? "it" : "them" %> at the link below.
+<% end %>
 
 You can reply or view the full conversation here:
 <%= @url %>

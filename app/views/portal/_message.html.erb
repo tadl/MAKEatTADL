@@ -14,7 +14,7 @@
   <% if message.images.attached? %>
     <div class="message-images mt-2">
       <% message.images.each do |img| %>
-        <%= link_to main_app.rails_blob_path(img, disposition: 'attachment'),
+        <%= link_to main_app.rails_blob_path(img, disposition: 'inline'),
                     target:   '_blank',
                     rel:      'noopener' do %>
           <%= image_tag(

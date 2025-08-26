@@ -236,3 +236,21 @@
     <% end %>
   </div>
 </main>
+
+<style>
+  .mlbx-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1050}
+  .mlbx-backdrop img{max-width:90vw;max-height:90vh;box-shadow:0 10px 30px rgba(0,0,0,.5);border-radius:8px}
+</style>
+<div class="mlbx-backdrop" id="mlbx"><img alt=""></div>
+<script>
+  document.addEventListener('click', function(e){
+    const a = e.target.closest('.message-images a');
+    if(!a) return;
+    e.preventDefault();
+    const box = document.getElementById('mlbx');
+    box.querySelector('img').src = a.href;
+    box.style.display='flex';
+  });
+  document.getElementById('mlbx').addEventListener('click', function(){ this.style.display='none'; });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('mlbx').style.display='none'; });
+</script>

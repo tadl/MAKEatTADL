@@ -8,9 +8,16 @@
   <strong>#<%= @job.id %></strong>:
 </p>
 
-<blockquote style="border-left: 4px solid #21428d; padding-left: 1rem; color: #333; margin:0 0 2em 0;">
-  <%= simple_format(@message.body) %>
+<blockquote style="border-left: 4px solid #21428d; padding-left: 1rem; color: #333; margin:0 0 1em 0;">
+  <%= simple_format(@message.body.presence || "(no text)") %>
 </blockquote>
+
+<% if @message.images.attached? %>
+  <p style="margin: 0 0 2em 0; color:#444;">
+    This message includes <strong><%= pluralize(@message.images.size, "image") %></strong>.
+    You can view <%= @message.images.size == 1 ? "it" : "them" %> at the link below.
+  </p>
+<% end %>
 
 <p style="margin-bottom:2em;">
   You can reply or view the full conversation here:<br>
