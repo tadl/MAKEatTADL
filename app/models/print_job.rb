@@ -5,14 +5,13 @@ class PrintJob < Job
   # Sync print_type when a printer is assigned
   before_validation :sync_print_type_from_printer, if: :will_save_change_to_assigned_printer_id?
 
-  # Calculate cost & notify when slicer_weight is first set
-  after_update :calculate_cost_and_send_estimate, if: :just_set_slicer_weight?
+  # Derived costs (re)computed any time weights change
+  before_validation :compute_slicer_cost, if: -> { will_save_change_to_slicer_weight? }
+  before_validation :compute_actual_cost, if: -> { will_save_change_to_actual_weight? }
 
-  # Send “ready for pickup” notice when both actual_cost and completion_date are set
-  after_update :send_ready_for_pickup_notification, if: :just_set_ready_for_pickup?
-
-  # Disallow manual updates to slicer_cost (it’s derived)
-  before_validation :prevent_manual_slicer_cost_change, on: :update
+  # Notify flows
+  after_update :send_cost_estimate_if_first_weight, if: :just_set_slicer_weight?
+  after_update :finalize_and_notify_if_actual_weight_set, if: :just_set_actual_weight?
 
   belongs_to :assigned_printer, class_name: 'Printer', optional: true
 
@@ -44,22 +43,16 @@ class PrintJob < Job
     return if print_time_estimate.blank?
     hours   = print_time_estimate / 60
     minutes = print_time_estimate % 60
-    if hours > 0
-      format("%d:%02d", hours, minutes)
-    else
-      format("%d", minutes)
-    end
+    hours > 0 ? format("%d:%02d", hours, minutes) : format("%d", minutes)
   end
 
   def print_time_estimate_hm=(value)
     return if value.blank?
-    parts   = value.strip.split(':').map(&:to_i)
-    minutes =
-      case parts.length
-      when 2 then parts[0] * 60 + parts[1] # HH:MM
-      when 1 then parts[0]                 # MM
-      else nil
-      end
+    parts = value.strip.split(':').map(&:to_i)
+    minutes = case parts.length
+              when 2 then parts[0] * 60 + parts[1] # HH:MM
+              when 1 then parts[0]                 # MM
+              end
     self.print_time_estimate = minutes
   end
 
@@ -77,34 +70,35 @@ class PrintJob < Job
       slicer_weight.present?
   end
 
-  # Pricing: FDM $0.10/g min $1.00; Resin $0.35/g min $3.00; default to FDM if unknown
-  def compute_estimated_cost_from(weight_grams)
+  # First time actual_weight gets set
+  def just_set_actual_weight?
+    saved_change_to_actual_weight? &&
+      actual_weight_previously_was.blank? &&
+      actual_weight.present?
+  end
+
+  # Single pricing helper
+  # FDM: $0.10/g, min $1.00
+  # Resin: $0.35/g, min $3.00
+  def estimated_cost_for(weight_grams)
     w = weight_grams.to_f
-    if print_type&.code == 'resin'
-      [0.35 * w, 3.00].max
-    else
-      [0.10 * w, 1.00].max
-    end
+    type_code = print_type&.code || assigned_printer&.print_type&.code
+    rate, minimum = (type_code == 'resin') ? [0.35, 3.00] : [0.10, 1.00]
+    [(w * rate), minimum].max.round(2)
   end
 
-  # When weight is first set: compute & persist cost (override any manual value), then notify
-  def calculate_cost_and_send_estimate
-    estimated = compute_estimated_cost_from(slicer_weight)
-    update_column(:slicer_cost, estimated) # force our computed value
-    send_cost_estimate(estimated)
+  def compute_slicer_cost
+    self.slicer_cost = estimated_cost_for(slicer_weight)
   end
 
-  # Block manual edits to slicer_cost unless weight is changing (we’ll overwrite anyway)
-  def prevent_manual_slicer_cost_change
-    if will_save_change_to_slicer_cost? && !will_save_change_to_slicer_weight?
-      self.slicer_cost = slicer_cost_was
-      errors.add(:slicer_cost, 'is calculated automatically from slicer weight')
-    end
+  def compute_actual_cost
+    self.actual_cost = estimated_cost_for(actual_weight)
   end
 
-  # Send the “cost estimate” message and move status to information_requested
-  def send_cost_estimate(amount)
+  # Notify patron with estimate the first time weight is entered
+  def send_cost_estimate_if_first_weight
     return unless conversation
+
     info = Status.find_by!(code: 'information_requested')
     update_column(:status_id, info.id) if status_id != info.id
 
@@ -112,7 +106,7 @@ class PrintJob < Job
       body: <<~EOS.strip,
         Hello,
 
-        The estimated cost for this order is $#{format('%.2f', amount)}.
+        The estimated cost for this order is $#{format('%.2f', slicer_cost)}.
         If that sounds ok, let us know and we’ll add you to the queue.
 
         Thank you
@@ -124,14 +118,19 @@ class PrintJob < Job
     JobMailer.notify_patron(msg).deliver_later
   end
 
-  def just_set_ready_for_pickup?
-    saved_change_to_actual_cost? && saved_change_to_completion_date?
-  end
-
-  def send_ready_for_pickup_notification
+  # When actual_weight is first set, finalize & notify
+  def finalize_and_notify_if_actual_weight_set
     return unless conversation
-    ready = Status.find_by!(code: 'ready_for_pickup')
-    update_column(:status_id, ready.id) if status_id != ready.id
+
+    ready_status = Status.find_by!(code: 'ready_for_pickup')
+    cost         = estimated_cost_for(actual_weight)
+
+    # Set fields without retriggering callbacks
+    update_columns(
+      completion_date: (completion_date.presence || Date.current),
+      actual_cost:     cost,
+      status_id:       ready_status.id
+    )
 
     location_name = PickupLocation.find_by(code: pickup_location)&.name || pickup_location
 
@@ -140,7 +139,7 @@ class PrintJob < Job
         Hello,
 
         Your print is complete and ready for pickup at #{location_name}.
-        The total cost is $#{'%.2f' % actual_cost}.
+        The total cost is $#{format('%.2f', cost)}.
 
         Thank you for using our service!
       EOS

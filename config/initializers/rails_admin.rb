@@ -318,10 +318,18 @@ RailsAdmin.config do |config|
         end
         field :actual_weight do
           label "Weight (grams)"
-          help "How many grams is the finished print?"
+          help 'Enter when the print is finished — this auto-sets Actual cost, marks Ready for pickup, and emails the patron.'
         end
         field :actual_cost do
-          help 'When a value is entered here, the patron will be notified their print is ready to pick up.'
+          read_only true
+          help 'Auto calculated from actual weight.'
+          formatted_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
+          # And in case RailsAdmin falls back to pretty_value anywhere:
+          pretty_value do
+            value.present? ? bindings[:view].number_to_currency(value) : ''
+          end
         end
         field :completion_date, :date do
           help "Set this to today's date when the print is completed."
