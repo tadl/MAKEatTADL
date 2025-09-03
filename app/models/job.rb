@@ -1,3 +1,4 @@
+# app/models/job.rb
 class Job < ApplicationRecord
   audited
   belongs_to :patron
@@ -27,9 +28,15 @@ class Job < ApplicationRecord
     super(attachables)
   end
 
-  has_one  :conversation, dependent: :destroy
+  has_one :conversation, dependent: :destroy
+
   after_create :build_conversation!
+
+  # Archive automatically when pickup_date is set
   after_update :archive_if_picked_up, if: :saved_change_to_pickup_date?
+
+  after_update :notify_cancellation, if: :just_cancelled?
+  after_update :notify_rejection,   if: :just_rejected?
 
   validates :status, presence: true
 
@@ -46,7 +53,7 @@ class Job < ApplicationRecord
 
   # Flexible date-range scopes for stats
   scope :started_between,  ->(start_time, end_time) { where(started_at:  start_time..end_time) }
-  scope :finished_between, ->(start_time, end_time) { where(finished_at: start_time..end_time) }
+  scope :finished_between, ->(start_time, end_time) { where(finished_at: end_time ? (start_time..end_time) : start_time..start_time) }
 
   private
 
@@ -65,13 +72,69 @@ class Job < ApplicationRecord
     new_code = Status.find(status_id).code
 
     if new_code == 'in_progress' && started_by_id.nil?
-      self.started_by  = Current.staff_user
-      self.started_at  = Time.current
+      self.started_by = Current.staff_user
+      self.started_at = Time.current
     end
 
     if new_code == 'ready_for_pickup' && finished_by_id.nil?
       self.finished_by = Current.staff_user
       self.finished_at = Time.current
     end
+  end
+
+  # -------- Status-driven notifications --------
+
+  def just_cancelled?
+    saved_change_to_status_id? && current_status_code == 'cancelled'
+  end
+
+  def just_rejected?
+    saved_change_to_status_id? && current_status_code == 'rejected'
+  end
+
+  def current_status_code
+    # Avoid stale association cache by reading via id
+    Status.find(status_id).code
+  end
+
+  def notify_cancellation
+    build_conversation! unless conversation
+
+    job_label = is_a?(PrintJob) ? 'print' : 'scan'
+
+    msg = conversation.messages.create!(
+      body: <<~EOS.strip,
+        Hello,
+
+        We’re writing to let you know your #{job_label} request ##{id} has been cancelled.
+
+        If you have any questions or would like to resubmit, just reply to this message.
+      EOS
+      author:          Current.staff_user,
+      staff_note_only: false
+    )
+
+    JobMailer.notify_patron(msg).deliver_later
+  end
+
+  def notify_rejection
+    build_conversation! unless conversation
+
+    job_label = is_a?(PrintJob) ? 'print' : 'scan'
+
+    msg = conversation.messages.create!(
+      body: <<~EOS.strip,
+        Hello,
+
+        We reviewed your #{job_label} request ##{id}, and unfortunately it has been rejected.
+        This can happen for a few reasons (e.g., technical limitations, safety concerns, or policy).
+
+        If you’d like help adjusting the model or have questions about next steps, reply here and we’ll be glad to assist.
+      EOS
+      author:          Current.staff_user,
+      staff_note_only: false
+    )
+
+    JobMailer.notify_patron(msg).deliver_later
   end
 end

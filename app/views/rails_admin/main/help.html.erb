@@ -35,13 +35,14 @@
                 <li>Review model for scale, print type, and printability.</li>
                 <li>Slice model to estimate filament weight and print time.</li>
                 <li>Contact patron via conversation if clarification is needed.</li>
-                <li>Record <em>slicer_cost</em> and <em>slicer_weight</em>.</li>
+                <li>Record <em>slicer_weight</em> (Weight estimate).</li>
               </ul>
             </li>
             <li><strong>Automated:</strong>
               <ul>
-                <li>Send automated estimate message via JobMailer.</li>
+                <li>Calculate <em>slicer_cost</em> (Estimated cost).</li>
                 <li>Update status to <em>information_requested</em>.</li>
+                <li>Send automated estimate message via JobMailer.</li>
               </ul>
             </li>
           </ul>
@@ -96,7 +97,11 @@
             <li><strong>Staff Actions (on cancellation):</strong>
               <ul>
                 <li>Update status to <em>cancelled</em>.</li>
-                <li>Confirm cancellation with patron by sending a message (consider automating this).</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong>
+              <ul>
+                <li>Notify patron the job has been cancelled</li>
               </ul>
             </li>
           </ul>
@@ -115,7 +120,7 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Printer becomes available and staff starts the print.</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Assign job to a printer.</li>
                 <li>Update status to <em>in_progress</em>.</li>
@@ -137,16 +142,17 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Print run completes successfully.</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Post-process (support removal, curing, cleaning).</li>
                 <li>Weigh actual filament (or resin volume).</li>
-                <li>Record completion date and actual weight.</li>
+                <li>Record actual weight.</li>
               </ul>
             </li>
             <li><strong>Automated:</strong>
               <ul>
                 <li>Update status to <em>ready_for_pickup</em>.</li>
+                <li>Calculates cost based on entered weight.</li>
                 <li>Notify patron via JobMailer that job is ready with actual cost.</li>
               </ul>
             </li>
@@ -166,9 +172,9 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Patron picks up the finished print.</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
-                <li>Staff enters Pickup Date.</li>
+                <li>Enter Pickup Date.</li>
               </ul>
             </li>
             <li><strong>Automated:</strong>
@@ -193,7 +199,7 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Usage:</strong> Internal filler prints when no patron jobs are queued.</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Staff manually assign or create <em>ongoing</em> jobs for assistive/fidget devices or programs.</li>
                 <li>Increment Quantity for each printed object.</li>
@@ -215,10 +221,10 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Patron declines during <em>response_received</em> or staff cancels otherwise.</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Update status to <em>cancelled</em>.</li>
-                <li>Retain record for reporting; do not queue or print.</li>
+                <li>Do not queue or print.</li>
               </ul>
             </li>
           </ul>
@@ -237,11 +243,15 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Staff rejects the job after review (e.g., unprintable model or violates policy).</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Update status to <em>rejected</em>.</li>
-                <li>Optionally notify patron of rejection.</li>
                 <li>Do not queue for printing.</li>
+              </ul>
+            </li>
+            <li><strong>Automated:</strong>
+              <ul>
+                <li>Notify the patron the job has been rejected.</li>
               </ul>
             </li>
           </ul>
@@ -260,12 +270,11 @@
         <div class="accordion-body">
           <ul>
             <li><strong>Trigger:</strong> Job abandoned by patron (not picked up within 30 days of completion).</li>
-            <li><strong>Actions:</strong>
+            <li><strong>Staff Actions:</strong>
               <ul>
                 <li>Update status to <em>abandoned</em>.</li>
-                <li>Retain for record-keeping and reporting.</li>
                 <li>Dispose of print appropriately.</li>
-                <li>Bill patron Evergreen account for cost of item.</li>
+                <li>Bill patron Evergreen account for cost of item (if they have an Evergreen account).</li>
               </ul>
             </li>
           </ul>
@@ -281,12 +290,13 @@
     </div>
     <div class="card-body">
       <ul>
-        <li>When entering <code>slicer_cost</code> and saving a job, the patron will be notified and status changed to <code>information_requested</code>.</li>
+        <li>When entering <code>slicer_weight</code> (Weight estimate) and saving a job, the patron will be notified and status changed to <code>information_requested</code>.</li>
         <li>When a job is <code>information_requested</code> and the patron replies (email or web), the status automatically changes to <code>response_received</code>.</li>
-        <li>(TODO) When a job is <code>cancelled</code>, send a message notifying the patron (and consider allowing resubmission).</li>
+        <li>When a job is <code>cancelled</code>, send a message notifying the patron (and consider allowing resubmission).</li>
         <li>Assigning a printer automatically sets the job’s <code>print_type</code>.</li>
-        <li>Saving completion date and actual weight changes status to <code>ready_for_pickup</code> and notifies patron.</li>
-        <li>Entering pickup date changes status to <code>archived</code> (with optional feedback or follow-up).</li>
+        <li>Setting <code>actual_weight</code> (Weight) calculates cost, changes status to <code>ready_for_pickup</code>, and notifies patron.</li>
+        <li>Entering pickup date changes status to <code>archived</code>.</li>
+        <li>Setting job status to <code>cancelled</code> or <code>rejected</code> will notify the patron automatically.</li>
       </ul>
     </div>
   </div>
