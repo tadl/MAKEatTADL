@@ -1,10 +1,14 @@
 <!-- app/views/portal/_captcha.html.erb -->
 <%= hidden_field_tag 'g-recaptcha-response', '', id: 'g-recaptcha-response' %>
 <% site_key = ENV['RECAPTCHA_SITE_KEY'] %>
-<script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>" defer></script>
+
+<!-- Keep using the standard v3 script (works with the recaptcha gem).
+     Do NOT swap to enterprise.js unless you also change server-side verification. -->
+<script src="https://www.google.com/recaptcha/api.js?render=<%= site_key %>" async defer></script>
 
 <script>
 (function() {
+  // This script lives inside the form via the partial, so we can find the nearest form safely.
   const thisScript = document.currentScript;
 
   function onReady(cb) {
@@ -13,12 +17,16 @@
     } else {
       cb();
     }
+    // For Turbo (if it’s ever enabled on the page that includes this partial later)
     document.addEventListener("turbo:load", cb, { once: true });
   }
 
   function whenGrecaptchaReady(cb) {
-    if (typeof grecaptcha !== "undefined") cb();
-    else setTimeout(() => whenGrecaptchaReady(cb), 100);
+    if (window.grecaptcha && typeof window.grecaptcha.ready === 'function') {
+      cb();
+    } else {
+      setTimeout(() => whenGrecaptchaReady(cb), 100);
+    }
   }
 
   onReady(() => {
@@ -26,8 +34,33 @@
     if (!form || form.dataset.recaptchaBound === "1") return;
     form.dataset.recaptchaBound = "1";
 
+    // Find & disable submit buttons until we’ve bound and reCAPTCHA is available.
+    const submits = Array.from(
+      form.querySelectorAll('button[type="submit"], input[type="submit"]')
+    );
+    const disableSubmits = (yes) => submits.forEach(btn => btn.disabled = !!yes);
+
+    disableSubmits(true);
+
+    // As soon as we know our submit handler is attached, we can safely enable.
+    // We’ll also try to wait for grecaptcha to be present, but don’t block forever.
+    let enabled = false;
+    const enableWhenReady = () => {
+      if (enabled) return;
+      enabled = true;
+      disableSubmits(false);
+    };
+
+    // If grecaptcha loads quickly, great—enable now.
+    whenGrecaptchaReady(enableWhenReady);
+    // Otherwise, fail-safe: enable after 2s so users aren’t stuck if grecaptcha is blocked.
+    setTimeout(enableWhenReady, 2000);
+
     form.addEventListener("submit", (e) => {
-      if (form.dataset.recaptchaDone === "1") return; // already have a token
+      // If we already minted a token for this submission, let it through.
+      if (form.dataset.recaptchaDone === "1") return;
+
+      // If grecaptcha isn’t ready yet, prevent submission and wait until it is.
       e.preventDefault();
 
       whenGrecaptchaReady(() => {
@@ -45,11 +78,16 @@
               }
               input.value = token;
 
+              // Mark so a second submit (double-click/Enter) doesn’t loop.
               form.dataset.recaptchaDone = "1";
+
+              // Submit for real
               if (form.requestSubmit) form.requestSubmit();
               else form.submit();
             })
-            .catch(() => alert("reCAPTCHA couldn’t load. Please try again."));
+            .catch(() => {
+              alert("reCAPTCHA couldn’t load. Please try again.");
+            });
         });
       });
     }, { passive: false });

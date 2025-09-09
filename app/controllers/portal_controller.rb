@@ -88,8 +88,8 @@ class PortalController < ApplicationController
     @job.category = Category.find_by!(name: @type.capitalize)
     @job.status   = Status.find_by!(code: 'pending')
 
-    unless verify_recaptcha(model: @job, action: 'submit', minimum_score: 0.5)
-      flash.now[:alert] = @job.errors.full_messages.to_sentence
+    unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
+      flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
       return render form_template_for(@type), status: :unprocessable_entity
     end
 
@@ -117,9 +117,9 @@ class PortalController < ApplicationController
     @job.category = Category.find_by!(name: 'Patron')
     @job.status   = Status.find_by!(code: 'pending')
 
-    unless verify_recaptcha(model: @job, action: 'submit', minimum_score: 0.5)
-      flash.now[:alert] = @job.errors.full_messages.to_sentence
-      return render :submit_scan, status: :unprocessable_entity
+    unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
+      flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
+      return render form_template_for(@type), status: :unprocessable_entity
     end
 
     if @job.save

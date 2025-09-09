@@ -17,6 +17,17 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def verify_recaptcha_with_logging!(model:, action:, min_score: 0.5)
+    ok = verify_recaptcha(model: model, action: action, minimum_score: min_score)
+    reply = request.env['recaptcha.reply'] || {}
+    Rails.logger.info(
+      "[reCAPTCHA] ok=#{ok} score=#{reply['score'].inspect} action=#{reply['action'].inspect} " \
+      "host=#{reply['hostname'].inspect} errors=#{Array(reply['error-codes']).join(', ').presence || 'none'} " \
+      "ip=#{request.remote_ip}"
+    )
+    ok
+  end
+
   unless Rails.env.development?
     rescue_from ActionController::RoutingError, with: :not_found
     rescue_from ActiveRecord::RecordNotFound,  with: :not_found
