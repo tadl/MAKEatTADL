@@ -40,7 +40,8 @@ class Job < ApplicationRecord
 
   validates :status, presence: true
 
-  validate :model_files_must_be_stl
+  # ✅ Server-side allowlist for model files
+  validate :model_files_must_be_allowed_models
 
   # Track start/finish events when status changes
   before_update :track_start_and_finish, if: :will_save_change_to_status_id?
@@ -140,23 +141,31 @@ class Job < ApplicationRecord
     JobMailer.notify_patron(msg).deliver_later
   end
 
-  def model_files_must_be_stl
+  # ---- File validation (STL & 3MF only) ----
+  def model_files_must_be_allowed_models
     return unless model_files.attached?
+
+    allowed_exts = %w[.stl .3mf]
+    zip_mimes    = %w[application/zip application/x-zip-compressed multipart/x-zip]
 
     bad = []
 
     model_files.each do |blob|
-      fname = blob.filename.to_s.downcase
+      fname = blob.filename.to_s
+      ext   = File.extname(fname).downcase
       cty   = (blob.content_type || '').downcase
 
-      ext_ok   = fname.end_with?('.stl')
-      zip_type = %w[application/zip application/x-zip-compressed multipart/x-zip].include?(cty)
+      # Allow by extension only (robust to octet-stream). ZIP-type MIME is OK only for .3mf.
+      ext_ok     = allowed_exts.include?(ext)
+      zip_mime   = zip_mimes.include?(cty)
+      mime_ok    = !zip_mime || ext == '.3mf'
+      valid_file = ext_ok && mime_ok
 
-      bad << blob.filename.to_s unless ext_ok && !zip_type
+      bad << fname unless valid_file
     end
 
     if bad.any?
-      errors.add(:model_files, "must be STL files (.stl). Invalid: #{bad.join(', ')}")
+      errors.add(:model_files, "must be STL (.stl) or 3MF (.3mf) files. Invalid: #{bad.join(', ')}")
     end
   end
 end

@@ -5,6 +5,9 @@ module RailsAdmin
       class Files < RailsAdmin::Config::Actions::Base
         RailsAdmin::Config::Actions.register(self)
 
+        # ✅ Allow only STL and 3MF
+        ALLOWED_EXTS = %w[.stl .3mf].freeze
+
         register_instance_option :member do
           true
         end
@@ -37,8 +40,8 @@ module RailsAdmin
             ]
             uploaded_files = candidate_sets.flatten.compact
 
-            files_to_attach = uploaded_files.select do |f|
-              # Be robust: accept any upload object that quacks like an upload and has bytes
+            # Keep only real uploaded files with bytes
+            raw_files = uploaded_files.select do |f|
               f.respond_to?(:original_filename) &&
                 f.respond_to?(:tempfile) &&
                 f.tempfile &&
@@ -47,25 +50,42 @@ module RailsAdmin
             end
 
             if request.post?
-              Rails.logger.debug do
-                names = files_to_attach.map { |f| f.original_filename }.inspect
-                "RailsAdmin Files: attaching #{files_to_attach.size} file(s) to Job##{@job.id}: #{names}"
+              # Partition by extension allowlist
+              allowed, rejected = raw_files.partition do |f|
+                ext = File.extname(f.original_filename.to_s).downcase
+                ALLOWED_EXTS.include?(ext)
               end
 
-              if files_to_attach.any?
-                begin
-                  @job.model_files.attach(files_to_attach)
-                  # Ensure in-memory instance reflects the new attachments (not strictly required)
+              Rails.logger.debug do
+                "RailsAdmin Files: attaching #{allowed.size} ALLOWED and "\
+                "#{rejected.size} REJECTED to Job##{@job.id}"
+              end
+
+              begin
+                if allowed.any?
+                  @job.model_files.attach(allowed)
                   @job.reload
-                  flash[:success] = "#{files_to_attach.size} file#{'s' unless files_to_attach.size == 1} attached."
-                rescue => e
-                  Rails.logger.error("RailsAdmin Files attach error: #{e.class}: #{e.message}")
-                  flash[:error] = "Attachment failed: #{e.message}"
+                  flash[:success] = "#{allowed.size} file#{'s' unless allowed.size == 1} attached."
                 end
-              else
-                # Helpful debug shows what we actually received
-                debug_preview = uploaded_files.map { |x| x.is_a?(String) ? x.inspect : x.class.name }.inspect
-                flash[:error] = "No valid files to attach. (Received: #{debug_preview})"
+
+                if rejected.any?
+                  names = rejected.map { |f| f.original_filename }.join(', ')
+                  msg   = "Only .stl or .3mf files are allowed. Blocked: #{names}"
+                  # If we also attached some, make this a warning; otherwise it's an error
+                  if allowed.any?
+                    flash[:warning] = msg
+                  else
+                    flash[:error] = msg
+                  end
+                end
+
+                if allowed.empty? && rejected.empty?
+                  debug_preview = uploaded_files.map { |x| x.is_a?(String) ? x.inspect : x.class.name }.inspect
+                  flash[:error] = "No valid files to attach. (Received: #{debug_preview})"
+                end
+              rescue => e
+                Rails.logger.error("RailsAdmin Files attach error: #{e.class}: #{e.message}")
+                flash[:error] = "Attachment failed: #{e.message}"
               end
 
               redirect_to rails_admin.files_path(model_name: @abstract_model.to_param, id: @job.id)
