@@ -13,7 +13,7 @@
     transition: color 0.2s ease;
   }
 
-  .file-link:hover, 
+  .file-link:hover,
   .file-link:focus {
     color: #0d6efd; /* Bootstrap primary blue */
     text-decoration: underline;
@@ -62,9 +62,11 @@
     <% if @job.model_files.attached? %>
       <ul class="list-group mb-4">
         <% @job.model_files.each do |file| %>
+          <% ext = File.extname(file.filename.to_s).downcase %>
           <li class="list-group-item d-flex align-items-center justify-content-between py-2 px-0 border-0 border-bottom">
             <div class="file-item-content">
-              <i class="bi bi-file-earmark-stl file-icon"></i>
+              <!-- Use a generic icon to avoid missing icon names -->
+              <i class="bi bi-file-earmark file-icon"></i>
               <%= link_to main_app.rails_blob_path(file, disposition: 'attachment'), class: "file-link", title: file.filename.to_s do %>
                 <%= file.filename.to_s %>
               <% end %>
@@ -110,21 +112,92 @@
 
     <div class="card bg-light mb-0">
       <div class="card-body py-3">
-        <%= form_with model: @job, url: rails_admin.files_path(model_name: 'job', id: @job.id), local: true, multipart: true, method: :post, data: { turbo: false } do |f| %>
+        <%= form_with model: @job,
+                      url: rails_admin.files_path(model_name: 'job', id: @job.id),
+                      local: true, multipart: true, method: :post,
+                      data: { turbo: false } do |f| %>
           <div class="row g-2 align-items-center">
             <div class="col-auto">
               <%= f.label :model_files, "Upload Model Files", class: "form-label mb-0" %>
             </div>
             <div class="col">
-              <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control" %>
+              <%= f.file_field :model_files,
+                    multiple: true,
+                    class: "form-control",
+                    id: "admin_model_files",
+                    accept: ".stl,.3mf,model/stl,application/sla,model/3mf,application/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel" %>
+              <div id="admin_model_files_feedback"
+                   class="invalid-feedback d-block small mt-2"
+                   style="display:none"
+                   aria-live="polite"></div>
             </div>
             <div class="col-auto">
               <%= f.submit "Attach Files", class: "btn btn-primary" %>
             </div>
           </div>
-          <div class="form-text ms-1">You can upload one or more STL files.</div>
+          <div class="form-text ms-1">
+            Allowed types: STL (<code>.stl</code>) or 3MF (<code>.3mf</code>).
+          </div>
         <% end %>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  // Small client-side guard (server already enforces allowlist)
+  const input    = document.getElementById('admin_model_files');
+  const feedback = document.getElementById('admin_model_files_feedback');
+  if (!input) return;
+
+  const allowedExts = ['.stl', '.3mf'];
+  const blockedMimes = ['application/zip', 'application/x-zip-compressed', 'multipart/x-zip'];
+
+  function isValid(file){
+    const name = (file.name || '').toLowerCase();
+    const type = (file.type || '').toLowerCase();
+    const ext  = name.slice(name.lastIndexOf('.'));
+    const extOk = allowedExts.includes(ext);
+    const typeOk = !blockedMimes.includes(type);
+    return extOk && typeOk;
+  }
+
+  function showError(msg){
+    if (!feedback) return;
+    feedback.style.display = '';
+    feedback.textContent = msg;
+    input.classList.add('is-invalid');
+  }
+
+  function clearError(){
+    if (!feedback) return;
+    feedback.style.display = 'none';
+    feedback.textContent = '';
+    input.classList.remove('is-invalid');
+  }
+
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) { clearError(); return; }
+
+    const valid   = [];
+    const invalid = [];
+    files.forEach(f => (isValid(f) ? valid : invalid).push(f));
+
+    if (invalid.length) {
+      try {
+        const dt = new DataTransfer();
+        valid.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+      } catch(_) {
+        input.value = '';
+      }
+      const names = invalid.map(f => f.name).join(', ');
+      showError('Only STL or 3MF files are allowed. Rejected: ' + names);
+    } else {
+      clearError();
+    }
+  });
+})();
+</script>
