@@ -40,6 +40,8 @@ class Job < ApplicationRecord
 
   validates :status, presence: true
 
+  validate :model_files_must_be_stl
+
   # Track start/finish events when status changes
   before_update :track_start_and_finish, if: :will_save_change_to_status_id?
 
@@ -136,5 +138,25 @@ class Job < ApplicationRecord
     )
 
     JobMailer.notify_patron(msg).deliver_later
+  end
+
+  def model_files_must_be_stl
+    return unless model_files.attached?
+
+    bad = []
+
+    model_files.each do |blob|
+      fname = blob.filename.to_s.downcase
+      cty   = (blob.content_type || '').downcase
+
+      ext_ok   = fname.end_with?('.stl')
+      zip_type = %w[application/zip application/x-zip-compressed multipart/x-zip].include?(cty)
+
+      bad << blob.filename.to_s unless ext_ok && !zip_type
+    end
+
+    if bad.any?
+      errors.add(:model_files, "must be STL files (.stl). Invalid: #{bad.join(', ')}")
+    end
   end
 end

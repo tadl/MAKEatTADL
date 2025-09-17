@@ -3,12 +3,92 @@
   <div class="card-header"><h4 class="mb-0">Model</h4></div>
   <div class="card-body">
     <%= label_tag 'job[model_files][]', 'Upload a Model File', class: 'form-label' %>
-    <%= file_field_tag 'job[model_files][]', accept: '.stl', multiple: true,
-          id: 'job_model_file', class: 'form-control' %>
-    <div class="form-text">Allowed file type: STL.</div>
+    <%= file_field_tag 'job[model_files][]',
+          accept: '.stl,model/stl,application/sla',
+          multiple: true,
+          id: 'job_model_file',
+          class: 'form-control' %>
+    <div id="job_model_file_feedback"
+         class="invalid-feedback d-block small mt-2"
+         style="display:none"
+         aria-live="polite"></div>
+    <div class="form-text">Allowed file type: STL (.stl) only.</div>
+
     <br/>
+
     <%= label_tag 'job[url]', 'Or paste a URL to a Model here', class: 'form-label' %>
     <%= url_field_tag 'job[url]', params.dig(:job, :url),
           id: 'job_url', class: 'form-control' %>
   </div>
 </div>
+
+<script>
+(function(){
+  const input    = document.getElementById('job_model_file');
+  const feedback = document.getElementById('job_model_file_feedback');
+  if (!input) return;
+
+  function isValid(file){
+    const name = (file.name || '').toLowerCase();
+    const type = (file.type || '').toLowerCase();
+
+    // Allow .stl regardless of MIME (browsers often use octet-stream)
+    const extOk = name.endsWith('.stl');
+
+    // Explicitly block zip MIME types
+    const blockedTypes = [
+      'application/zip',
+      'application/x-zip-compressed',
+      'multipart/x-zip'
+    ];
+    const typeOk = !blockedTypes.includes(type);
+
+    return extOk && typeOk;
+  }
+
+  function showError(msg){
+    if (!feedback) return;
+    feedback.style.display = '';
+    feedback.textContent = msg;
+    input.classList.add('is-invalid');
+  }
+
+  function clearError(){
+    if (!feedback) return;
+    feedback.style.display = 'none';
+    feedback.textContent = '';
+    input.classList.remove('is-invalid');
+  }
+
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) {
+      clearError();
+      return;
+    }
+
+    const valid   = [];
+    const invalid = [];
+
+    files.forEach(f => (isValid(f) ? valid : invalid).push(f));
+
+    // Keep valid files selected; remove invalid ones
+    if (invalid.length > 0) {
+      // Try to preserve valid files using DataTransfer (most modern browsers support this)
+      try {
+        const dt = new DataTransfer();
+        valid.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+      } catch (_) {
+        // Fallback: if we can't filter, clear selection
+        input.value = '';
+      }
+
+      const names = invalid.map(f => f.name).join(', ');
+      showError('Only STL files are allowed. Rejected: ' + names);
+    } else {
+      clearError();
+    }
+  });
+})();
+</script>

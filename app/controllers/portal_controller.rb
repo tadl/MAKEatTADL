@@ -14,16 +14,24 @@ class PortalController < ApplicationController
 
   def attach_model_files
     @job = Job.find(params[:id])
-    param_key = @job.model_name.param_key # returns "print_job", "scan_job", etc.
-    files = Array(params.dig(param_key, :model_files)).reject(&:blank?)
+    param_key = @job.model_name.param_key
+    incoming = Array(params.dig(param_key, :model_files)).reject(&:blank?)
 
-    Rails.logger.debug "Attach model_files: #{files.inspect}"
+    # Split valid/invalid at the controller level (strongest guard for this patch endpoint)
+    valid, invalid = incoming.partition do |f|
+      ext = File.extname(f.original_filename.to_s).downcase
+      cty = (f.content_type || '').downcase
+      ext == '.stl' && !%w[application/zip application/x-zip-compressed multipart/x-zip].include?(cty)
+    end
 
-    if files.any?
-      @job.model_files.attach(files)
-      flash[:notice] = "Model files attached successfully."
-    else
-      flash[:alert] = "No files selected."
+    if valid.any?
+      @job.model_files.attach(valid)
+      flash[:notice] = "Attached #{valid.size} STL #{'file'.pluralize(valid.size)}."
+    end
+
+    if invalid.any?
+      names = invalid.map(&:original_filename).join(', ')
+      flash[:alert] = "Rejected non-STL files: #{names}."
     end
 
     redirect_to job_path(@job)
