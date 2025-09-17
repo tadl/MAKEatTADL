@@ -1,0 +1,9 @@
+# app/views/job_mailer/job_in_progress.text.erb
+Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
+
+Your print job #<%= @job.id %> is now in progress.
+
+View your job:
+<%= @url %>
+
+— Your MAKE@TADL Team

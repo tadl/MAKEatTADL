@@ -276,6 +276,7 @@ class PortalController < ApplicationController
       :pickup_location,
       :printable_model_id,
       :print_type,
+      :print_notify,
       model_files: []
     )
   end

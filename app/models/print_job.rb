@@ -12,6 +12,14 @@ class PrintJob < Job
   # Notify flows
   after_update :send_cost_estimate_if_first_weight,         if: :just_set_slicer_weight?
   after_update :finalize_and_notify_if_actual_weight_set,   if: :just_set_actual_weight?
+  after_update :notify_in_progress_if_opted, if: :should_notify_in_progress?
+
+  def should_notify_in_progress?
+    saved_change_to_status_id? &&
+      Status.find(status_id).code == 'in_progress' &&
+      print_notify &&
+      assigned_printer&.public?
+  end
 
   belongs_to :assigned_printer, class_name: 'Printer', optional: true
 
@@ -172,5 +180,38 @@ class PrintJob < Job
     )
 
     JobMailer.notify_patron(msg).deliver_later
+  end
+
+  def just_entered_in_progress?
+    saved_change_to_status_id? && Status.find(status_id).code == 'in_progress'
+  end
+
+  def notify_in_progress_if_opted
+    return unless print_notify
+    return unless assigned_printer&.public?
+
+    build_conversation! unless conversation
+
+    location_name =
+      assigned_printer&.pickup_location&.name ||
+      PickupLocation.find_by(code: pickup_location)&.name ||
+      pickup_location
+
+    # Post a visible message for the portal (no email triggered here)
+    conversation.messages.create!(
+      body: <<~EOS.strip,
+        Hello,
+
+        Your print has started on #{assigned_printer&.name || assigned_printer&.printer_model}.
+        Location: #{location_name}.
+
+        You can follow along or message us in your portal.
+      EOS
+      author:          Current.staff_user,
+      staff_note_only: false
+    )
+
+    # Send a single, dedicated email (no notify_patron call)
+    JobMailer.job_in_progress(self).deliver_later
   end
 end

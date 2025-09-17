@@ -1,0 +1,28 @@
+<!-- app/views/portal/_print_notify_opt_in.html.erb -->
+<div class="card mb-4">
+  <div class="card-header"><h4 class="mb-0">Notifications</h4></div>
+  <div class="card-body">
+    <div class="form-check">
+      <% checked =
+           if params.dig(:job, :print_notify).present?
+             ['1', 'true', 'on'].include?(params.dig(:job, :print_notify).to_s)
+           else
+             @job&.print_notify
+           end %>
+
+      <%= check_box_tag 'job[print_notify]',
+                        '1',
+                        checked,
+                        id: 'job_print_notify',
+                        class: 'form-check-input' %>
+
+      <%= label_tag 'job_print_notify',
+                    'If we print this on a public printer, notify me when the job begins printing.',
+                    class: 'form-check-label fw-semibold' %>
+
+      <div class="form-text">
+        Some of our printers are in staff-only areas and aren’t viewable by patrons, but we'll do our best.
+      </div>
+    </div>
+  </div>
+</div>

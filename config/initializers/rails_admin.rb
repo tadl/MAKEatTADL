@@ -292,6 +292,10 @@ RailsAdmin.config do |config|
           label "Quantity"
           help "Number of copies printed. Update this when printing additional copies."
         end
+        field :print_notify, :boolean do
+          label 'Notify patron when printing starts (public printers only)'
+          help  'Sends an email and portal message on transition to In Progress.'
+        end
         field :print_time_estimate_hm do
           label 'Print time estimate'
           help 'Enter estimated print duration from slicer. Format: HH:MM.'
@@ -620,6 +624,10 @@ RailsAdmin.config do |config|
         help 'e.g. 200x200x200 mm'
       end
       field :location
+      field :public, :boolean do
+        label 'Publicly viewable'
+        help  'Only public printers trigger patron “in progress” notifications.'
+      end
     end
   end
 

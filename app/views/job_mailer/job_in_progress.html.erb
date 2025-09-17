@@ -1,0 +1,21 @@
+<!-- app/views/job_mailer/job_in_progress.html.erb -->
+<p style="font-size:1.12em; margin-bottom:1.5em;">
+  Hello<% if @patron.name.present? %> <%= @patron.name %><% end %>,
+</p>
+
+<p style="margin-bottom:1.5em;">
+  Good news — your <strong>3D print job</strong>
+  (<strong>#<%= @job.id %></strong>) is now in progress<%=
+    @job.assigned_printer.present? ? " on <strong>#{h @job.assigned_printer.name}</strong>" : ""
+  %>.
+</p>
+
+<p style="margin-bottom:2em;">
+  You can check the status of your request or reply to our staff any time by clicking below:
+</p>
+
+<p style="margin-bottom:2em;">
+  <a href="<%= @url %>" class="btn">View Your Job</a>
+</p>
+
+<p style="color:#444;">— Your MAKE@TADL Team</p>
