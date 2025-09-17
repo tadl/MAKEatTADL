@@ -417,12 +417,25 @@ RailsAdmin.config do |config|
       field :name
       field :code
       field :active
+      field :rgb do
+        pretty_value do
+          if value.present?
+            %(<span style="display:inline-block;width:14px;height:14px;vertical-align:middle;border:1px solid #ccc;background:#{value};margin-right:6px;"></span> #{value}).html_safe
+          else
+            ''
+          end
+        end
+      end
     end
 
     edit do
       field :name
       field :code
       field :active
+      field :rgb do
+        label 'Hex Color'
+        help  'Optional: e.g. #ff9900 (used in dashboard pie chart)'
+      end
     end
   end
 

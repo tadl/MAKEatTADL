@@ -8,31 +8,38 @@
   curr_year    = today.beginning_of_year..today
   prev_year    = today.last_year.beginning_of_year..today.last_year.end_of_year
 
-  start_date   = params[:start].present? ? Date.parse(params[:start]) : curr_month.begin
-  end_date     = params[:end].present?   ? Date.parse(params[:end])   : curr_month.end
+  start_date   = params[:start].present? ? Date.parse(params[:start]) : last_30_days.begin
+  end_date     = params[:end].present?   ? Date.parse(params[:end])   : last_30_days.end
 
   report = PrintJobReport.new(start_date: start_date, end_date: end_date)
 
-  # Leaderboards using Job model's staff tracking
   stats_started  = Job.started_between(start_date.beginning_of_day, end_date.end_of_day).group(:started_by_id).count
   stats_finished = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:finished_by_id).count
   stats_printer  = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:assigned_printer_id).count
 
-  # Chart data pre-processing
   prints_per_day = report.prints_per_day
   filament_per_day = report.filament_per_day
   filament_color_counts = report.filament_color_counts
 
-  sorted_print_dates = prints_per_day.keys.sort
+  sorted_print_dates  = prints_per_day.keys.sort
   sorted_print_labels = sorted_print_dates.map { |d| d.strftime("%b %-d") }
   sorted_print_values = sorted_print_dates.map { |d| prints_per_day[d] }
 
-  sorted_filament_dates = filament_per_day.keys.sort
+  sorted_filament_dates  = filament_per_day.keys.sort
   sorted_filament_labels = sorted_filament_dates.map { |d| d.strftime("%b %-d") }
   sorted_filament_values = sorted_filament_dates.map { |d| filament_per_day[d] }
 
-  filament_color_labels = filament_color_counts.keys.map(&:titleize)
+  # Use codes as canonical keys, titleize for labels
+  filament_color_codes  = filament_color_counts.keys
+  filament_color_labels = filament_color_codes.map(&:titleize)
   filament_color_values = filament_color_counts.values
+
+  # Pull hexes from FilamentColor.rgb, fallback palette if missing
+  colors_by_code = FilamentColor.where(code: filament_color_codes).pluck(:code, :rgb).to_h
+  default_palette = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
+  chart_colors = filament_color_codes.each_with_index.map do |code, i|
+    (colors_by_code[code].presence) || default_palette[i % default_palette.length]
+  end
 %>
 
 <div class="card mb-4">
@@ -224,80 +231,99 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+(function() {
+  // Keep chart instances between loads so we can destroy them on re-init
+  window.__raCharts = window.__raCharts || {};
 
-const chartColors = [
-  "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
-  "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"
-];
+  function initDashboardCharts() {
+    const ctx1 = document.getElementById('printsPerDayChart');
+    const ctx2 = document.getElementById('filamentPerDayChart');
+    const ctx3 = document.getElementById('filamentColorChart');
+    if (!ctx1 || !ctx2 || !ctx3 || !window.Chart) return;
 
-// Prints per Day Line Chart
-new window.Chart(document.getElementById('printsPerDayChart').getContext('2d'), {
-  type: 'line',
-  data: {
-    labels: <%= raw sorted_print_labels.to_json %>,
-    datasets: [{
-      label: 'Prints per Day',
-      data: <%= raw sorted_print_values.to_json %>,
-      borderColor: '#3a8ee6',
-      backgroundColor: 'rgba(54, 162, 235, 0.10)',
-      borderWidth: 2,
-      pointRadius: 2,
-      fill: true,
-      tension: 0.4
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'Prints per Day' },
-      legend: { display: false }
-    },
-    scales: { y: { beginAtZero: true, precision: 0 } }
+    // Destroy existing, if any
+    ['printsPerDayChart','filamentPerDayChart','filamentColorChart'].forEach((k) => {
+      if (window.__raCharts[k]) {
+        window.__raCharts[k].destroy();
+        window.__raCharts[k] = null;
+      }
+    });
+
+    window.__raCharts.printsPerDayChart = new window.Chart(ctx1.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: <%= raw sorted_print_labels.to_json %>,
+        datasets: [{
+          label: 'Prints per Day',
+          data: <%= raw sorted_print_values.to_json %>,
+          borderColor: '#3a8ee6',
+          backgroundColor: 'rgba(54, 162, 235, 0.10)',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Prints per Day' }, legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+
+    window.__raCharts.filamentPerDayChart = new window.Chart(ctx2.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: <%= raw sorted_filament_labels.to_json %>,
+        datasets: [{
+          label: 'Filament Used (g)',
+          data: <%= raw sorted_filament_values.to_json %>,
+          borderColor: '#3ad29f',
+          backgroundColor: 'rgba(58,210,159,0.10)',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Filament Used Per Day (g)' }, legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+
+    window.__raCharts.filamentColorChart = new window.Chart(ctx3.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels: <%= raw filament_color_labels.to_json %>,
+        datasets: [{
+          data: <%= raw filament_color_values.to_json %>,
+          backgroundColor: <%= raw chart_colors.to_json %>
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          title: { display: true, text: 'Filament Color Popularity' }
+        }
+      }
+    });
   }
-});
 
-// Filament Used Per Day Line Chart
-new window.Chart(document.getElementById('filamentPerDayChart').getContext('2d'), {
-  type: 'line',
-  data: {
-    labels: <%= raw sorted_filament_labels.to_json %>,
-    datasets: [{
-      label: 'Filament Used (g)',
-      data: <%= raw sorted_filament_values.to_json %>,
-      borderColor: '#3ad29f',
-      backgroundColor: 'rgba(58,210,159,0.10)',
-      borderWidth: 2,
-      pointRadius: 2,
-      fill: true,
-      tension: 0.4
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'Filament Used Per Day (g)' },
-      legend: { display: false }
-    },
-    scales: { y: { beginAtZero: true, precision: 0 } }
+  // Run on first load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDashboardCharts, { once: true });
+  } else {
+    initDashboardCharts();
   }
-});
 
-// Filament Color Pie Chart
-new window.Chart(document.getElementById('filamentColorChart').getContext('2d'), {
-  type: 'pie',
-  data: {
-    labels: <%= raw filament_color_labels.to_json %>,
-    datasets: [{
-      data: <%= raw filament_color_values.to_json %>,
-      backgroundColor: chartColors
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'bottom' },
-      title: { display: true, text: 'Filament Color Popularity' }
-    }
-  }
-});
+  // RailsAdmin fires this on each page render
+  document.addEventListener('rails_admin.dom_ready', initDashboardCharts);
+
+  // If Turbo is in play, also handle turbo:load
+  document.addEventListener('turbo:load', initDashboardCharts);
+
+})();
 </script>
