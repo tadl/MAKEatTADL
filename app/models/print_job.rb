@@ -60,7 +60,18 @@ class PrintJob < Job
 
   def sync_print_type_from_printer
     return unless assigned_printer
+
+    # existing behavior
     self.print_type = assigned_printer.print_type
+
+    # NEW: auto-advance status to in_progress when a printer is assigned.
+    # Don't override terminal or already-in-progress states.
+    blocked = %w[cancelled rejected archived ready_for_pickup abandoned]
+    current = status&.code
+
+    if current.blank? || (!blocked.include?(current) && current != 'in_progress')
+      self.status = Status.find_by!(code: 'in_progress')
+    end
   end
 
   # Treat Assistive / Staff / Fidget as "free" categories
