@@ -17,18 +17,21 @@
     <section class="my-8">
       <h2 class="h4 mb-3">Current Job Status</h2>
 
+      <% items = [
+        { label: 'Pending',        code: 'pending',           model: :all   }, # include Scan + Print
+        { label: 'Ready to Print', code: 'approved',          model: :print },
+        { label: 'Printing',       code: 'in_progress',       model: :print },
+        { label: 'Complete',       code: 'ready_for_pickup',  model: :print }
+      ] %>
+
       <div class="row gx-3 gy-3">
-        <% [
-          ['Pending',       'pending'],
-          ['Ready to Print',         'approved'],
-          ['Printing',       'in_progress'],
-          ['Complete',          'ready_for_pickup']
-        ].each do |label, code| %>
+        <% items.each do |it| %>
+          <% count = (it[:model] == :all ? Job : PrintJob).with_status(it[:code]).count %>
           <div class="col-6 col-md-3">
             <div class="card text-center shadow-sm">
               <div class="card-body py-4">
-                <div class="display-6"><%= PrintJob.with_status(code).count %></div>
-                <div class="text-muted"><%= label %></div>
+                <div class="display-6"><%= count %></div>
+                <div class="text-muted"><%= it[:label] %></div>
               </div>
             </div>
           </div>

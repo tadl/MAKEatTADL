@@ -86,7 +86,8 @@ class PortalController < ApplicationController
 
     # common attrs
     @job.category = Category.find_by!(name: @type.capitalize)
-    @job.status   = Status.find_by!(code: 'pending')
+    initial_status_code = %w[fidget assistive staff].include?(@type) ? 'approved' : 'pending'
+    @job.status   = Status.find_by!(code: initial_status_code)
 
     unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
       flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
@@ -119,7 +120,7 @@ class PortalController < ApplicationController
 
     unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
       flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
-      return render form_template_for(@type), status: :unprocessable_entity
+      return render :submit_scan, status: :unprocessable_entity
     end
 
     if @job.save

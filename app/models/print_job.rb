@@ -10,8 +10,8 @@ class PrintJob < Job
   before_validation :compute_actual_cost, if: -> { will_save_change_to_actual_weight? }
 
   # Notify flows
-  after_update :send_cost_estimate_if_first_weight, if: :just_set_slicer_weight?
-  after_update :finalize_and_notify_if_actual_weight_set, if: :just_set_actual_weight?
+  after_update :send_cost_estimate_if_first_weight,         if: :just_set_slicer_weight?
+  after_update :finalize_and_notify_if_actual_weight_set,   if: :just_set_actual_weight?
 
   belongs_to :assigned_printer, class_name: 'Printer', optional: true
 
@@ -63,6 +63,12 @@ class PrintJob < Job
     self.print_type = assigned_printer.print_type
   end
 
+  # Treat Assistive / Staff / Fidget as "free" categories
+  def free_category?
+    name = category&.name
+    name == 'Assistive' || name == 'Staff' || name == 'Fidget'
+  end
+
   # First time slicer_weight gets set
   def just_set_slicer_weight?
     saved_change_to_slicer_weight? &&
@@ -78,9 +84,13 @@ class PrintJob < Job
   end
 
   # Single pricing helper
-  # FDM: $0.10/g, min $1.00
-  # Resin: $0.35/g, min $3.00
+  # Patron:
+  #   - FDM: $0.10/g, min $1.00
+  #   - Resin: $0.35/g, min $3.00
+  # Assistive/Staff/Fidget: always $0.00
   def estimated_cost_for(weight_grams)
+    return 0.00 if free_category?
+
     w = weight_grams.to_f
     type_code = print_type&.code || assigned_printer&.print_type&.code
     rate, minimum = (type_code == 'resin') ? [0.35, 3.00] : [0.10, 1.00]
@@ -95,9 +105,10 @@ class PrintJob < Job
     self.actual_cost = estimated_cost_for(actual_weight)
   end
 
-  # Notify patron with estimate the first time weight is entered
+  # Notify patron with estimate the first time weight is entered — Patron only
   def send_cost_estimate_if_first_weight
     return unless conversation
+    return unless category&.name == 'Patron' # suppress for Assistive/Staff/Fidget
 
     info = Status.find_by!(code: 'information_requested')
     update_column(:status_id, info.id) if status_id != info.id
@@ -119,11 +130,13 @@ class PrintJob < Job
   end
 
   # When actual_weight is first set, finalize & notify
+  # - Patron: compute actual cost from weight
+  # - Assistive/Staff/Fidget: force $0.00
   def finalize_and_notify_if_actual_weight_set
     return unless conversation
 
     ready_status = Status.find_by!(code: 'ready_for_pickup')
-    cost         = estimated_cost_for(actual_weight)
+    cost         = free_category? ? 0.00 : estimated_cost_for(actual_weight)
 
     # Set fields without retriggering callbacks
     update_columns(
