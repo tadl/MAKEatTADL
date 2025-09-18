@@ -16,7 +16,6 @@
   { name: "Purple",     code: "purple",      position: 9 },
   { name: "Gray",       code: "gray",        position: 10 },
   { name: "Light Cyan", code: "light_cyan",  position: 11 },
-  { name: "Other",      code: "other",       position: 12 }
 ].each do |attrs|
   fc = FilamentColor.find_or_initialize_by(code: attrs[:code])
   fc.name     = attrs[:name]
