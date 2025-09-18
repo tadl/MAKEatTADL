@@ -60,7 +60,7 @@ module PrintJobsTasks
     Current.staff_user = author
     begin
       cancelled = Status.find_by!(code: 'cancelled')
-      job.update!(status: cancelled) # triggers your Job callback to notify the patron
+      job.update!(status: cancelled) # triggers callback to notify the patron
     ensure
       Current.staff_user = prev
     end
@@ -75,16 +75,23 @@ module PrintJobsTasks
       .where.not(completion_date: nil)
   end
 
-  def should_send_pickup_reminder?(job, today)
-    days_since     = (today - job.completion_date).to_i
-    last_sent_date = job.last_pickup_reminder_sent_at&.to_date
+  # Next reminder is due 7 days after the later of completion_date or last reminder
+  def next_pickup_reminder_due_date(job)
+    anchor = job.last_pickup_reminder_sent_at&.to_date || job.completion_date
+    anchor + 7
+  end
 
-    return [false, "completed today (days_since=#{days_since})"] if days_since <= 0
-    return [false, "not a 7-day interval (days_since=#{days_since})"] if (days_since % 7) != 0
-    if last_sent_date && (today - last_sent_date) < 7
-      return [false, "last reminder #{(today - last_sent_date).to_i} day(s) ago"]
+  # Intuitive due/overdue rule (no modulo): send if today >= next_due
+  def should_send_pickup_reminder?(job, today)
+    return [false, "no completion_date"] if job.completion_date.blank?
+
+    next_due = next_pickup_reminder_due_date(job)
+    if today >= next_due
+      [true, nil]
+    else
+      days_left = (next_due - today).to_i
+      [false, "next due in #{days_left} day(s)"]
     end
-    [true, nil]
   end
 
   def send_pickup_reminder!(job, author, today)
@@ -149,11 +156,11 @@ namespace :print_jobs do
       location = location_name_for(job)
       cost_str = job.slicer_cost.present? ? format('%.2f', job.slicer_cost) : '—'
 
-      if days > 14
+      if days >= 14
         to_cancel += 1
         printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | WOULD CANCEL (location: %s)\n",
                job.id, job.patron&.email.to_s, last_at.to_date, days, location
-      elsif days == 7
+      elsif days >= 7
         if can_send_quote?(job)
           to_nudge += 1
           printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | WOULD NUDGE (quote: $%s)\n",
@@ -166,8 +173,8 @@ namespace :print_jobs do
         end
       else
         skipped += 1
-        reasons["not at 7d and not >14d (days=#{days})"] += 1
-        printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | skip — window not met\n",
+        reasons["<7 days since last public message"] += 1
+        printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | skip — not due yet\n",
                job.id, job.patron&.email.to_s, last_at.to_date, days
       end
     end
@@ -180,7 +187,7 @@ namespace :print_jobs do
     reasons.each { |r, c| puts "  - #{r}: #{c}" } if reasons.any?
   end
 
-  desc "Send follow-ups/cancel jobs stuck in information_requested (7d nudge, >14d cancel)"
+  desc "Send follow-ups/cancel jobs stuck in information_requested (7–13d nudge, ≥14d cancel)"
   task info_requests_nudge_and_cancel: :environment do
     include PrintJobsTasks
 
@@ -206,11 +213,11 @@ namespace :print_jobs do
 
       days = (today - last_at.to_date).to_i
 
-      if days > 14
+      if days >= 14
         cancel_job!(job, robot)
         cancelled += 1
-        puts "Job ##{job.id} — CANCELLED (>14 days since last public message)"
-      elsif days == 7
+        puts "Job ##{job.id} — CANCELLED (≥14 days since last public message)"
+      elsif days >= 7
         if can_send_quote?(job)
           resend_quote!(job, robot)
           nudged += 1
@@ -252,7 +259,8 @@ namespace :print_jobs do
       end
 
       send_pickup_reminder!(job, robot, today)
-      puts "Sent pickup reminder for job ##{job.id} (#{job.patron.email})"
+      next_due = next_pickup_reminder_due_date(job) # after update_column this is anchored to today
+      puts "Sent pickup reminder for job ##{job.id} (next due in #{(next_due - today).to_i} day[s])"
     end
   end
 
@@ -266,7 +274,6 @@ namespace :print_jobs do
 
     eligible_cnt  = 0
     skipped_cnt   = 0
-    reasons_count = Hash.new(0)
 
     puts "== DRY RUN: Weekly pickup reminders preview (as of #{today}) =="
     puts "Ready-for-pickup jobs: #{ready_total}"
@@ -275,27 +282,29 @@ namespace :print_jobs do
     jobs.find_each do |job|
       days_since = (today - job.completion_date).to_i
       last_sent  = job.last_pickup_reminder_sent_at&.to_date
+      next_due   = next_pickup_reminder_due_date(job)
 
       should_send, reason = should_send_pickup_reminder?(job, today)
 
-      location = location_name_for(job)
-      cost_str = job.actual_cost.present? ? ('%.2f' % job.actual_cost) : '0.00'
-
-      printf "Job #%-6d %-30s completed: %-10s (%3dd ago) last_sent: %-10s | %s\n",
-             job.id,
-             job.patron&.email.to_s,
-             job.completion_date,
-             days_since,
-             (last_sent || '—'),
-             (should_send ?
-               "WOULD SEND (#{location}, $#{cost_str})" :
-               "skip — #{reason}")
-
       if should_send
+        overdue_days = (today - next_due).to_i
         eligible_cnt += 1
+        printf "Job #%-6d %-30s completed: %-10s (%3dd ago) last_sent: %-10s | WOULD SEND (due %dd ago)\n",
+               job.id,
+               job.patron&.email.to_s,
+               job.completion_date,
+               days_since,
+               (last_sent || '—'),
+               overdue_days
       else
         skipped_cnt  += 1
-        reasons_count[reason] += 1 if reason
+        printf "Job #%-6d %-30s completed: %-10s (%3dd ago) last_sent: %-10s | skip — %s\n",
+               job.id,
+               job.patron&.email.to_s,
+               job.completion_date,
+               days_since,
+               (last_sent || '—'),
+               reason
       end
     end
 
@@ -303,10 +312,6 @@ namespace :print_jobs do
     puts "== Summary =="
     puts "Eligible to send now : #{eligible_cnt}"
     puts "Skipped              : #{skipped_cnt}"
-    if reasons_count.any?
-      puts "Skip reasons:"
-      reasons_count.each { |r, c| puts "  - #{r}: #{c}" }
-    end
     puts "Total considered     : #{ready_total}"
   end
 
