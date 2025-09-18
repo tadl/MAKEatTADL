@@ -32,6 +32,12 @@
       "postdeploy": "bundle exec rails db:seed"
     }
   },
+  "cron": [
+    {
+      "command": "rake print_jobs:nightly_maintenance",
+      "schedule": "0 3 * * *",
+    }
+  ],
   "buildpacks": [
     { "url": "heroku/nodejs" },
     { "url": "heroku/ruby" }
