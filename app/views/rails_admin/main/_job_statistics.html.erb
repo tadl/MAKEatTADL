@@ -1,4 +1,5 @@
 <%
+  # Date presets for quick links
   today        = Date.current
   yesterday    = (today - 1.day)..(today - 1.day)
   last_7_days  = (today - 6.days)..today
@@ -8,17 +9,15 @@
   curr_year    = today.beginning_of_year..today
   prev_year    = today.last_year.beginning_of_year..today.last_year.end_of_year
 
-  start_date   = params[:start].present? ? Date.parse(params[:start]) : last_30_days.begin
-  end_date     = params[:end].present?   ? Date.parse(params[:end])   : last_30_days.end
+  # Selected range (default: last 30 days)
+  start_date = params[:start].present? ? Date.parse(params[:start]) : last_30_days.begin
+  end_date   = params[:end].present?   ? Date.parse(params[:end])   : last_30_days.end
 
   report = PrintJobReport.new(start_date: start_date, end_date: end_date)
 
-  stats_started  = Job.started_between(start_date.beginning_of_day, end_date.end_of_day).group(:started_by_id).count
-  stats_finished = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:finished_by_id).count
-  stats_printer  = Job.finished_between(start_date.beginning_of_day, end_date.end_of_day).group(:assigned_printer_id).count
-
-  prints_per_day = report.prints_per_day
-  filament_per_day = report.filament_per_day
+  # Chart data
+  prints_per_day        = report.prints_per_day
+  filament_per_day      = report.filament_per_day
   filament_color_counts = report.filament_color_counts
 
   sorted_print_dates  = prints_per_day.keys.sort
@@ -35,10 +34,10 @@
   filament_color_values = filament_color_counts.values
 
   # Pull hexes from FilamentColor.rgb, fallback palette if missing
-  colors_by_code = FilamentColor.where(code: filament_color_codes).pluck(:code, :rgb).to_h
-  default_palette = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
+  colors_by_code   = FilamentColor.where(code: filament_color_codes).pluck(:code, :rgb).to_h
+  default_palette  = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
   chart_colors = filament_color_codes.each_with_index.map do |code, i|
-    (colors_by_code[code].presence) || default_palette[i % default_palette.length]
+    colors_by_code[code].presence || default_palette[i % default_palette.length]
   end
 %>
 
@@ -110,72 +109,6 @@
         </tr>
       </tbody>
     </table>
-
-    <div class="row g-4 mb-4">
-      <!-- Jobs Started by Staff -->
-      <div class="col-12 col-md-4">
-        <div class="card h-100">
-          <div class="card-header bg-primary text-white">Jobs Started by Staff</div>
-          <div class="card-body p-2">
-            <% if stats_started.any? %>
-              <ul class="list-group list-group-flush">
-                <% stats_started.each do |staff_id, count| %>
-                  <% staff = StaffUser.find_by(id: staff_id) %>
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <%= staff&.name || "Unknown" %>
-                    <span class="badge bg-primary rounded-pill"><%= count %></span>
-                  </li>
-                <% end %>
-              </ul>
-            <% else %>
-              <div class="text-muted">No jobs started in this period.</div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-      <!-- Jobs Finished by Staff -->
-      <div class="col-12 col-md-4">
-        <div class="card h-100">
-          <div class="card-header bg-success text-white">Jobs Finished by Staff</div>
-          <div class="card-body p-2">
-            <% if stats_finished.any? %>
-              <ul class="list-group list-group-flush">
-                <% stats_finished.each do |staff_id, count| %>
-                  <% staff = StaffUser.find_by(id: staff_id) %>
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <%= staff&.name || "Unknown" %>
-                    <span class="badge bg-success rounded-pill"><%= count %></span>
-                  </li>
-                <% end %>
-              </ul>
-            <% else %>
-              <div class="text-muted">No jobs finished in this period.</div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-      <!-- Jobs Completed by Printer -->
-      <div class="col-12 col-md-4">
-        <div class="card h-100">
-          <div class="card-header bg-info text-white">Jobs Completed by Printer</div>
-          <div class="card-body p-2">
-            <% if stats_printer.any? %>
-              <ul class="list-group list-group-flush">
-                <% stats_printer.each do |printer_id, count| %>
-                  <% printer = Printer.find_by(id: printer_id) %>
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <%= printer&.name || "Unknown" %>
-                    <span class="badge bg-info rounded-pill"><%= count %></span>
-                  </li>
-                <% end %>
-              </ul>
-            <% else %>
-              <div class="text-muted">No jobs completed by printer in this period.</div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Category Counts Table -->
     <div class="card mb-4">
@@ -319,11 +252,9 @@
     initDashboardCharts();
   }
 
-  // RailsAdmin fires this on each page render
+  // RailsAdmin fire on each page render
   document.addEventListener('rails_admin.dom_ready', initDashboardCharts);
-
   // If Turbo is in play, also handle turbo:load
   document.addEventListener('turbo:load', initDashboardCharts);
-
 })();
 </script>
