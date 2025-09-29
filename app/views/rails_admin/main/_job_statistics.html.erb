@@ -15,14 +15,14 @@
 
   report = PrintJobReport.new(start_date: start_date, end_date: end_date)
 
-  # Chart data
+  # Chart data (completions)
   prints_per_day        = report.prints_per_day
   filament_per_day      = report.filament_per_day
   filament_color_counts = report.filament_color_counts
 
-  sorted_print_dates  = prints_per_day.keys.sort
-  sorted_print_labels = sorted_print_dates.map { |d| d.strftime("%b %-d") }
-  sorted_print_values = sorted_print_dates.map { |d| prints_per_day[d] }
+  sorted_print_dates   = prints_per_day.keys.sort
+  sorted_print_labels  = sorted_print_dates.map { |d| d.strftime("%b %-d") }
+  sorted_print_values  = sorted_print_dates.map { |d| prints_per_day[d] }
 
   sorted_filament_dates  = filament_per_day.keys.sort
   sorted_filament_labels = sorted_filament_dates.map { |d| d.strftime("%b %-d") }
@@ -34,11 +34,22 @@
   filament_color_values = filament_color_counts.values
 
   # Pull hexes from FilamentColor.rgb, fallback palette if missing
-  colors_by_code   = FilamentColor.where(code: filament_color_codes).pluck(:code, :rgb).to_h
-  default_palette  = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
-  chart_colors = filament_color_codes.each_with_index.map do |code, i|
-    colors_by_code[code].presence || default_palette[i % default_palette.length]
-  end
+  colors_by_code  = FilamentColor.where(code: filament_color_codes).pluck(:code, :rgb).to_h
+  default_palette = ["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
+  chart_colors = filament_color_codes.each_with_index.map { |code, i| colors_by_code[code].presence || default_palette[i % default_palette.length] }
+
+  # --- Derived rollups for clearer storytelling (completions are non-cancelled) ---
+  completed_by_category = report.category_counts            # { "Patron"=>x, "Staff"=>y, ... }
+  completed_jobs_count  = completed_by_category.values.sum # total completed, non-cancelled
+  fdm_jobs              = report.fdm_count
+  resin_jobs            = report.resin_count
+
+  avg_prints_per_job    = completed_jobs_count.positive? ? (report.total_quantity.to_f / completed_jobs_count) : 0.0
+  avg_filament_per_fdm  = fdm_jobs.positive? ? (report.filament_grams.to_f / fdm_jobs) : 0.0
+  avg_resin_per_resin   = resin_jobs.positive? ? (report.resin_ml.to_f / resin_jobs)   : 0.0
+
+  # Popular filament with count (if present)
+  popular_code, popular_count = filament_color_counts.max_by { |_, c| c } || [nil, 0]
 %>
 
 <div class="card mb-4">
@@ -50,6 +61,7 @@
       </small>
     </h3>
   </div>
+
   <div class="card-body">
 
     <%= form_with url: rails_admin.dashboard_path, method: :get, local: true, class: "form-inline mb-3" do %>
@@ -58,28 +70,44 @@
       <label class="mr-2 font-weight-bold">End:</label>
       <%= date_field_tag :end, end_date, class: "form-control mr-2" %>
       <%= submit_tag "Apply", class: "btn btn-primary btn-sm mr-2" %>
-      <%= link_to "Yesterday", rails_admin.dashboard_path(start: yesterday.begin, end: yesterday.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Last 7 Days", rails_admin.dashboard_path(start: last_7_days.begin, end: last_7_days.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Yesterday",    rails_admin.dashboard_path(start: yesterday.begin,    end: yesterday.end),    class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Last 7 Days",  rails_admin.dashboard_path(start: last_7_days.begin,  end: last_7_days.end),  class: "btn btn-outline-secondary btn-sm mr-1" %>
       <%= link_to "Last 30 Days", rails_admin.dashboard_path(start: last_30_days.begin, end: last_30_days.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Current Month", rails_admin.dashboard_path(start: curr_month.begin, end: curr_month.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Previous Month", rails_admin.dashboard_path(start: prev_month.begin, end: prev_month.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Current Year", rails_admin.dashboard_path(start: curr_year.begin, end: curr_year.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Previous Year", rails_admin.dashboard_path(start: prev_year.begin, end: prev_year.end), class: "btn btn-outline-secondary btn-sm" %>
+      <%= link_to "Current Month",  rails_admin.dashboard_path(start: curr_month.begin, end: curr_month.end),   class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Previous Month", rails_admin.dashboard_path(start: prev_month.begin, end: prev_month.end),   class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Current Year",   rails_admin.dashboard_path(start: curr_year.begin,  end: curr_year.end),    class: "btn btn-outline-secondary btn-sm mr-1" %>
+      <%= link_to "Previous Year",  rails_admin.dashboard_path(start: prev_year.begin,  end: prev_year.end),    class: "btn btn-outline-secondary btn-sm" %>
     <% end %>
 
     <table class="table table-bordered mb-4">
       <tbody>
-        <tr>
-          <th>Orders</th>
-          <td>
-            <%= report.orders_count %> total
-            (<%= report.resin_count %> resin, <%= report.fdm_count %> FDM, <%= report.multiple_count %> multi-color);
-            <%= report.cancelled_count %> cancelled
-          </td>
+        <tr class="table-light">
+          <th colspan="2">Submissions (created in date range)</th>
         </tr>
         <tr>
-          <th>Individuals</th>
-          <td><%= report.distinct_patrons %> distinct patrons</td>
+          <th>Orders Submitted</th>
+          <td><%= report.orders_count %></td>
+        </tr>
+        <tr>
+          <th>Cancelled (of those orders)</th>
+          <td><%= report.cancelled_count %></td>
+        </tr>
+        <tr>
+          <th>Distinct Patrons (submitted)</th>
+          <td><%= report.distinct_patrons %></td>
+        </tr>
+
+        <tr class="table-light">
+          <th colspan="2">Completions (finished in date range; excludes cancelled)</th>
+        </tr>
+        <tr>
+          <th>Jobs Completed</th>
+          <td>
+            <%= completed_jobs_count %>
+            <small class="text-muted">
+              (<%= report.fdm_count %> FDM, <%= report.resin_count %> Resin, <%= report.multiple_count %> multi-color)
+            </small>
+          </td>
         </tr>
         <tr>
           <th>Total Prints</th>
@@ -100,20 +128,50 @@
         <tr>
           <th>Most Popular Filament Color</th>
           <td>
-            <% if report.popular_filament.present? %>
-              <%= report.popular_filament.titleize %>
+            <% if popular_code.present? %>
+              <%= popular_code.titleize %> <small class="text-muted">(n=<%= popular_count %>)</small>
             <% else %>
-              (none this period)
+              <span class="text-muted">(none this period)</span>
+            <% end %>
+          </td>
+        </tr>
+
+        <tr class="table-light">
+          <th colspan="2">Averages (completions)</th>
+        </tr>
+        <tr>
+          <th>Avg Prints per Completed Job</th>
+          <td><%= number_with_precision(avg_prints_per_job, precision: 2) %></td>
+        </tr>
+        <tr>
+          <th>Avg Filament per FDM Job</th>
+          <td>
+            <% if fdm_jobs.positive? %>
+              <%= number_with_precision(avg_filament_per_fdm, precision: 1) %> g
+              <small class="text-muted">(across <%= fdm_jobs %> FDM jobs)</small>
+            <% else %>
+              <span class="text-muted">—</span>
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <th>Avg Resin per Resin Job</th>
+          <td>
+            <% if resin_jobs.positive? %>
+              <%= number_with_precision(avg_resin_per_resin, precision: 1) %> mL
+              <small class="text-muted">(across <%= resin_jobs %> resin jobs)</small>
+            <% else %>
+              <span class="text-muted">—</span>
             <% end %>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <!-- Category Counts Table -->
+    <!-- Completed jobs by Category -->
     <div class="card mb-4">
       <div class="card-header bg-light">
-        <h3 class="mb-0">Prints by Category</h3>
+        <h3 class="mb-0">Completed Jobs by Category</h3>
       </div>
       <div class="card-body p-0">
         <table class="table mb-0">
@@ -129,6 +187,9 @@
                 <td><%= name %></td>
                 <td class="text-end"><%= count %></td>
               </tr>
+            <% end %>
+            <% if completed_jobs_count.zero? %>
+              <tr><td colspan="2" class="text-muted">No completed jobs this period.</td></tr>
             <% end %>
           </tbody>
         </table>
@@ -156,7 +217,14 @@
       </div>
     </div>
 
+    <p class="text-muted small mb-0">
+      <strong>Notes:</strong> “Submissions” reflect jobs created in the date range.
+      “Completions” reflect jobs finished in the date range (cancelled jobs excluded).
+      Quantities of 0/blank count as 1.
+    </p>
+
   </div>
+
   <div class="card-footer text-end">
     <small>Stats auto-refresh each time you open or filter the dashboard.</small>
   </div>
@@ -165,7 +233,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function() {
-  // Keep chart instances between loads so we can destroy them on re-init
   window.__raCharts = window.__raCharts || {};
 
   function initDashboardCharts() {
@@ -174,12 +241,8 @@
     const ctx3 = document.getElementById('filamentColorChart');
     if (!ctx1 || !ctx2 || !ctx3 || !window.Chart) return;
 
-    // Destroy existing, if any
     ['printsPerDayChart','filamentPerDayChart','filamentColorChart'].forEach((k) => {
-      if (window.__raCharts[k]) {
-        window.__raCharts[k].destroy();
-        window.__raCharts[k] = null;
-      }
+      if (window.__raCharts[k]) { window.__raCharts[k].destroy(); window.__raCharts[k] = null; }
     });
 
     window.__raCharts.printsPerDayChart = new window.Chart(ctx1.getContext('2d'), {
@@ -187,7 +250,7 @@
       data: {
         labels: <%= raw sorted_print_labels.to_json %>,
         datasets: [{
-          label: 'Prints per Day',
+          label: 'Prints per Day (qty)',
           data: <%= raw sorted_print_values.to_json %>,
           borderColor: '#3a8ee6',
           backgroundColor: 'rgba(54, 162, 235, 0.10)',
@@ -199,7 +262,7 @@
       },
       options: {
         responsive: true,
-        plugins: { title: { display: true, text: 'Prints per Day' }, legend: { display: false } },
+        plugins: { title: { display: true, text: 'Prints per Day (Completions)' }, legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
@@ -221,7 +284,7 @@
       },
       options: {
         responsive: true,
-        plugins: { title: { display: true, text: 'Filament Used Per Day (g)' }, legend: { display: false } },
+        plugins: { title: { display: true, text: 'Filament Used Per Day (Completions)' }, legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
@@ -239,22 +302,18 @@
         responsive: true,
         plugins: {
           legend: { position: 'bottom' },
-          title: { display: true, text: 'Filament Color Popularity' }
+          title: { display: true, text: 'Filament Color Popularity (Completions)' }
         }
       }
     });
   }
 
-  // Run on first load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDashboardCharts, { once: true });
   } else {
     initDashboardCharts();
   }
-
-  // RailsAdmin fire on each page render
   document.addEventListener('rails_admin.dom_ready', initDashboardCharts);
-  // If Turbo is in play, also handle turbo:load
   document.addEventListener('turbo:load', initDashboardCharts);
 })();
 </script>

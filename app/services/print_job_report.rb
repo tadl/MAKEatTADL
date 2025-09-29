@@ -9,9 +9,14 @@ class PrintJobReport
 
     # Base scopes used consistently throughout
     @submitted   = PrintJob.where(created_at: @start_date..@end_date)
+
     @completed   = PrintJob.where.not(completion_date: nil)
                            .where(completion_date: @start_date..@end_date)
-    @non_cancelled_completed = @completed.joins(:status).where.not(statuses: { code: 'cancelled' })
+
+    @non_cancelled_completed = @completed
+      .joins(:status)
+      .where.not(statuses: { code: 'cancelled' })
+      .with_attached_model_files # for unique_designs (blob checksums) without N+1
   end
 
   # ---------------------------
@@ -24,7 +29,6 @@ class PrintJobReport
   end
 
   # Of the above orders, how many are (currently) cancelled
-  # (keeps it a subset of orders_count; avoids updated_at mismatch)
   def cancelled_count
     @submitted.joins(:status).where(statuses: { code: 'cancelled' }).count
   end
@@ -38,27 +42,24 @@ class PrintJobReport
   # Output/completions metrics
   # ---------------------------
 
-  # Completed FDM jobs (non-cancelled) in window
   def fdm_count
     @non_cancelled_completed.joins(:print_type).where(print_types: { code: 'fdm' }).count
   end
 
-  # Completed resin jobs (non-cancelled) in window
   def resin_count
     @non_cancelled_completed.joins(:print_type).where(print_types: { code: 'resin' }).count
   end
 
-  # If you use filament_color == 'multiple' to mean multi-color, keep it here
   def multiple_count
     @non_cancelled_completed.where(filament_color: 'multiple').count
   end
 
-  # Sum of quantities for completed, non-cancelled jobs (default to 1 if nil)
+  # Sum quantities for completed, non-cancelled jobs; treat nil OR 0 as 1
   def total_quantity
-    @non_cancelled_completed.sum(Arel.sql("COALESCE(quantity, 1)"))
+    @non_cancelled_completed.sum(Arel.sql("COALESCE(NULLIF(quantity, 0), 1)"))
   end
 
-  # Filament used in grams, prefer actual_weight else slicer_weight, non-cancelled
+  # Filament used in grams, prefer actual_weight else slicer_weight
   def filament_grams
     @non_cancelled_completed
       .joins(:print_type).where(print_types: { code: 'fdm' })
@@ -72,51 +73,38 @@ class PrintJobReport
       .sum(Arel.sql("COALESCE(resin_volume_ml, 0)")).to_i
   end
 
-  # Distinct designs among completed, non-cancelled jobs:
-  # - printable_model_id if present
-  # - else: distinct ActiveStorage blob checksums for attached files
-  # - plus: distinct normalized URLs
+  # ---------------------------
+  # Designs (per job)
+  # ---------------------------
+
+  # Per-job design identity (never more than completed orders)
   def unique_designs
-    pm_count = @non_cancelled_completed.where.not(printable_model_id: nil)
-                                       .distinct.count(:printable_model_id)
-
-    # Only jobs w/o a PrintableModel
-    file_jobs = @non_cancelled_completed.where(printable_model_id: nil)
-
-    # Distinct blob checksums for model_files
-    checksums = file_jobs
-      .joins("LEFT JOIN active_storage_attachments asa ON asa.record_type = 'Job' AND asa.record_id = jobs.id AND asa.name = 'model_files'")
-      .joins("LEFT JOIN active_storage_blobs asb ON asb.id = asa.blob_id")
-      .where.not(asb: { checksum: nil })
-      .distinct
-      .pluck('asb.checksum')
-
-    # Distinct normalized URLs for jobs with a URL
-    urls = file_jobs.where.not(url: [nil, ''])
-                    .pluck(:url)
-                    .map { |u| normalize_url(u) }
-                    .uniq
-
-    pm_count + (checksums + urls).uniq.size
+    keys = @non_cancelled_completed.map { |job| design_key_for(job) }
+    keys.uniq.size
   end
 
   # ---------------------------
   # Per-day series (completions)
   # ---------------------------
 
-  # Prints per day = sum of COALESCE(quantity,1) on completed, non-cancelled
+  # Sum COALESCE(NULLIF(quantity,0),1) per day for completed non-cancelled
   def prints_per_day
     @non_cancelled_completed
       .group("DATE(completion_date)")
-      .pluck(Arel.sql("DATE(completion_date)"), Arel.sql("SUM(COALESCE(quantity,1))"))
+      .pluck(
+        Arel.sql("DATE(completion_date)"),
+        Arel.sql("SUM(COALESCE(NULLIF(quantity, 0), 1))")
+      )
       .to_h
   end
 
-  # Filament per day (g), prefer actual_weight else slicer_weight, completed non-cancelled
   def filament_per_day
     @non_cancelled_completed
       .group("DATE(completion_date)")
-      .pluck(Arel.sql("DATE(completion_date)"), Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0))"))
+      .pluck(
+        Arel.sql("DATE(completion_date)"),
+        Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0))")
+      )
       .to_h
   end
 
@@ -140,15 +128,26 @@ class PrintJobReport
 
   private
 
-  # A gentle URL normalizer so the same design link doesn’t count multiple times
+  # One design key per job
+  def design_key_for(job)
+    if job.printable_model_id.present?
+      "pm:#{job.printable_model_id}"
+    elsif job.url.present?
+      "url:#{normalize_url(job.url)}"
+    elsif job.model_files.attached?
+      sums = job.model_files.map { |att| att.blob&.checksum }.compact.sort
+      sums.any? ? "files:#{sums.join('|')}" : "job:#{job.id}"
+    else
+      "job:#{job.id}"
+    end
+  end
+
+  # Gentle URL normalizer so the same design link doesn’t count multiple times
   def normalize_url(url)
     begin
       u = URI.parse(url.to_s.strip)
-      return url.to_s.strip.downcase if u.nil?
-
-      # Lowercase host, strip trailing slash, ignore query/fragment (often irrelevant for the design)
-      host = (u.host || '').downcase
-      path = (u.path || '').chomp('/')
+      host   = (u.host || '').downcase
+      path   = (u.path || '').chomp('/')
       scheme = (u.scheme || 'https').downcase
       "#{scheme}://#{host}#{path}"
     rescue
