@@ -58,6 +58,17 @@ class Job < ApplicationRecord
   scope :started_between,  ->(start_time, end_time) { where(started_at:  start_time..end_time) }
   scope :finished_between, ->(start_time, end_time) { where(finished_at: end_time ? (start_time..end_time) : start_time..start_time) }
 
+  # --------------------
+  # Automation guard 🛑
+  # --------------------
+  # Returns true if this job is in a state where we should NOT run automations.
+  # We currently suppress automations when the status is `ongoing`.
+  def automations_suppressed?
+    current_status_code == 'ongoing'
+  rescue
+    false
+  end
+
   private
 
   def build_conversation!

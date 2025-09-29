@@ -9,16 +9,17 @@ class PrintJob < Job
   before_validation :compute_slicer_cost, if: -> { will_save_change_to_slicer_weight? }
   before_validation :compute_actual_cost, if: -> { will_save_change_to_actual_weight? }
 
-  # Notify flows
-  after_update :send_cost_estimate_if_first_weight,         if: :just_set_slicer_weight?
-  after_update :finalize_and_notify_if_actual_weight_set,   if: :just_set_actual_weight?
-  after_update :notify_in_progress_if_opted, if: :should_notify_in_progress?
+  # Notify flows (🚫 suppressed when status == 'ongoing')
+  after_update :send_cost_estimate_if_first_weight,       if: -> { just_set_slicer_weight? && !automations_suppressed? }
+  after_update :finalize_and_notify_if_actual_weight_set, if: -> { just_set_actual_weight?  && !automations_suppressed? }
+  after_update :notify_in_progress_if_opted,              if: :should_notify_in_progress?
 
   def should_notify_in_progress?
     saved_change_to_status_id? &&
       Status.find(status_id).code == 'in_progress' &&
       print_notify &&
-      assigned_printer&.public?
+      assigned_printer&.public? &&
+      !automations_suppressed?
   end
 
   belongs_to :assigned_printer, class_name: 'Printer', optional: true
@@ -69,12 +70,11 @@ class PrintJob < Job
   def sync_print_type_from_printer
     return unless assigned_printer
 
-    # existing behavior
+    # Keep print_type in sync
     self.print_type = assigned_printer.print_type
 
-    # NEW: auto-advance status to in_progress when a printer is assigned.
-    # Don't override terminal or already-in-progress states.
-    blocked = %w[cancelled rejected archived ready_for_pickup abandoned]
+    # ✅ Do NOT auto-advance if job is explicitly marked as 'ongoing'
+    blocked = %w[cancelled rejected archived ready_for_pickup abandoned ongoing]
     current = status&.code
 
     if current.blank? || (!blocked.include?(current) && current != 'in_progress')
@@ -126,6 +126,7 @@ class PrintJob < Job
 
   # Notify patron with estimate the first time weight is entered — Patron only
   def send_cost_estimate_if_first_weight
+    return if automations_suppressed?
     return unless conversation
     return unless category&.name == 'Patron' # suppress for Assistive/Staff/Fidget
 
@@ -152,12 +153,12 @@ class PrintJob < Job
   # - Patron: compute actual cost from weight
   # - Assistive/Staff/Fidget: force $0.00
   def finalize_and_notify_if_actual_weight_set
+    return if automations_suppressed?
     return unless conversation
 
     ready_status = Status.find_by!(code: 'ready_for_pickup')
     cost         = free_category? ? 0.00 : estimated_cost_for(actual_weight)
 
-    # Set fields without retriggering callbacks
     update_columns(
       completion_date: (completion_date.presence || Date.current),
       actual_cost:     cost,
@@ -182,11 +183,8 @@ class PrintJob < Job
     JobMailer.notify_patron(msg).deliver_later
   end
 
-  def just_entered_in_progress?
-    saved_change_to_status_id? && Status.find(status_id).code == 'in_progress'
-  end
-
   def notify_in_progress_if_opted
+    return if automations_suppressed?
     return unless print_notify
     return unless assigned_printer&.public?
 
@@ -197,7 +195,7 @@ class PrintJob < Job
       PickupLocation.find_by(code: pickup_location)&.name ||
       pickup_location
 
-    # Post a visible message for the portal (no email triggered here)
+    # Post a visible message for the portal
     conversation.messages.create!(
       body: <<~EOS.strip,
         Hello,
@@ -211,7 +209,7 @@ class PrintJob < Job
       staff_note_only: false
     )
 
-    # Send a single, dedicated email (no notify_patron call)
+    # Send the dedicated email
     JobMailer.job_in_progress(self).deliver_later
   end
 end
