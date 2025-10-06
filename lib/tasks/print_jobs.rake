@@ -26,8 +26,33 @@ module PrintJobsTasks
       .includes(conversation: :messages)
   end
 
+  # (kept for compatibility; not used by the new logic)
   def last_public_message_at(job)
     job.conversation&.messages&.where(staff_note_only: false)&.maximum(:created_at)
+  end
+
+  def last_patron_public_message_at(job)
+    job.conversation&.messages
+       &.where(staff_note_only: false)
+       &.where.not(author_type: 'StaffUser')
+       &.maximum(:created_at)
+  end
+
+  def first_staff_public_message_at(job)
+    job.conversation&.messages
+       &.where(staff_note_only: false, author_type: 'StaffUser')
+       &.minimum(:created_at)
+  end
+
+  # Returns [:patron_reply|:first_staff_request|:job_created, Date]
+  def info_request_anchor(job)
+    if (t = last_patron_public_message_at(job))
+      [:patron_reply, t.to_date]
+    elsif (t = first_staff_public_message_at(job))
+      [:first_staff_request, t.to_date]
+    else
+      [:job_created, job.created_at.to_date]
+    end
   end
 
   def category_is_patron?(job)
@@ -175,39 +200,32 @@ namespace :print_jobs do
     reasons    = Hash.new(0)
 
     jobs.find_each do |job|
-      last_at = last_public_message_at(job)
-      if last_at.nil?
-        skipped += 1
-        reasons["no public messages yet"] += 1
-        printf "Job #%-6d %-30s | skip — no public messages yet\n",
-               job.id, job.patron&.email.to_s
-        next
-      end
+      kind, anchor_date = info_request_anchor(job)
+      days = (today - anchor_date).to_i
 
-      days     = (today - last_at.to_date).to_i
       location = location_name_for(job)
       cost_str = job.slicer_cost.present? ? format('%.2f', job.slicer_cost) : '—'
 
       if days >= 14
         to_cancel += 1
-        printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | WOULD CANCEL (location: %s)\n",
-               job.id, job.patron&.email.to_s, last_at.to_date, days, location
+        printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD CANCEL (location: %s)\n",
+               job.id, job.patron&.email.to_s, kind, anchor_date, days, location
       elsif days >= 7
         if can_send_quote?(job)
           to_nudge += 1
-          printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | WOULD NUDGE (quote: $%s)\n",
-                 job.id, job.patron&.email.to_s, last_at.to_date, days, cost_str
+          printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD NUDGE (quote: $%s)\n",
+                 job.id, job.patron&.email.to_s, kind, anchor_date, days, cost_str
         else
           skipped += 1
           reasons["no slicer_cost or non-Patron"] += 1
-          printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | skip — no slicer_cost or non-Patron\n",
-                 job.id, job.patron&.email.to_s, last_at.to_date, days
+          printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | skip — no slicer_cost or non-Patron\n",
+                 job.id, job.patron&.email.to_s, kind, anchor_date, days
         end
       else
         skipped += 1
-        reasons["<7 days since last public message"] += 1
-        printf "Job #%-6d %-30s last_msg: %-10s (%3dd) | skip — not due yet\n",
-               job.id, job.patron&.email.to_s, last_at.to_date, days
+        reasons["<7 days since anchor (#{kind})"] += 1
+        printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | skip — not due yet\n",
+               job.id, job.patron&.email.to_s, kind, anchor_date, days
       end
     end
 
@@ -236,31 +254,25 @@ namespace :print_jobs do
     skipped   = 0
 
     jobs.find_each do |job|
-      last_at = last_public_message_at(job)
-      if last_at.nil?
-        skipped += 1
-        puts "Job ##{job.id} — skip: no public messages yet"
-        next
-      end
-
-      days = (today - last_at.to_date).to_i
+      kind, anchor_date = info_request_anchor(job)
+      days = (today - anchor_date).to_i
 
       if days >= 14
         cancel_job!(job, robot)
         cancelled += 1
-        puts "Job ##{job.id} — CANCELLED (≥14 days since last public message)"
+        puts "Job ##{job.id} — CANCELLED (≥14 days since #{kind.to_s.tr('_', ' ')})"
       elsif days >= 7
         if can_send_quote?(job)
           resend_quote!(job, robot)
           nudged += 1
-          puts "Job ##{job.id} — nudged (sent quote reminder)"
+          puts "Job ##{job.id} — nudged (sent quote reminder; anchor=#{kind})"
         else
           skipped += 1
-          puts "Job ##{job.id} — skip: no slicer_cost or non-Patron"
+          puts "Job ##{job.id} — skip: no slicer_cost or non-Patron (anchor=#{kind})"
         end
       else
         skipped += 1
-        puts "Job ##{job.id} — skip: days_since_last_public_message=#{days}"
+        puts "Job ##{job.id} — skip: #{days}d since #{kind} (<7)"
       end
     end
 
