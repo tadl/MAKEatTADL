@@ -3,14 +3,32 @@ require Rails.root.join('lib/rails_admin/config/actions/conversation')
 require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
 require Rails.root.join('lib/rails_admin/config/actions/files')
 
+# Global alphabetical ordering helper for association dropdowns (never use :position)
+ALPHA_ORDER = ->(scope) do
+  cols = scope.klass.column_names
+  if cols.include?('name')
+    scope.reorder(nil).order(Arel.sql('LOWER(name) ASC'))
+  elsif cols.include?('title')
+    scope.reorder(nil).order(Arel.sql('LOWER(title) ASC'))
+  elsif cols.include?('email')
+    scope.reorder(nil).order(Arel.sql('LOWER(email) ASC'))
+  else
+    scope.reorder(nil).order(:id)
+  end
+end
+
+# Safe global default for ALL RailsAdmin association pickers (doesn't enumerate models at boot)
+RailsAdmin::Config::Fields::Association.register_instance_option :associated_collection_scope do
+  ALPHA_ORDER
+end
+
 RailsAdmin.config do |config|
   config.authorize_with :cancancan, Ability
+
   # Authentication & inheritance
-  config.parent_controller      = '::ApplicationController'
+  config.parent_controller = '::ApplicationController'
   config.authenticate_with do
-    unless current_staff_user
-      redirect_to '/admin/login'
-    end
+    redirect_to '/admin/login' unless current_staff_user
   end
   config.current_user_method(&:current_staff_user)
 
@@ -37,7 +55,6 @@ RailsAdmin.config do |config|
 
   # Actions
   config.actions do
-
     dashboard
     index
     new   { except ['StaffUser'] }
@@ -51,12 +68,8 @@ RailsAdmin.config do |config|
         bindings[:controller].current_ability.can?(:update, bindings[:abstract_model].model)
       end
     end
-    conversation do
-      only ['Job']
-    end
-    files do
-      only ['Job']
-    end
+    conversation { only ['Job'] }
+    files        { only ['Job'] }
     delete do
       visible do
         bindings[:controller].current_ability.can?(:destroy, bindings[:abstract_model].model)
@@ -65,24 +78,24 @@ RailsAdmin.config do |config|
     help
   end
 
-  #   Management (Jobs and Patrons)
+  # -----------------------------
+  # Management (Jobs and Patrons)
+  # -----------------------------
   config.model 'Job' do
     navigation_label 'Management'
     weight           100
     label_plural     'Jobs'
 
     list do
-      scopes [:active, :inactive, :ongoing]
+      scopes  [:active, :inactive, :ongoing]
       sort_by :created_at
-      field :id do
-        label "Job"
-      end
+      field(:id) { label 'Job' }
       field :patron
       field :status, :belongs_to_association do
         label        'Status'
         pretty_value { bindings[:object].status.name }
         filterable   true
-        filter_options { Status.all.map { |s| [s.name, s.id] } }
+        filter_options { Status.order(:name).pluck(:name, :id) }
       end
       field :category, :belongs_to_association do
         pretty_value { bindings[:object].category.name }
@@ -105,10 +118,8 @@ RailsAdmin.config do |config|
         end
       end
       field :created_at do
-        label "Received"
-        pretty_value do
-          value&.in_time_zone('America/Detroit')&.strftime("%b %-d, %Y %-l:%M%P")
-        end
+        label 'Received'
+        pretty_value { value&.in_time_zone('America/Detroit')&.strftime('%b %-d, %Y %-l:%M%P') }
       end
     end
 
@@ -122,18 +133,16 @@ RailsAdmin.config do |config|
       field :category, :belongs_to_association do
         pretty_value { bindings[:object].category.name }
       end
-      field :type do
-        label 'Job Type'
-      end
+      field(:type) { label 'Job Type' }
       field :notes
       field :model_files, :active_storage do
         label 'Model Files'
         pretty_value do
           value.map.with_index do |file, i|
             file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
-            html_id = "stlviewer-#{i}"
+            html_id  = "stlviewer-#{i}"
 
-            if File.extname(file.filename.to_s).downcase == ".stl"
+            if File.extname(file.filename.to_s).downcase == '.stl'
               %Q{
                 <div>
                   <details id="stl-details-#{i}">
@@ -157,7 +166,7 @@ RailsAdmin.config do |config|
           label          'Print Type'
           pretty_value   { bindings[:object].print_type&.name }
           filterable     true
-          associated_collection_scope { ->(scope){ scope.order(:position) } }
+          associated_collection_scope { ALPHA_ORDER }
         end
         field :url do
           label 'URL'
@@ -170,24 +179,15 @@ RailsAdmin.config do |config|
           end
         end
         field :filament_color
-        field :print_time_estimate_hm do
-          label 'Print time estimate'
-        end
+        field(:print_time_estimate_hm) { label 'Print time estimate' }
         field :slicer_weight
         field :slicer_cost do
-          label "Estimated cost"
-          formatted_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
-          # And in case RailsAdmin falls back to pretty_value anywhere:
-          pretty_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
+          label 'Estimated cost'
+          formatted_value { value.present? ? bindings[:view].number_to_currency(value) : '' }
+          pretty_value    { value.present? ? bindings[:view].number_to_currency(value) : '' }
         end
         field :actual_weight
-        field :resin_volume_ml do
-          label "Resin Volume (mL)"
-        end
+        field(:resin_volume_ml) { label 'Resin Volume (mL)' }
         field :actual_cost
         field :completion_date
         field :pickup_date
@@ -203,12 +203,12 @@ RailsAdmin.config do |config|
             img = bindings[:object].scan_image
             if img.attached?
               thumb = bindings[:view].image_tag(
-                img.variant(resize_to_limit: [300,300]),
+                img.variant(resize_to_limit: [300, 300]),
                 class: 'rounded shadow',
                 style: 'margin:4px;max-width:300px;'
               )
               blob_url = Rails.application.routes.url_helpers.
-                           rails_blob_path(img, disposition: 'attachment', only_path: true)
+                rails_blob_path(img, disposition: 'attachment', only_path: true)
               bindings[:view].link_to(thumb, blob_url, target: '_blank', rel: 'noopener')
             else
               bindings[:view].content_tag(:em, 'No photo uploaded.')
@@ -225,20 +225,22 @@ RailsAdmin.config do |config|
 
     edit do
       field :patron do
+        read_only true
+        associated_collection_scope { ALPHA_ORDER }
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
         help ''
       end
       field :status, :belongs_to_association do
         label 'Status'
-        associated_collection_scope { ->(scope){ scope.order(:position) } }
+        associated_collection_scope { ALPHA_ORDER }
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
         help ''
       end
       field :category, :belongs_to_association do
         label 'Category'
-        associated_collection_scope { ->(scope){ scope.order(:position) } }
+        associated_collection_scope { ALPHA_ORDER }
         inline_add   { bindings[:controller].current_staff_user.admin? }
         inline_edit  { bindings[:controller].current_staff_user.admin? }
         help ''
@@ -252,15 +254,13 @@ RailsAdmin.config do |config|
       field :pickup_location, :enum do
         label    'Pickup Location'
         required true
-        enum     { PickupLocation.where(active: true).order(:position).pluck(:name, :code) }
+        enum { PickupLocation.where(active: true).order(Arel.sql('LOWER(name) ASC')).pluck(:name, :code) }
         help ''
       end
       field :notes do
         help 'Notes from requestor. Print jobs for Asssitive/Fidget categories will include relevant contact method/info and/or company/organization information here.'
       end
-      field :model_files do
-        visible false
-      end
+      field(:model_files) { visible false }
 
       group :print_fields do
         label   'Print-only fields'
@@ -268,14 +268,14 @@ RailsAdmin.config do |config|
         field :assigned_printer, :belongs_to_association do
           inline_add   { bindings[:controller].current_staff_user.admin? }
           inline_edit  { bindings[:controller].current_staff_user.admin? }
-          associated_collection_scope { ->(scope){ scope.order(:name) } }
+          associated_collection_scope { ALPHA_ORDER }
           help 'The printer that will be used for this job.'
         end
         field :print_type, :belongs_to_association do
           inline_add   { bindings[:controller].current_staff_user.admin? }
           inline_edit  { bindings[:controller].current_staff_user.admin? }
-          label                         'Print Type'
-          associated_collection_scope   { ->(scope){ scope.order(:position) } }
+          label        'Print Type'
+          associated_collection_scope { ALPHA_ORDER }
           help 'Automatically set from the assigned printer.'
         end
         field :url do
@@ -284,63 +284,38 @@ RailsAdmin.config do |config|
           partial 'url_with_open'
         end
         field :filament_color, :enum do
-          enum          { FilamentColor.order(:name).pluck(:name, :code) }
+          enum do
+            FilamentColor.where(active: true)
+                         .pluck(:name, :code)                 # [["Black","black"], ...]
+                         .sort_by { |(name, _)| name.to_s.downcase }
+          end
           default_value { bindings[:object].filament_color }
           help ''
         end
-        field :quantity, :integer do
-          label "Quantity"
-          help "Number of copies printed. Update this when printing additional copies."
-        end
+        field(:quantity, :integer) { label 'Quantity'; help 'Number of copies printed. Update this when printing additional copies.' }
         field :print_notify, :boolean do
           label 'Notify patron when printing starts (public printers only)'
           help  'Sends an email and portal message on transition to In Progress.'
         end
-        field :print_time_estimate_hm do
-          label 'Print time estimate'
-          help 'Enter estimated print duration from slicer. Format: HH:MM.'
-        end
-        field :slicer_weight do
-          label "Weight estimate (grams)"
-          help 'Estimated weight from slicer.'
-        end
+        field(:print_time_estimate_hm) { label 'Print time estimate'; help 'Enter estimated print duration from slicer. Format: HH:MM.' }
+        field(:slicer_weight)          { label 'Weight estimate (grams)'; help 'Estimated weight from slicer.' }
         field :slicer_cost do
-          label "Estimated cost"
+          label 'Estimated cost'
           read_only true
-          help 'Auto-calculate4d from weight estimate.'
-          formatted_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
-          # And in case RailsAdmin falls back to pretty_value anywhere:
-          pretty_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
+          help 'Auto-calculated from weight estimate.'
+          formatted_value { value.present? ? bindings[:view].number_to_currency(value) : '' }
+          pretty_value    { value.present? ? bindings[:view].number_to_currency(value) : '' }
         end
-        field :resin_volume_ml do
-          label "Resin Volume (mL)"
-          help  "How many milliliters of resin were used?"
-        end
-        field :actual_weight do
-          label "Weight (grams)"
-          help 'Enter when the print is finished — this auto-sets Actual cost, marks Ready for pickup, and emails the patron.'
-        end
+        field(:resin_volume_ml) { label 'Resin Volume (mL)'; help 'How many milliliters of resin were used?' }
+        field(:actual_weight)   { label 'Weight (grams)';    help 'Enter when the print is finished — this auto-sets Actual cost, marks Ready for pickup, and emails the patron.' }
         field :actual_cost do
           read_only true
           help 'Auto calculated from actual weight.'
-          formatted_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
-          # And in case RailsAdmin falls back to pretty_value anywhere:
-          pretty_value do
-            value.present? ? bindings[:view].number_to_currency(value) : ''
-          end
+          formatted_value { value.present? ? bindings[:view].number_to_currency(value) : '' }
+          pretty_value    { value.present? ? bindings[:view].number_to_currency(value) : '' }
         end
-        field :completion_date, :date do
-          help "Set this to today's date when the print is completed."
-        end
-        field :pickup_date, :date do
-          help "Set this to today's date when the print is picked up."
-        end
+        field(:completion_date, :date) { help "Set this to today's date when the print is completed." }
+        field(:pickup_date, :date)     { help "Set this to today's date when the print is picked up." }
       end
 
       group :scan_fields do
@@ -370,45 +345,34 @@ RailsAdmin.config do |config|
 
     show do
       fields :id, :email, :name
-
       field :jobs, :has_many_association do
         pretty_value do
           bindings[:object].jobs.map do |job|
             bindings[:view].link_to(
               "##{job.id} (#{job.type.demodulize})",
-              bindings[:view].rails_admin.show_path(
-                model_name: 'job',
-                id:         job.id
-              )
+              bindings[:view].rails_admin.show_path(model_name: 'job', id: job.id)
             )
           end.join(', ').html_safe
         end
-        visible do
-          true
-        end
+        visible { true }
       end
-
-      # All other fields only visible to admins
       fields :access_token, :token_sent_at, :audits do
-        visible do
-          bindings[:controller].current_staff_user.admin?
-        end
+        visible { bindings[:controller].current_staff_user.admin? }
       end
     end
 
     edit do
       field :name
       field :email
-
       fields :access_token, :token_sent_at, :jobs, :audits do
-        visible do
-          bindings[:controller].current_staff_user.admin?
-        end
+        visible { bindings[:controller].current_staff_user.admin? }
       end
     end
   end
 
-  #   Form Options (for your public webforms)
+  # ----------------
+  # Form Options etc
+  # ----------------
   config.model 'FilamentColor' do
     visible          { bindings[:controller].current_staff_user.admin? }
     navigation_label 'Form Options'
@@ -460,7 +424,9 @@ RailsAdmin.config do |config|
       field :name
       field :code
       field :position
-      field :category
+      field :category do
+        associated_collection_scope { ALPHA_ORDER }
+      end
       field :notes
       field :model_file, :active_storage do
         label 'Model File (STL)'
@@ -468,11 +434,7 @@ RailsAdmin.config do |config|
         pretty_value do
           if value&.attached?
             file_url = Rails.application.routes.url_helpers.rails_blob_url(value, only_path: true)
-            %Q{
-              <div class="mb-2">
-                Currently attached: <a href="#{file_url}">#{value.filename}</a>
-              </div>
-            }.html_safe
+            %Q{<div class="mb-2">Currently attached: <a href="#{file_url}">#{value.filename}</a></div>}.html_safe
           else
             '<span class="text-muted">(No file attached)</span>'.html_safe
           end
@@ -483,6 +445,7 @@ RailsAdmin.config do |config|
         help  'Attach a PNG/JPG preview for this model'
       end
     end
+
     show do
       field :name
       field :code
@@ -494,9 +457,9 @@ RailsAdmin.config do |config|
           if value.present?
             file = value
             file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
-            html_id = "stlviewer-#{file.id}"
+            html_id  = "stlviewer-#{file.id}"
 
-            if File.extname(file.filename.to_s).downcase == ".stl"
+            if File.extname(file.filename.to_s).downcase == '.stl'
               %Q{
                 <div>
                   <details id="stl-details-#{file.id}">
@@ -510,7 +473,7 @@ RailsAdmin.config do |config|
               %Q{<div><a href="#{file_url}">#{file.filename}</a></div>}.html_safe
             end
           else
-            "(none)"
+            '(none)'
           end
         end
       end
@@ -538,46 +501,39 @@ RailsAdmin.config do |config|
       field :name
       field :code
       field :active
-      field :scanner, :boolean do
-        help "Check if this location has a 3D scanner"
-      end
-      field :fdm_printer, :boolean do
-        help "Check if this location has an FDM printer"
-      end
-      field :resin_printer, :boolean do
-        help "Check if this location has a resin printer"
-      end
+      field(:scanner, :boolean)     { help 'Check if this location has a 3D scanner' }
+      field(:fdm_printer, :boolean) { help 'Check if this location has an FDM printer' }
+      field(:resin_printer, :boolean) { help 'Check if this location has a resin printer' }
       field :printers, :has_many_association do
         label 'Printers at this Location'
         help  'Select which printers live at this pickup location'
         inline_add  { bindings[:controller].current_staff_user.admin? }
         inline_edit { bindings[:controller].current_staff_user.admin? }
-        associated_collection_scope { ->(scope){ scope.order(:name) } }
+        associated_collection_scope { ALPHA_ORDER }
       end
     end
   end
 
-  #   Admin (everything staff/admin manage)
+  # -----------
+  # Admin area
+  # -----------
   config.model 'Audited::Audit' do
     visible          { bindings[:controller].current_staff_user.admin? }
     navigation_label 'Admin'
     weight           299
-    label_plural 'Activity Log'
+    label_plural     'Activity Log'
     list do
       field :created_at
-      field :user         # who made the change
-      field :auditable    # record that was changed
-      field :action       # update/create/destroy
+      field :user
+      field :auditable
+      field :action
       field :audited_changes
     end
-    show do
-      include_all_fields
-    end
+    show { include_all_fields }
   end
 
   config.model 'Printer' do
     visible { bindings[:controller].current_staff_user.admin? }
-
     navigation_label 'Admin'
     weight           300
     label_plural     'Printers'
@@ -611,18 +567,16 @@ RailsAdmin.config do |config|
         label           'Pickup Location'
         inline_add      { bindings[:controller].current_staff_user.admin? }
         inline_edit     { bindings[:controller].current_staff_user.admin? }
-        associated_collection_scope { ->(scope){ scope.order(:name) } }
+        associated_collection_scope { ALPHA_ORDER }
       end
       field :print_type, :belongs_to_association do
         label           'Print Type'
         inline_add      true
         inline_edit     true
-        associated_collection_scope { ->(scope){ scope.order(:position) } }
+        associated_collection_scope { ALPHA_ORDER }
       end
       field :printer_model
-      field :bed_size, :string do
-        help 'e.g. 200x200x200 mm'
-      end
+      field(:bed_size, :string) { help 'e.g. 200x200x200 mm' }
       field :location
       field :public, :boolean do
         label 'Publicly viewable'
@@ -639,7 +593,7 @@ RailsAdmin.config do |config|
     label_plural     'Print Types'
 
     list do
-      sort_by :position
+      sort_by :name
       field :name
       field :code
       field :position
@@ -655,15 +609,9 @@ RailsAdmin.config do |config|
     end
 
     edit do
-      field :name do
-        help 'Human‐readable label (e.g. “FDM”).'
-      end
-      field :code do
-        help 'Machine value (e.g. “fdm”). Must be unique.'
-      end
-      field :position do
-        help 'Order in dropdowns.'
-      end
+      field(:name)     { help 'Human‐readable label (e.g. “FDM”).' }
+      field(:code)     { help 'Machine value (e.g. “fdm”). Must be unique.' }
+      field(:position) { help 'Legacy field (not used for ordering).' }
     end
   end
 
@@ -694,6 +642,7 @@ RailsAdmin.config do |config|
     label_plural     'Statuses'
 
     list do
+      sort_by :name
       field :id
       field :name
       field :code
@@ -721,7 +670,7 @@ RailsAdmin.config do |config|
     label_plural     'Categories'
 
     list do
-      sort_by :position
+      sort_by :name
       field :name
       field :position
     end
@@ -744,9 +693,6 @@ RailsAdmin.config do |config|
     navigation_label 'Admin'
     weight           370
     label_plural     'Messages'
-
-    list do
-      exclude_fields :images
-    end
+    list { exclude_fields :images }
   end
 end
