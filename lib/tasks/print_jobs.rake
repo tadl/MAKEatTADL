@@ -60,7 +60,7 @@ module PrintJobsTasks
     Current.staff_user = author
     begin
       cancelled = Status.find_by!(code: 'cancelled')
-      job.update!(status: cancelled) # triggers callback to notify the patron
+      job.update!(status: cancelled) # triggers your callback to notify the patron
     ensure
       Current.staff_user = prev
     end
@@ -81,16 +81,14 @@ module PrintJobsTasks
     anchor + 7
   end
 
-  # Intuitive due/overdue rule (no modulo): send if today >= next_due
+  # Intuitive rule: send if today >= next_due (no modulo gymnastics)
   def should_send_pickup_reminder?(job, today)
     return [false, "no completion_date"] if job.completion_date.blank?
-
     next_due = next_pickup_reminder_due_date(job)
     if today >= next_due
       [true, nil]
     else
-      days_left = (next_due - today).to_i
-      [false, "next due in #{days_left} day(s)"]
+      [false, "next due in #{(next_due - today).to_i} day(s)"]
     end
   end
 
@@ -118,6 +116,40 @@ module PrintJobsTasks
     JobMailer.notify_patron(msg).deliver_later
 
     job.update_column(:last_pickup_reminder_sent_at, Time.current)
+  end
+
+  # ---------- Abandon helpers (30+ days in ready_for_pickup) ----------
+
+  def overdue_for_abandon_scope(today)
+    ready_for_pickup_scope.where('completion_date <= ?', today - 30)
+  end
+
+  def abandon_job!(job, author)
+    ensure_conversation!(job)
+    prev = Current.staff_user
+    Current.staff_user = author
+    begin
+      abandoned = Status.find_by!(code: 'abandoned')
+      job.update!(status: abandoned)
+
+      # Optional courtesy message/email; comment out if you do not want to notify.
+      msg = job.conversation.messages.create!(
+        body: <<~EOS.strip,
+          Hello,
+
+          Your 3D print job (##{job.id}) has been ready for pickup for over 30 days and has now been marked as abandoned per our policy.
+          If this is a mistake, reply here and we’ll work with you on next steps.
+
+          Thank you,
+          MAKE@TADL
+        EOS
+        author:          author,
+        staff_note_only: false
+      )
+      JobMailer.notify_patron(msg).deliver_later
+    ensure
+      Current.staff_user = prev
+    end
   end
 end
 
@@ -243,27 +275,6 @@ namespace :print_jobs do
   # Pickup reminder tasks
   # ========================
 
-  desc "Send weekly pickup reminders for jobs in ready_for_pickup status"
-  task send_pickup_reminders: :environment do
-    include PrintJobsTasks
-
-    robot = robot_user!
-    today = Date.current
-    jobs  = ready_for_pickup_scope
-
-    jobs.find_each do |job|
-      should_send, reason = should_send_pickup_reminder?(job, today)
-      unless should_send
-        puts "Job ##{job.id} — skip: #{reason}"
-        next
-      end
-
-      send_pickup_reminder!(job, robot, today)
-      next_due = next_pickup_reminder_due_date(job) # after update_column this is anchored to today
-      puts "Sent pickup reminder for job ##{job.id} (next due in #{(next_due - today).to_i} day[s])"
-    end
-  end
-
   desc "Preview (dry run) which pickup reminders would be sent today"
   task pickup_reminders_preview: :environment do
     include PrintJobsTasks
@@ -315,10 +326,76 @@ namespace :print_jobs do
     puts "Total considered     : #{ready_total}"
   end
 
-  desc "Nightly maintenance: nudge/cancel info-requests, then send pickup reminders"
+  desc "Send weekly pickup reminders for jobs in ready_for_pickup status"
+  task send_pickup_reminders: :environment do
+    include PrintJobsTasks
+
+    robot = robot_user!
+    today = Date.current
+    jobs  = ready_for_pickup_scope
+
+    jobs.find_each do |job|
+      should_send, reason = should_send_pickup_reminder?(job, today)
+      unless should_send
+        puts "Job ##{job.id} — skip: #{reason}"
+        next
+      end
+
+      send_pickup_reminder!(job, robot, today)
+      next_due = next_pickup_reminder_due_date(job) # after update_column this anchors to today
+      puts "Sent pickup reminder for job ##{job.id} (next due in #{(next_due - today).to_i} day[s])"
+    end
+  end
+
+  # ========================
+  # Abandon (30+ days) tasks
+  # ========================
+
+  desc "Preview (dry run): jobs in ready_for_pickup for ≥30 days that would be marked abandoned"
+  task pickup_abandon_preview: :environment do
+    include PrintJobsTasks
+
+    today  = Date.current
+    jobs   = overdue_for_abandon_scope(today)
+    total  = jobs.count
+
+    puts "== DRY RUN: Abandon ready_for_pickup jobs (≥30 days) as of #{today} =="
+    puts "Overdue count: #{total}"
+    puts
+
+    jobs.find_each do |job|
+      days = (today - job.completion_date).to_i
+      printf "Job #%-6d %-30s completion: %-10s (%3dd ago) | WOULD MARK ABANDONED\n",
+             job.id, job.patron&.email.to_s, job.completion_date, days
+    end
+  end
+
+  desc "Mark ready_for_pickup jobs older than 30 days as abandoned"
+  task abandon_overdue_pickups: :environment do
+    include PrintJobsTasks
+
+    robot = robot_user!
+    today = Date.current
+    jobs  = overdue_for_abandon_scope(today)
+
+    puts "== LIVE RUN: Marking ready_for_pickup jobs as abandoned (≥30 days) =="
+    puts "Count: #{jobs.count}"
+    puts
+
+    jobs.find_each do |job|
+      days = (today - job.completion_date).to_i
+      abandon_job!(job, robot)
+      puts "Job ##{job.id} — marked ABANDONED (#{days} days since completion)"
+    end
+  end
+
+  # ========================
+  # Nightly batch
+  # ========================
+
+  desc "Nightly maintenance: nudge/cancel info-requests, send pickup reminders, abandon 30+ day ready items"
   task nightly_maintenance: :environment do
     puts "== Nightly: info_requests_nudge_and_cancel =="
-
     begin
       t = Rake::Task["print_jobs:info_requests_nudge_and_cancel"]
       t.reenable
@@ -328,13 +405,21 @@ namespace :print_jobs do
     end
 
     puts "\n== Nightly: send_pickup_reminders =="
-
     begin
       t = Rake::Task["print_jobs:send_pickup_reminders"]
       t.reenable
       t.invoke
     rescue => e
       warn "[nightly] send_pickup_reminders failed: #{e.class}: #{e.message}"
+    end
+
+    puts "\n== Nightly: abandon_overdue_pickups =="
+    begin
+      t = Rake::Task["print_jobs:abandon_overdue_pickups"]
+      t.reenable
+      t.invoke
+    rescue => e
+      warn "[nightly] abandon_overdue_pickups failed: #{e.class}: #{e.message}"
     end
 
     puts "\n== Nightly maintenance complete =="
