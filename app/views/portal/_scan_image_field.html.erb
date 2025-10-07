@@ -5,11 +5,12 @@
   <div class="card-body">
     <%= label_tag 'job[scan_image]', 'Upload Photo', class: 'form-label' %>
     <%= file_field_tag 'job[scan_image]',
-                        accept: 'image/*',
+                        accept: 'image/png,image/jpeg,image/heic,image/heif,.heic,.heif',
                         id: 'job_scan_image',
                         class: 'form-control' %>
     <div class="form-text">
-      Upload a high-res photo of your object (include a ruler or common item for scale).
+      Upload a clear <strong>PNG, JPEG, or HEIC</strong> photo of your object (include a ruler or common item for scale).
+      ZIP/model files are not allowed here.
     </div>
   </div>
 </div>
