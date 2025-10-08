@@ -48,18 +48,18 @@ module RailsAdmin
 
             if request.get?
               # ==== MARK PATRON MESSAGES READ ====
-              # for each unread message NOT authored by staff, stamp read_at
-              @conversation.messages.unread.find_each do |msg|
-                msg.update_read_at!
-              end
+              @conversation.messages.unread.find_each(&:update_read_at!)
 
-              # now render the blank conversation view
               render @action.template_name
 
             elsif request.post?
               # ==== STAFF POST ====
-              body            = params.dig(:conversation, :message_body)
+              body            = params.dig(:conversation, :message_body).to_s
               staff_only_flag = params.dig(:conversation, :staff_note_only) == '1'
+
+              # --- FORCE STAFF NOTE WHENEVER THERE ARE @MENTIONS ---
+              has_mentions = body.match?(/@\w+/)
+              staff_only_flag ||= has_mentions
 
               msg = @conversation.messages.create!(
                 body:            body,
@@ -67,26 +67,22 @@ module RailsAdmin
                 staff_note_only: staff_only_flag
               )
 
-              # extract @mentions
-              msg.body.scan(/@(\w+)/).flatten.uniq.each do |username|
+              # extract @mentions and notify staff
+              usernames = body.scan(/@(\w+)/).flatten.uniq
+              usernames.each do |username|
                 staff_email = "#{username}@#{ENV.fetch('GOOGLE_DOMAIN')}"
-                if staff = StaffUser.find_by(email: staff_email)
-                  # persist in-app notification
+                if (staff = StaffUser.find_by(email: staff_email))
                   Notification.create!(staff_user: staff, message: msg)
-
-                  # email ping
                   MentionMailer.user_mentioned(staff, msg).deliver_later
                 end
               end
 
               # attach any uploaded images
               if params.dig(:conversation, :images).present?
-                Array(params.dig(:conversation, :images)).each do |upload|
-                  msg.images.attach(upload)
-                end
+                Array(params.dig(:conversation, :images)).each { |upload| msg.images.attach(upload) }
               end
 
-              # only email patron when not a staff-only note
+              # only email patron when not a staff-only note (mentions force staff-only)
               unless staff_only_flag
                 JobMailer.notify_patron(msg).deliver_later
               end
@@ -101,8 +97,7 @@ module RailsAdmin
                 turbo_stream.replace(
                   'conversation_form',
                   partial: 'rails_admin/main/conversation_form',
-                  locals: { job:          @job,
-                            conversation: @conversation }
+                  locals: { job: @job, conversation: @conversation }
                 )
               ]
             end
