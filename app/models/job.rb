@@ -40,6 +40,10 @@ class Job < ApplicationRecord
 
   validates :status, presence: true
 
+  # NEW: record what the job originated as (print|scan)
+  before_validation :set_origin_default, on: :create
+  validates :origin, inclusion: { in: %w[print scan] }
+
   # ✅ Server-side allowlist for model files
   validate :model_files_must_be_allowed_models
 
@@ -59,7 +63,7 @@ class Job < ApplicationRecord
   scope :finished_between, ->(start_time, end_time) { where(finished_at: end_time ? (start_time..end_time) : start_time..start_time) }
 
   # --------------------
-  # Automation guard 🛑
+  # Automation guard �
   # --------------------
   # Returns true if this job is in a state where we should NOT run automations.
   # We currently suppress automations when the status is `ongoing`.
@@ -70,6 +74,11 @@ class Job < ApplicationRecord
   end
 
   private
+
+  # Set origin once at creation; persists through Scan→Print flips
+  def set_origin_default
+    self.origin ||= (is_a?(ScanJob) ? 'scan' : 'print')
+  end
 
   def build_conversation!
     create_conversation! unless conversation

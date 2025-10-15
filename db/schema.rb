@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_17_182239) do
+ActiveRecord::Schema[7.1].define(version: 2025_10_15_152846) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -120,14 +120,17 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_17_182239) do
     t.datetime "started_at", precision: nil
     t.datetime "finished_at", precision: nil
     t.boolean "print_notify", default: false, null: false
+    t.string "origin", default: "print", null: false
     t.index ["assigned_printer_id"], name: "index_jobs_on_assigned_printer_id"
     t.index ["category_id"], name: "index_jobs_on_category_id"
     t.index ["finished_by_id"], name: "index_jobs_on_finished_by_id"
+    t.index ["origin"], name: "index_jobs_on_origin"
     t.index ["patron_id"], name: "index_jobs_on_patron_id"
     t.index ["print_notify"], name: "index_jobs_on_print_notify"
     t.index ["printable_model_id"], name: "index_jobs_on_printable_model_id"
     t.index ["started_by_id"], name: "index_jobs_on_started_by_id"
     t.index ["status_id"], name: "index_jobs_on_status_id"
+    t.check_constraint "origin::text = ANY (ARRAY['print'::character varying, 'scan'::character varying]::text[])", name: "jobs_origin_check"
   end
 
   create_table "messages", force: :cascade do |t|
