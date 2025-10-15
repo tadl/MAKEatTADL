@@ -88,6 +88,13 @@ class PortalController < ApplicationController
       if (pm_id = params.dig(:job, :printable_model_id)).present?
         pm = PrintableModel.find(pm_id)
         @job.printable_model = pm
+
+        # Pre-fill single-copy weight and default quantity
+        if pm.respond_to?(:weight_grams) && pm.weight_grams.present? && @job.slicer_weight.blank?
+          @job.slicer_weight = pm.weight_grams
+        end
+        @job.quantity = 1 if @job.quantity.blank?
+
         @job.model_files.attach(pm.model_file.blob) if pm.model_file.attached?
       end
     end
@@ -285,6 +292,8 @@ class PortalController < ApplicationController
       :printable_model_id,
       :print_type,
       :print_notify,
+      :quantity,
+      :slicer_weight,
       model_files: []
     )
   end

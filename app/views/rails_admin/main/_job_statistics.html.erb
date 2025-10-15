@@ -18,7 +18,7 @@
   # Chart data (completions)
   prints_per_day        = report.prints_per_day          # { Date => qty }
   filament_per_day      = report.filament_per_day        # { Date => grams }
-  filament_color_counts = report.filament_color_counts   # { "black" => n, ... }
+  filament_color_counts = report.filament_color_counts   # { "black" => total prints, ... }
 
   # --- Ensure every day in range has a point (fill gaps with 0) ---
   all_days        = (start_date.to_date..end_date.to_date).to_a
@@ -137,7 +137,7 @@
           <td><%= number_with_delimiter(report.resin_ml) %> mL</td>
         </tr>
         <tr>
-          <th>Most Popular Filament Color</th>
+          <th>Most Popular Filament Color (by prints)</th>
           <td>
             <% if popular_code.present? %>
               <%= popular_code.titleize %> <small class="text-muted">(n=<%= popular_count %>)</small>
@@ -313,7 +313,7 @@
         responsive: true,
         plugins: {
           legend: { position: 'bottom' },
-          title: { display: true, text: 'Filament Color Popularity (Completions)' }
+          title: { display: true, text: 'Filament Color Popularity (by prints)' }
         }
       }
     });

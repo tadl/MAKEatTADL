@@ -427,6 +427,10 @@ RailsAdmin.config do |config|
       field :category do
         associated_collection_scope { ALPHA_ORDER }
       end
+      field :weight_grams do
+        label 'Default Weight (g)'
+        help  'Single-copy weight in grams. Used to pre-fill weights.'
+      end
       field :notes
       field :model_file, :active_storage do
         label 'Model File (STL)'

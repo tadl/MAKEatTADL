@@ -112,10 +112,12 @@ class PrintJobReport
   # Breakdowns (completions)
   # ---------------------------
 
+  # ✅ Popularity by *prints* (not jobs). Quantity 0/blank counts as 1.
   def filament_color_counts
     @non_cancelled_completed
       .where.not(filament_color: [nil, ""])
-      .group(:filament_color).count
+      .group(:filament_color)
+      .sum(Arel.sql("COALESCE(NULLIF(quantity, 0), 1)"))
   end
 
   def popular_filament
