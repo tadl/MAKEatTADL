@@ -3,6 +3,14 @@ class Patron < ApplicationRecord
   audited
   has_many :jobs, dependent: :destroy
 
+  before_validation { self.email = email.to_s.strip.downcase }
+
+  validates :email,
+            presence: true,
+            length: { maximum: 254 },
+            format: { with: /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/,
+                      message: "must look like name@example.org" }
+
   before_create :generate_access_token
 
   # Public: regenerates the access token and timestamp

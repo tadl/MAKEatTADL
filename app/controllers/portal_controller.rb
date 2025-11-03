@@ -4,6 +4,8 @@ class PortalController < ApplicationController
   helper :portal
   layout 'application'
 
+  EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
+
   # Need a logged-in patron for dashboard/show/create_message
   before_action :load_patron, only: %i[dashboard show create_message]
   before_action :load_job,    only: %i[show create_message]
@@ -64,8 +66,7 @@ class PortalController < ApplicationController
   # SAVE ANY TYPE OF PRINT JOB
   #
   def create_print_job
-    @type   = params[:type]&.downcase.presence || 'patron'
-    @patron = find_or_create_patron
+    @type = params[:type]&.downcase.presence || 'patron'
 
     # PATCH: Accept both model_file (old) and model_files (new)
     if params[:job][:model_file].present?
@@ -73,7 +74,22 @@ class PortalController < ApplicationController
       params[:job][:model_files] << params[:job].delete(:model_file)
     end
 
-    @job    = PrintJob.new(print_job_params)
+    # Build first so the form can re-render with posted values on validation errors
+    @job = PrintJob.new(print_job_params)
+
+    # Validate email early (authoritative server-side)
+    email = params.dig(:patron, :email).to_s.strip.downcase
+    unless valid_email?(email)
+      flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
+      return render form_template_for(@type), status: :unprocessable_entity
+    end
+
+    @patron = find_or_create_patron
+    unless @patron
+      flash.now[:alert] = "We couldn’t create your account with that email."
+      return render form_template_for(@type), status: :unprocessable_entity
+    end
+
     @job.patron = @patron
 
     # STAFF‐ONLY: enforce @tadl.org email
@@ -127,8 +143,22 @@ class PortalController < ApplicationController
   end
 
   def create_scan_job
+    # Build first so the form can re-render with posted values on validation errors
+    @job = ScanJob.new(scan_job_params)
+
+    # Validate email early (authoritative server-side)
+    email = params.dig(:patron, :email).to_s.strip.downcase
+    unless valid_email?(email)
+      flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
+      return render :submit_scan, status: :unprocessable_entity
+    end
+
     @patron = find_or_create_patron
-    @job    = ScanJob.new(scan_job_params)
+    unless @patron
+      flash.now[:alert] = "We couldn’t create your account with that email."
+      return render :submit_scan, status: :unprocessable_entity
+    end
+
     @job.patron   = @patron
     @job.category = Category.find_by!(name: 'Patron')
     @job.status   = Status.find_by!(code: 'pending')
@@ -159,7 +189,13 @@ class PortalController < ApplicationController
 
   # Send the magic link, and set secure cookie
   def send_token
-    @patron = Patron.find_by(email: params.dig(:patron, :email))
+    email = params.dig(:patron, :email).to_s.strip.downcase
+    unless valid_email?(email)
+      flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
+      return render :token_request, status: :unprocessable_entity
+    end
+
+    @patron = Patron.find_by(email: email)
     unless @patron
       flash.now[:alert] = "We couldn't find that email address."
       return render :token_request, status: :unprocessable_entity
@@ -199,13 +235,21 @@ class PortalController < ApplicationController
 
   private
 
-  # DRY: find or build patron from form
+  def valid_email?(email)
+    email.present? && email.match?(EMAIL_REGEX)
+  end
+
+  # DRY: find or build patron from form (email already validated/normalized by caller)
   def find_or_create_patron
     p = params.require(:patron).permit(:first_name, :last_name, :email)
-    patron = Patron.find_or_initialize_by(email: p[:email])
+    email = p[:email].to_s.strip.downcase
+    return nil unless valid_email?(email)
+
+    patron = Patron.find_or_initialize_by(email: email)
     if patron.new_record?
-      patron.name = "#{p[:first_name]} #{p[:last_name]}"
-      patron.save!
+      patron.name  = "#{p[:first_name]} #{p[:last_name]}".strip
+      patron.email = email
+      return nil unless patron.save
     end
     patron
   end

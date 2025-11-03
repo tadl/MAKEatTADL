@@ -14,10 +14,38 @@
               id: 'patron_last_name', class: 'form-control', required: true %>
       </div>
     </div>
+
     <div class="mt-3">
       <%= label_tag 'patron[email]', 'Email Address', class: 'form-label' %>
-      <%= email_field_tag 'patron[email]', params.dig(:patron, :email),
-            id: 'patron_email', class: 'form-control', required: true %>
+      <%= email_field_tag 'patron[email]', params.dig(:patron, :email).to_s.strip,
+            id: 'patron_email',
+            class: 'form-control',
+            required: true,
+            placeholder: 'name@example.org',
+            autocomplete: 'email',
+            inputmode: 'email',
+            spellcheck: false,
+            autocapitalize: 'off',
+            autocorrect: 'off',
+            pattern: '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$',
+            title: 'Enter a valid email like name@example.org (no spaces, one "@").',
+            'aria-describedby': 'patron_email_help' %>
+
+      <small id="patron_email_help" class="form-text text-muted">
+        We’ll email you a secure sign-in link. Double-check for typos — no spaces and exactly one “@”.
+      </small>
     </div>
   </div>
 </div>
+
+<script>
+  // Light polish: trim & lowercase on blur to avoid accidental spaces/caps
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('patron_email');
+    if (!el) return;
+    // Attach the datalist for browser autocompletion (optional)
+    el.addEventListener('blur', function () {
+      this.value = (this.value || '').trim().toLowerCase();
+    });
+  });
+</script>
