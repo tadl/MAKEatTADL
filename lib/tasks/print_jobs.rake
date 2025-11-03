@@ -63,6 +63,16 @@ module PrintJobsTasks
     category_is_patron?(job) && job.slicer_cost.to_f > 0
   end
 
+  # NEW: find the most recent automated "Just checking in" quote nudge we sent
+  # We key off a distinctive substring to avoid a schema change.
+  def last_quote_nudge_at(job)
+    return nil unless job.conversation
+    job.conversation.messages
+       .where(author_type: 'StaffUser', staff_note_only: false)
+       .where("body ILIKE ?", "%Just checking in — the estimated cost%")
+       .maximum(:created_at)
+  end
+
   def resend_quote!(job, author)
     ensure_conversation!(job)
     msg = job.conversation.messages.create!(
@@ -203,18 +213,25 @@ namespace :print_jobs do
       kind, anchor_date = info_request_anchor(job)
       days = (today - anchor_date).to_i
 
-      location = location_name_for(job)
-      cost_str = job.slicer_cost.present? ? format('%.2f', job.slicer_cost) : '—'
-
       if days >= 14
         to_cancel += 1
-        printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD CANCEL (location: %s)\n",
-               job.id, job.patron&.email.to_s, kind, anchor_date, days, location
+        printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD CANCEL\n",
+               job.id, job.patron&.email.to_s, kind, anchor_date, days
       elsif days >= 7
         if can_send_quote?(job)
-          to_nudge += 1
-          printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD NUDGE (quote: $%s)\n",
-                 job.id, job.patron&.email.to_s, kind, anchor_date, days, cost_str
+          last_nudge = last_quote_nudge_at(job)
+          due = last_nudge.nil? || ((today - last_nudge.to_date).to_i >= 7)
+          if due
+            to_nudge += 1
+            printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | WOULD NUDGE (quote: $%s)\n",
+                   job.id, job.patron&.email.to_s, kind, anchor_date, days, format('%.2f', job.slicer_cost)
+          else
+            skipped += 1
+            ago = (today - last_nudge.to_date).to_i
+            reasons["nudged #{ago}d ago (<7)"] += 1
+            printf "Job #%-6d %-30s anchor:%-18s %-10s (%3dd) | skip — last nudge %dd ago (<7)\n",
+                   job.id, job.patron&.email.to_s, kind, anchor_date, days, ago
+          end
         else
           skipped += 1
           reasons["no slicer_cost or non-Patron"] += 1
@@ -263,9 +280,18 @@ namespace :print_jobs do
         puts "Job ##{job.id} — CANCELLED (≥14 days since #{kind.to_s.tr('_', ' ')})"
       elsif days >= 7
         if can_send_quote?(job)
-          resend_quote!(job, robot)
-          nudged += 1
-          puts "Job ##{job.id} — nudged (sent quote reminder; anchor=#{kind})"
+          last_nudge = last_quote_nudge_at(job)
+          due = last_nudge.nil? || ((today - last_nudge.to_date).to_i >= 7)
+          if due
+            resend_quote!(job, robot)
+            nudged += 1
+            last_info = last_nudge ? "#{(today - last_nudge.to_date).to_i}d since last nudge" : "first nudge"
+            puts "Job ##{job.id} — nudged (#{last_info}; anchor=#{kind})"
+          else
+            skipped += 1
+            ago = (today - last_nudge.to_date).to_i
+            puts "Job ##{job.id} — skip: last nudge #{ago}d ago (<7)"
+          end
         else
           skipped += 1
           puts "Job ##{job.id} — skip: no slicer_cost or non-Patron (anchor=#{kind})"
