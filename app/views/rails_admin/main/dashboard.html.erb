@@ -15,9 +15,9 @@
            'In Progress'           => 'Currently printing',
            'Ready for pickup'      => 'Awaiting pickup',
            'Archived'              => 'Finished and closed',
-           'Ongoing'               => 'Staff-only filler jobs, outreach devices',
+           'Ongoing'               => 'Staff-only misc jobs',
            'Cancelled'             => 'Declined by patron',
-           'Rejected'              => 'Violated our terms or impossible',
+           'Rejected'              => 'Terms violation or impossible',
            'Abandoned'             => 'Items never picked up'
          } %>
 
@@ -48,6 +48,109 @@
     </div>
   </div>
 
+  <% ready_status = Status.find_by(code: 'ready_for_pickup') %>
+  <% ready_jobs   = ready_status ? Job.where(status_id: ready_status.id).includes(:patron).order(Arel.sql('COALESCE(completion_date, created_at) ASC')) : Job.none %>
+  <% pl_names     = PickupLocation.pluck(:code, :name).to_h %>
+
+  <div class="card mb-4">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h3 class="mb-0">Ready for Pickup</h3>
+      <span class="badge bg-primary"><%= ready_jobs.size %></span>
+    </div>
+
+    <% if ready_jobs.any? %>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Job #</th>
+              <th>Patron</th>
+              <th>Location</th>
+              <th>Completed</th>
+              <th class="text-end">Cost</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <% ready_jobs.each do |job| %>
+              <% modal_id = "pickupModal_#{job.id}" %>
+              <% form_id  = "pickup_form_#{job.id}" %>
+              <% loc_name = pl_names[job.pickup_location] || job.pickup_location %>
+
+              <tr>
+                <td>
+                  <%= link_to "##{job.id}",
+                    url_for(controller: "rails_admin/main",
+                            action:     "conversation",
+                            model_name: "job",
+                            id:         job.id) %>
+                </td>
+
+                <td><%= job.patron&.name.presence || job.patron&.email %></td>
+                <td><%= loc_name %></td>
+                <td><%= job.completion_date&.strftime("%Y-%m-%d") || "—" %></td>
+                <td class="text-end">
+                  <%= job.actual_cost.present? ? number_to_currency(job.actual_cost) : "—" %>
+                </td>
+
+                <td class="text-end">
+
+                  <%# --- IMPORTANT: Hidden form that POSTS to custom RailsAdmin action --- %>
+                  <form id="<%= form_id %>"
+                        class="d-none"
+                        action="<%= rails_admin.url_for(action: :picked_up, model_name: 'job', id: job.id) %>"
+                        method="post">
+                    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                  </form>
+
+                  <%# --- Button triggers confirmation modal --- %>
+                  <button type="button"
+                          class="btn btn-success btn-sm"
+                          data-bs-toggle="modal"
+                          data-bs-target="#<%= modal_id %>">
+                    Picked Up
+                  </button>
+
+                  <%# --- Modal markup --- %>
+                  <div class="modal fade" id="<%= modal_id %>" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content">
+
+                        <div class="modal-header">
+                          <h5 class="modal-title">Mark as Picked Up</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                          Mark Job <strong>#<%= job.id %></strong> as picked up and archive it?
+                        </div>
+
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+
+                          <button type="button"
+                                  class="btn btn-success"
+                                  onclick="document.getElementById('<%= form_id %>').submit();">
+                            Yes — Mark Picked Up
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="card-body">
+        <em>No items are currently waiting for pickup.</em>
+      </div>
+    <% end %>
+  </div>
+
   <% unread_by_job = Message.unread.joins(conversation: :job)
                          .select('jobs.id as job_id, jobs.patron_id, COUNT(messages.*) as cnt')
                          .group('jobs.id') %>
@@ -61,7 +164,7 @@
         <% unread_by_job.each do |row| %>
           <% job = Job.find(row.job_id) %>
           <li class="list-group-item d-flex justify-content-between align-items-center">
-            <%= link_to "Job ##{job.id} — #{job.patron.name}", 
+            <%= link_to "Job ##{job.id} — #{job.patron.name}",
                         url_for(
                           controller: "rails_admin/main",
                           action:     "conversation",
@@ -75,9 +178,7 @@
     </div>
   <% else %>
     <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="mb-0">No Unread Messages</h3>
-      </div>
+      <div class="card-header"><h3 class="mb-0">No Unread Messages</h3></div>
       <h3 class="m-3">Hooray!</h3>
     </div>
   <% end %>
@@ -90,6 +191,7 @@
     <div class="card-header">
       <h3 class="mb-0">Mentions for You</h3>
     </div>
+
     <% if my_mentions.any? %>
       <ul class="list-group list-group-flush">
         <% my_mentions.each do |row| %>
@@ -111,7 +213,11 @@
         <em>No new mentions.</em>
       </div>
     <% end %>
-    <div class=" card-footer help-text">You can notify another staff member by tagging their @username in a <em>"Staff note only"</em> Job Message</div>
+
+    <div class="card-footer help-text">
+      You can notify another staff member by tagging their @username in a
+      <em>"Staff note only"</em> Job Message
+    </div>
   </div>
 
   <div class="card mb-4">
@@ -119,25 +225,26 @@
       <h3 class="mb-0">Public Forms</h3>
     </div>
     <div class="card-body">
-      <div class="btn-toolbar" role="toolbar" aria-label="Public form links">
-        <div class="btn-group me-2" role="group" aria-label="Print">
+      <div class="btn-toolbar">
+        <div class="btn-group me-2">
           <%= link_to '3D Print Request', main_app.submit_print_path, class: 'btn btn-primary', target: '_blank' %>
         </div>
-        <div class="btn-group me-2" role="group" aria-label="Scan">
+        <div class="btn-group me-2">
           <%= link_to 'Scan Request', main_app.submit_scan_path, class: 'btn btn-primary', target: '_blank' %>
         </div>
-        <div class="btn-group me-2" role="group" aria-label="Fidget">
+        <div class="btn-group me-2">
           <%= link_to 'Fidget Request', main_app.submit_fidget_path, class: 'btn btn-primary', target: '_blank' %>
         </div>
-        <div class="btn-group me-2" role="group" aria-label="Assistive">
+        <div class="btn-group me-2">
           <%= link_to 'Assistive Request', main_app.submit_assistive_path, class: 'btn btn-primary', target: '_blank' %>
         </div>
-        <div class="btn-group" role="group" aria-label="Staff">
+        <div class="btn-group">
           <%= link_to 'Staff Print Request', main_app.submit_staff_path, class: 'btn btn-primary', target: '_blank' %>
         </div>
       </div>
     </div>
   </div>
+
 </div>
 
 <%= render 'rails_admin/main/job_statistics' %>

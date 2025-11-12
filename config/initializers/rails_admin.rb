@@ -2,6 +2,7 @@
 require Rails.root.join('lib/rails_admin/config/actions/conversation')
 require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
 require Rails.root.join('lib/rails_admin/config/actions/files')
+require Rails.root.join('lib/rails_admin/config/actions/picked_up')
 
 # Global alphabetical ordering helper for association dropdowns (never use :position)
 ALPHA_ORDER = ->(scope) do
@@ -70,6 +71,7 @@ RailsAdmin.config do |config|
     end
     conversation { only ['Job'] }
     files        { only ['Job'] }
+    picked_up
     delete do
       visible do
         bindings[:controller].current_ability.can?(:destroy, bindings[:abstract_model].model)
