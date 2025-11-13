@@ -112,7 +112,6 @@
                     Picked Up
                   </button>
 
-                  <%# --- Modal markup --- %>
                   <div class="modal fade" id="<%= modal_id %>" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                       <div class="modal-content">
@@ -123,11 +122,50 @@
                         </div>
 
                         <div class="modal-body">
-                          Mark Job <strong>#<%= job.id %></strong> as picked up and archive it?
+
+                          <p class="mb-3">
+                            Confirm pickup for this job. It will be
+                            <strong>archived immediately</strong>.
+                          </p>
+
+                          <ul class="list-group list-group-flush small">
+
+                            <li class="list-group-item d-flex justify-content-between">
+                              <span class="fw-bold">Patron:</span>
+                              <span><%= job.patron&.name.presence || job.patron&.email || "Unknown" %></span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between">
+                              <span class="fw-bold">Location:</span>
+                              <span><%= loc_name %></span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between">
+                              <span class="fw-bold">Completed:</span>
+                              <span><%= job.completion_date&.strftime("%Y-%m-%d") || "—" %></span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between">
+                              <span class="fw-bold">Cost:</span>
+                              <span>
+                                <% if job.actual_cost.present? %>
+                                  <%= number_to_currency(job.actual_cost) %>
+                                <% elsif job.slicer_cost.present? %>
+                                  <%= number_to_currency(job.slicer_cost) %>
+                                <% else %>
+                                  —
+                                <% end %>
+                              </span>
+                            </li>
+
+                          </ul>
+
                         </div>
 
                         <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                          </button>
 
                           <button type="button"
                                   class="btn btn-success"
@@ -135,6 +173,7 @@
                             Yes — Mark Picked Up
                           </button>
                         </div>
+
                       </div>
                     </div>
                   </div>
