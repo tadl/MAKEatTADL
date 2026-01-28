@@ -2,7 +2,7 @@
 
 **A full-featured 3D Print Job Management Platform for Public Libraries**
 
-[![Ruby](https://img.shields.io/badge/Ruby-3.2.8-red)](https://www.ruby-lang.org)
+[![Ruby](https://img.shields.io/badge/Ruby-3.2.10-red)](https://www.ruby-lang.org)
 [![Rails](https://img.shields.io/badge/Rails-7.1.3.3-red)](https://rubyonrails.org/)
 
 ---
@@ -59,7 +59,7 @@ MAKEatTADL is a web application developed by [Traverse Area District Library (TA
 
 ### Prerequisites
 
-- **Ruby**: 3.2.8 (use [rbenv](https://github.com/rbenv/rbenv) or [asdf](https://asdf-vm.com/))
+- **Ruby**: 3.2.10 (use [rbenv](https://github.com/rbenv/rbenv) or [asdf](https://asdf-vm.com/))
 - **Rails**: 7.1.3.3
 - **PostgreSQL**: 13+
 - **Redis**: For Sidekiq jobs/queues
