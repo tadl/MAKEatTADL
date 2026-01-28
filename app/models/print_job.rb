@@ -5,13 +5,15 @@ class PrintJob < Job
   # Sync print_type when a printer is assigned
   before_validation :sync_print_type_from_printer, if: :will_save_change_to_assigned_printer_id?
 
-  # Derived costs (re)computed any time weights change
+  # Derived costs (re)computed any time material usage changes
   before_validation :compute_slicer_cost, if: -> { will_save_change_to_slicer_weight? }
   before_validation :compute_actual_cost, if: -> { will_save_change_to_actual_weight? }
+  before_validation :compute_resin_cost,  if: -> { will_save_change_to_resin_volume_ml? }
 
   # Notify flows (🚫 suppressed when status == 'ongoing')
   after_update :send_cost_estimate_if_first_weight,       if: -> { just_set_slicer_weight? && !automations_suppressed? }
   after_update :finalize_and_notify_if_actual_weight_set, if: -> { just_set_actual_weight?  && !automations_suppressed? }
+  after_update :finalize_and_notify_if_resin_volume_set,  if: -> { just_set_resin_volume?  && !automations_suppressed? }
   after_update :notify_in_progress_if_opted,              if: :should_notify_in_progress?
 
   def should_notify_in_progress?
@@ -88,6 +90,10 @@ class PrintJob < Job
     name == 'Assistive' || name == 'Staff' || name == 'Fidget'
   end
 
+  def resin_print?
+    (print_type&.code || assigned_printer&.print_type&.code) == 'resin'
+  end
+
   # First time slicer_weight gets set
   def just_set_slicer_weight?
     saved_change_to_slicer_weight? &&
@@ -102,15 +108,22 @@ class PrintJob < Job
       actual_weight.present?
   end
 
+  # First time resin_volume_ml gets set
+  def just_set_resin_volume?
+    saved_change_to_resin_volume_ml? &&
+      resin_volume_ml_previously_was.blank? &&
+      resin_volume_ml.present?
+  end
+
   # Single pricing helper
   # Patron:
   #   - FDM: $0.10/g, min $1.00
-  #   - Resin: $0.35/g, min $3.00
+  #   - Resin: $0.35/ml, min $3.00
   # Assistive/Staff/Fidget: always $0.00
-  def estimated_cost_for(weight_grams)
+  def estimated_cost_for(weight_grams_or_volume_ml)
     return 0.00 if free_category?
 
-    w = weight_grams.to_f
+    w = weight_grams_or_volume_ml.to_f
     type_code = print_type&.code || assigned_printer&.print_type&.code
     rate, minimum = (type_code == 'resin') ? [0.35, 3.00] : [0.10, 1.00]
     [(w * rate), minimum].max.round(2)
@@ -122,6 +135,11 @@ class PrintJob < Job
 
   def compute_actual_cost
     self.actual_cost = estimated_cost_for(actual_weight)
+  end
+
+  def compute_resin_cost
+    return unless resin_print?
+    self.actual_cost = estimated_cost_for(resin_volume_ml)
   end
 
   # Notify patron with estimate the first time weight is entered — Patron only
@@ -172,6 +190,41 @@ class PrintJob < Job
         Hello,
 
         Your print is complete and ready for pickup at #{location_name}.
+        The total cost is $#{format('%.2f', cost)}.
+
+        Thank you for using our service!
+      EOS
+      author:          Current.staff_user,
+      staff_note_only: false
+    )
+
+    JobMailer.notify_patron(msg).deliver_later
+  end
+
+  # When resin_volume_ml is first set (resin prints), finalize & notify
+  # - Patron: compute actual cost from resin volume
+  # - Assistive/Staff/Fidget: force $0.00
+  def finalize_and_notify_if_resin_volume_set
+    return if automations_suppressed?
+    return unless conversation
+    return unless resin_print?
+
+    ready_status = Status.find_by!(code: 'ready_for_pickup')
+    cost         = free_category? ? 0.00 : estimated_cost_for(resin_volume_ml)
+
+    update_columns(
+      completion_date: (completion_date.presence || Date.current),
+      actual_cost:     cost,
+      status_id:       ready_status.id
+    )
+
+    location_name = PickupLocation.find_by(code: pickup_location)&.name || pickup_location
+
+    msg = conversation.messages.create!(
+      body: <<~EOS.strip,
+        Hello,
+
+        Your resin print is complete and ready for pickup at #{location_name}.
         The total cost is $#{format('%.2f', cost)}.
 
         Thank you for using our service!

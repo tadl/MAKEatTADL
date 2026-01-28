@@ -250,6 +250,7 @@ GEM
     omniauth-rails_csrf_protection (1.0.2)
       actionpack (>= 4.2)
       omniauth (~> 2.0)
+    openssl (3.3.2)
     pagy (9.3.5)
     pg (1.5.9)
     popper_js (2.11.8)
@@ -399,6 +400,7 @@ DEPENDENCIES
   mailgun_rails
   omniauth-google-oauth2
   omniauth-rails_csrf_protection
+  openssl (~> 3.3.1)
   pagy
   pg (~> 1.1)
   puma (>= 5.0)
@@ -414,7 +416,7 @@ DEPENDENCIES
   web-console
 
 RUBY VERSION
-   ruby 3.2.9p265
+   ruby 3.2.10p266
 
 BUNDLED WITH
    2.6.9
