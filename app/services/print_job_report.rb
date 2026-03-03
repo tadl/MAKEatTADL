@@ -2,6 +2,8 @@
 class PrintJobReport
   attr_reader :start_date, :end_date
 
+  NORMALIZED_QUANTITY_SQL = "COALESCE(NULLIF(quantity, 0), 1)".freeze
+
   # Expect Date/Time; we normalize to a closed day-range
   def initialize(start_date:, end_date:)
     @start_date = start_date.beginning_of_day
@@ -16,7 +18,8 @@ class PrintJobReport
     @non_cancelled_completed = @completed
       .joins(:status)
       .where.not(statuses: { code: 'cancelled' })
-      .with_attached_model_files # for unique_designs (blob checksums) without N+1
+
+    @non_cancelled_completed_with_files = @non_cancelled_completed.with_attached_model_files
   end
 
   # ---------------------------
@@ -56,21 +59,21 @@ class PrintJobReport
 
   # Sum quantities for completed, non-cancelled jobs; treat nil OR 0 as 1
   def total_quantity
-    @non_cancelled_completed.sum(Arel.sql("COALESCE(NULLIF(quantity, 0), 1)"))
+    @non_cancelled_completed.sum(Arel.sql(NORMALIZED_QUANTITY_SQL))
   end
 
-  # Filament used in grams, prefer actual_weight else slicer_weight
+  # Filament used in grams. Staff enter per-copy weight, so multiply by normalized quantity.
   def filament_grams
     @non_cancelled_completed
       .joins(:print_type).where(print_types: { code: 'fdm' })
-      .sum(Arel.sql("COALESCE(actual_weight, slicer_weight, 0)")).to_i
+      .sum(Arel.sql("(COALESCE(actual_weight, slicer_weight, 0) * #{NORMALIZED_QUANTITY_SQL})")).to_i
   end
 
-  # Resin used (mL) for completed, non-cancelled resin jobs
+  # Resin used (mL). Staff enter per-copy volume, so multiply by normalized quantity.
   def resin_ml
     @non_cancelled_completed
       .joins(:print_type).where(print_types: { code: 'resin' })
-      .sum(Arel.sql("COALESCE(resin_volume_ml, 0)")).to_i
+      .sum(Arel.sql("(COALESCE(resin_volume_ml, 0) * #{NORMALIZED_QUANTITY_SQL})")).to_i
   end
 
   # ---------------------------
@@ -79,7 +82,7 @@ class PrintJobReport
 
   # Per-job design identity (never more than completed orders)
   def unique_designs
-    keys = @non_cancelled_completed.map { |job| design_key_for(job) }
+    keys = @non_cancelled_completed_with_files.map { |job| design_key_for(job) }
     keys.uniq.size
   end
 
@@ -93,7 +96,7 @@ class PrintJobReport
       .group("DATE(completion_date)")
       .pluck(
         Arel.sql("DATE(completion_date)"),
-        Arel.sql("SUM(COALESCE(NULLIF(quantity, 0), 1))")
+        Arel.sql("SUM(#{NORMALIZED_QUANTITY_SQL})")
       )
       .to_h
   end
@@ -103,7 +106,7 @@ class PrintJobReport
       .group("DATE(completion_date)")
       .pluck(
         Arel.sql("DATE(completion_date)"),
-        Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0))")
+        Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0) * #{NORMALIZED_QUANTITY_SQL})")
       )
       .to_h
   end
@@ -117,7 +120,7 @@ class PrintJobReport
     @non_cancelled_completed
       .where.not(filament_color: [nil, ""])
       .group(:filament_color)
-      .sum(Arel.sql("COALESCE(NULLIF(quantity, 0), 1)"))
+      .sum(Arel.sql(NORMALIZED_QUANTITY_SQL))
   end
 
   def popular_filament
