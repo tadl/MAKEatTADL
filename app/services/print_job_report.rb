@@ -67,18 +67,18 @@ class PrintJobReport
     @non_cancelled_completed.sum(Arel.sql(NORMALIZED_QUANTITY_SQL))
   end
 
-  # Filament used in grams. Staff enter per-copy weight, so multiply by normalized quantity.
+  # Filament used in grams. This matches the current pricing model and stored job totals.
   def filament_grams
     @non_cancelled_completed
       .joins(:print_type).where(print_types: { code: 'fdm' })
-      .sum(Arel.sql("(COALESCE(actual_weight, slicer_weight, 0) * #{NORMALIZED_QUANTITY_SQL})")).to_i
+      .sum(Arel.sql("COALESCE(actual_weight, slicer_weight, 0)")).to_i
   end
 
-  # Resin used (mL). Staff enter per-copy volume, so multiply by normalized quantity.
+  # Resin used (mL). This matches the current pricing model and stored job totals.
   def resin_ml
     @non_cancelled_completed
       .joins(:print_type).where(print_types: { code: 'resin' })
-      .sum(Arel.sql("(COALESCE(resin_volume_ml, 0) * #{NORMALIZED_QUANTITY_SQL})")).to_i
+      .sum(Arel.sql("COALESCE(resin_volume_ml, 0)")).to_i
   end
 
   # ---------------------------
@@ -111,7 +111,7 @@ class PrintJobReport
       .group("DATE(completion_date)")
       .pluck(
         Arel.sql("DATE(completion_date)"),
-        Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0) * #{NORMALIZED_QUANTITY_SQL})")
+        Arel.sql("SUM(COALESCE(actual_weight, slicer_weight, 0))")
       )
       .to_h
   end

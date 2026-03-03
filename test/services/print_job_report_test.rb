@@ -17,9 +17,9 @@ class PrintJobReportTest < ActiveSupport::TestCase
 
     assert_equal 1, report.category_counts.values.sum
     assert_equal 2, report.total_quantity
-    assert_equal 100, report.filament_grams
+    assert_equal 50, report.filament_grams
     assert_equal({ date => 2 }, report.prints_per_day)
-    assert_equal({ date => 100 }, report.filament_per_day)
+    assert_equal({ date => 50 }, report.filament_per_day)
     assert_equal({ "black" => 2 }, report.filament_color_counts)
     assert_equal 1, report.unique_designs
   end
@@ -37,7 +37,7 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal({ date => 50 }, report.filament_per_day)
   end
 
-  test "resin usage also scales by normalized quantity" do
+  test "resin usage matches stored job totals rather than quantity" do
     date = Date.new(2026, 2, 3)
     create_completed_resin_job(date:, quantity: 3, resin_volume_ml: 12)
     create_completed_resin_job(date:, quantity: nil, resin_volume_ml: 8)
@@ -45,7 +45,7 @@ class PrintJobReportTest < ActiveSupport::TestCase
     report = PrintJobReport.new(start_date: date, end_date: date)
 
     assert_equal 4, report.total_quantity
-    assert_equal 44, report.resin_ml
+    assert_equal 20, report.resin_ml
   end
 
   test "rejected submitted jobs are counted separately and excluded from completions" do
@@ -92,7 +92,7 @@ class PrintJobReportTest < ActiveSupport::TestCase
 
     assert_equal 1, report.category_counts.values.sum
     assert_equal 2, report.total_quantity
-    assert_equal 30, report.filament_grams
+    assert_equal 15, report.filament_grams
     assert_equal({ "black" => 2 }, report.filament_color_counts)
   end
 
