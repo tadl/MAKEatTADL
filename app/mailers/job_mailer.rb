@@ -1,7 +1,5 @@
 # app/mailers/job_mailer.rb
 class JobMailer < ApplicationMailer
-  MAIL_DOMAIN = ENV.fetch("MAILGUN_DOMAIN")
-
   def job_received(job)
     @job          = job
     @patron       = job.patron
@@ -10,7 +8,7 @@ class JobMailer < ApplicationMailer
     @patron.regenerate_access_token!
     @url          = job_url(@job, token: @patron.access_token)
 
-    reply_address = "MAKE at TADL <make+#{@conversation.conversation_token}@#{MAIL_DOMAIN}>"
+    reply_address = conversation_reply_address(@conversation)
 
     mail to:      @patron.email,
          from:    reply_address,
@@ -28,7 +26,7 @@ class JobMailer < ApplicationMailer
     @url = job_url(@job, token: @patron.access_token)
 
     # use the conversation’s conversation_token for plus‐addressing
-    reply_address = "MAKE at TADL <make+#{@conversation.conversation_token}@#{MAIL_DOMAIN}>"
+    reply_address = conversation_reply_address(@conversation)
 
     job_label = @job.is_a?(PrintJob) ? "print" : "scan"
 
@@ -46,7 +44,7 @@ class JobMailer < ApplicationMailer
     @patron.regenerate_access_token!
     @url = job_url(@job, token: @patron.access_token)
 
-    reply_address = "MAKE at TADL <make+#{@conversation.conversation_token}@#{MAIL_DOMAIN}>"
+    reply_address = conversation_reply_address(@conversation)
 
     printer_name  = job.assigned_printer&.name || job.assigned_printer&.printer_model || 'a library printer'
     location_name =

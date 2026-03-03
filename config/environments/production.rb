@@ -47,11 +47,17 @@ Rails.application.configure do
     host:     ENV.fetch("APP_HOST",     "make.tadl.org"),
     protocol: ENV.fetch("APP_PROTOCOL", "https")
   }
-  config.action_mailer.delivery_method = :mailgun
-  config.action_mailer.mailgun_settings = {
-    api_key: ENV.fetch("MAILGUN_API_KEY"),
-    domain:  ENV.fetch("MAILGUN_DOMAIN")
-  }
+  if ENV["MAILGUN_API_KEY"].present? && ENV["MAILGUN_DOMAIN"].present?
+    config.action_mailer.delivery_method = :mailgun
+    config.action_mailer.mailgun_settings = {
+      api_key: ENV["MAILGUN_API_KEY"],
+      domain:  ENV["MAILGUN_DOMAIN"]
+    }
+    config.action_mailer.perform_deliveries = true
+  else
+    config.action_mailer.perform_deliveries = false
+    config.logger&.warn("Mailgun is not configured; disabling outbound mail in production.")
+  end
 
 
   # All other URL helpers (job_url, edit_user_url, etc.) should also use the same host/proto.

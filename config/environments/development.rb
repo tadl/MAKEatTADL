@@ -46,13 +46,17 @@ Rails.application.configure do
     port: ENV.fetch("DEV_PORT", 3000)
   }
 
-  config.action_mailer.delivery_method = :mailgun
-  config.action_mailer.mailgun_settings = {
-    api_key: ENV.fetch("MAILGUN_API_KEY"),
-    domain:  ENV.fetch("MAILGUN_DOMAIN"),
-  }
-
-  config.action_mailer.perform_deliveries = true
+  if ENV["MAILGUN_API_KEY"].present? && ENV["MAILGUN_DOMAIN"].present?
+    config.action_mailer.delivery_method = :mailgun
+    config.action_mailer.mailgun_settings = {
+      api_key: ENV["MAILGUN_API_KEY"],
+      domain:  ENV["MAILGUN_DOMAIN"],
+    }
+    config.action_mailer.perform_deliveries = true
+  else
+    config.action_mailer.perform_deliveries = false
+    Rails.logger&.warn("Mailgun is not configured; disabling outbound mail in development.")
+  end
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
