@@ -78,6 +78,15 @@ module TestSupport
       Patron.create!(email: email, name: name)
     end
 
+    def create_staff_user(email: unique_email("staff"), name: "Test Staff", admin: false)
+      StaffUser.create!(
+        email: email,
+        name: name,
+        uid: SecureRandom.hex(8),
+        admin: admin
+      )
+    end
+
     def create_print_job(patron: create_patron, status_code: "pending", category_name: "Patron", attrs: {})
       ensure_base_lookups!
 
