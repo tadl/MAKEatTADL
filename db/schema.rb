@@ -180,15 +180,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_15_193637) do
     t.boolean "resin_printer", default: false, null: false
   end
 
-  create_table "print_job_notes", force: :cascade do |t|
-    t.bigint "print_job_id", null: false
-    t.text "content"
-    t.string "new_status"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["print_job_id"], name: "index_print_job_notes_on_print_job_id"
-  end
-
   create_table "print_types", force: :cascade do |t|
     t.string "name"
     t.string "code"
@@ -231,12 +222,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_15_193637) do
     t.string "reset_password_token"
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "name"
     t.string "avatar_url"
     t.string "uid", null: false
     t.boolean "admin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["email"], name: "index_staff_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_staff_users_on_reset_password_token", unique: true
     t.index ["uid"], name: "index_staff_users_on_uid", unique: true
@@ -254,7 +245,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_15_193637) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "conversations", "jobs"
-  add_foreign_key "conversations", "jobs"
   add_foreign_key "jobs", "categories"
   add_foreign_key "jobs", "patrons"
   add_foreign_key "jobs", "printable_models"
@@ -265,7 +255,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_15_193637) do
   add_foreign_key "messages", "conversations"
   add_foreign_key "notifications", "messages"
   add_foreign_key "notifications", "staff_users"
-  add_foreign_key "print_job_notes", "jobs", column: "print_job_id"
   add_foreign_key "printable_models", "categories"
   add_foreign_key "printers", "pickup_locations"
 end

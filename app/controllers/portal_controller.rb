@@ -15,8 +15,11 @@ class PortalController < ApplicationController
   end
 
   def attach_model_files
-    param_key = @job.model_name.param_key
-    incoming = Array(params.dig(param_key, :model_files)).reject(&:blank?)
+    param_key = @job.model_name.param_key.to_sym
+    incoming = [
+      Array(params.dig(param_key, :model_files)),
+      Array(params.dig(:job, :model_files))
+    ].flatten.reject(&:blank?)
 
     # Split valid/invalid at the controller level (strongest guard for this patch endpoint)
     valid, invalid = incoming.partition do |f|
@@ -313,7 +316,7 @@ class PortalController < ApplicationController
     elsif cookies.encrypted[:patron_id].present?
       # cookie-only flow
       @patron = Patron.find_by(id: cookies.encrypted[:patron_id])
-      unless @patron&.token_valid?
+      unless @patron
         return redirect_to login_path
       end
 

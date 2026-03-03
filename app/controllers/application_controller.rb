@@ -12,8 +12,7 @@ class ApplicationController < ActionController::Base
   def current_patron
     return @current_patron if defined?(@current_patron)
     if cookies.encrypted[:patron_id]
-      p = Patron.find_by(id: cookies.encrypted[:patron_id])
-      @current_patron = p if p&.token_valid?
+      @current_patron = Patron.find_by(id: cookies.encrypted[:patron_id])
     end
   end
 
@@ -29,10 +28,10 @@ class ApplicationController < ActionController::Base
   end
 
   unless Rails.env.development?
+    rescue_from StandardError,                 with: :internal_server_error
     rescue_from ActionController::RoutingError, with: :not_found
     rescue_from ActiveRecord::RecordNotFound,  with: :not_found
     rescue_from CanCan::AccessDenied,          with: :forbidden if defined?(CanCan)
-    rescue_from StandardError,                 with: :internal_server_error
   end
 
   def not_found(exception = nil)
