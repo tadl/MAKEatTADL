@@ -3,6 +3,7 @@ class PrintJobReport
   attr_reader :start_date, :end_date
 
   NORMALIZED_QUANTITY_SQL = "COALESCE(NULLIF(quantity, 0), 1)".freeze
+  NON_COMPLETED_STATUS_CODES = %w[cancelled rejected abandoned].freeze
 
   # Expect Date/Time; we normalize to a closed day-range
   def initialize(start_date:, end_date:)
@@ -17,7 +18,7 @@ class PrintJobReport
 
     @non_cancelled_completed = @completed
       .joins(:status)
-      .where.not(statuses: { code: 'cancelled' })
+      .where.not(statuses: { code: NON_COMPLETED_STATUS_CODES })
 
     @non_cancelled_completed_with_files = @non_cancelled_completed.with_attached_model_files
   end
@@ -34,6 +35,10 @@ class PrintJobReport
   # Of the above orders, how many are (currently) cancelled
   def cancelled_count
     @submitted.joins(:status).where(statuses: { code: 'cancelled' }).count
+  end
+
+  def rejected_count
+    @submitted.joins(:status).where(statuses: { code: 'rejected' }).count
   end
 
   # Distinct patrons who submitted during the window

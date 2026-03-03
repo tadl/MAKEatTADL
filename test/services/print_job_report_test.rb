@@ -48,7 +48,45 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal 44, report.resin_ml
   end
 
+  test "rejected submitted jobs are counted separately and excluded from completions" do
+    date = Date.new(2026, 2, 4)
+    create_submitted_job(date:, status_code: "rejected")
+    create_completed_fdm_job(date:, quantity: 1, actual_weight: 25)
+    create_print_job(
+      status_code: "rejected",
+      attrs: {
+        print_type: PrintType.find_by!(code: "fdm"),
+        completion_date: date,
+        quantity: 4,
+        actual_weight: 99,
+        url: "https://example.org/rejected/#{SecureRandom.hex(4)}"
+      }
+    )
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 1, report.orders_count
+    assert_equal 1, report.rejected_count
+    assert_equal 1, report.category_counts.values.sum
+    assert_equal 1, report.total_quantity
+    assert_equal 25, report.filament_grams
+  end
+
   private
+
+  def create_submitted_job(date:, status_code:)
+    ensure_base_lookups!
+
+    job = create_print_job(
+      status_code: status_code,
+      attrs: {
+        url: "https://example.org/submitted/#{SecureRandom.hex(4)}"
+      }
+    )
+
+    job.update_columns(created_at: date.noon, updated_at: date.noon)
+    job
+  end
 
   def create_completed_fdm_job(date:, quantity:, actual_weight:, filament_color: nil)
     ensure_base_lookups!
