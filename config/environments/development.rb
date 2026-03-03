@@ -94,6 +94,8 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   config.hosts << "aurora.lib.tadl.org:3000"
+  config.hosts << "orion.lib.tadl.org:3000"
+
   config.hosts << /[a-z0-9\-]+\.ngrok-free\.app/
   config.web_console.whitelisted_ips = ['172.16.0.0/12', '192.168.99.0/24']
 
