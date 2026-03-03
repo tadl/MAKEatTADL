@@ -18,7 +18,7 @@ module RailsAdmin
         end
 
         register_instance_option :visible? do
-          authorized?
+          authorized? && bindings[:object]&.status&.code == 'ready_for_pickup'
         end
 
         register_instance_option :http_methods do

@@ -1,5 +1,8 @@
 # app/controllers/sessions_controller.rb
 class SessionsController < ApplicationController
+  def choose_login
+  end
+
   # Staff login via OmniAuth
   def create
     auth  = request.env['omniauth.auth']

@@ -58,7 +58,7 @@ RailsAdmin.config do |config|
   config.actions do
     dashboard
     index
-    new   { except ['StaffUser'] }
+    new   { except ['StaffUser', 'Conversation', 'Message'] }
     export
     bulk_delete do
       visible { bindings[:controller].current_staff_user.admin? }
@@ -251,7 +251,8 @@ RailsAdmin.config do |config|
         label         'Job Type'
         enum          { [['Print','PrintJob'], ['Scan','ScanJob']] }
         default_value { bindings[:object].type || 'PrintJob' }
-        help ''
+        read_only true
+        help 'Derived from the underlying job record. Scan jobs convert automatically when printable model files are attached.'
       end
       field :pickup_location, :enum do
         label    'Pickup Location'
