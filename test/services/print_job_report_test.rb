@@ -72,6 +72,30 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal 25, report.filament_grams
   end
 
+  test "abandoned jobs still count as completed work" do
+    date = Date.new(2026, 2, 5)
+    ensure_base_lookups!
+
+    create_print_job(
+      status_code: "abandoned",
+      attrs: {
+        print_type: PrintType.find_by!(code: "fdm"),
+        completion_date: date,
+        quantity: 2,
+        actual_weight: 15,
+        filament_color: "black",
+        url: "https://example.org/abandoned/#{SecureRandom.hex(4)}"
+      }
+    )
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 1, report.category_counts.values.sum
+    assert_equal 2, report.total_quantity
+    assert_equal 30, report.filament_grams
+    assert_equal({ "black" => 2 }, report.filament_color_counts)
+  end
+
   private
 
   def create_submitted_job(date:, status_code:)

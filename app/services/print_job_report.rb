@@ -3,7 +3,7 @@ class PrintJobReport
   attr_reader :start_date, :end_date
 
   NORMALIZED_QUANTITY_SQL = "COALESCE(NULLIF(quantity, 0), 1)".freeze
-  NON_COMPLETED_STATUS_CODES = %w[cancelled rejected abandoned].freeze
+  NON_COMPLETED_STATUS_CODES = %w[cancelled rejected].freeze
 
   # Expect Date/Time; we normalize to a closed day-range
   def initialize(start_date:, end_date:)
