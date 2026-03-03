@@ -32,7 +32,7 @@
                     model_name: 'job',
                     scope:      link_scope,
                     query:      '',
-                    f: { status: { '0' => { o: 'like', v: status.code } } }
+                    f: { status: { '0' => { o: 'is', v: status.id } } }
                   ),
                   class: "card h-100 text-decoration-none status-card #{'border-primary' if count.positive?}"
                 ) do %>
