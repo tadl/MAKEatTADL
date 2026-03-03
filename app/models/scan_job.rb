@@ -16,9 +16,9 @@ class ScanJob < Job
   # Strict server-side allowlist for the scan image
   validate :scan_image_must_be_allowed_photo_type
 
-  # If staff later attach STL(s) to a ScanJob, flip it to a PrintJob.
+  # If staff later attach printable model files to a ScanJob, flip it to a PrintJob.
   # Use after_commit so the ActiveStorage attachments are present.
-  after_commit :convert_to_print_job_if_stl_attached, on: %i[create update]
+  after_commit :convert_to_print_job_if_model_attached, on: %i[create update]
 
   private
 
@@ -40,10 +40,10 @@ class ScanJob < Job
     end
   end
 
-  def convert_to_print_job_if_stl_attached
+  def convert_to_print_job_if_model_attached
     return unless self.type == 'ScanJob'
     return unless model_files.attached?
-    return unless model_files.any? { |f| f.filename.extension&.downcase == 'stl' }
+    return unless model_files.any? { |f| f.filename.extension&.downcase.in?(%w[stl 3mf]) }
 
     update_column(:type, 'PrintJob')
   end

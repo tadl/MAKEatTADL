@@ -29,6 +29,20 @@ class Patron < ApplicationRecord
     update!(access_token: nil, token_sent_at: nil)
   end
 
+  # Public: atomically consume a valid token after first successful use
+  def consume_access_token!(token)
+    return false unless access_token.present? && access_token == token && token_valid?
+
+    with_lock do
+      reload
+      return false unless access_token.present? && access_token == token && token_valid?
+
+      update!(access_token: nil, token_sent_at: nil)
+    end
+
+    true
+  end
+
   private
 
   # Generates a new token and sets timestamp

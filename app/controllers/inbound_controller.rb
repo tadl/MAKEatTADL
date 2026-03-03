@@ -1,6 +1,7 @@
 # app/controllers/inbound_controller.rb
 class InboundController < ActionController::API
   require 'email_reply_parser'
+  WEBHOOK_TTL = 15.minutes
 
   # pull in the Rails CSRF protection callbacks
   include ActionController::RequestForgeryProtection
@@ -13,6 +14,9 @@ class InboundController < ActionController::API
 
   # POST /inbound/mailgun
   def mailgun
+    return head :service_unavailable unless webhook_signing_key.present?
+    return head :unauthorized unless valid_mailgun_signature?
+
     recipient   = params[:recipient]
     raw_body    = params['body-plain']
     from_header = params[:from]
@@ -45,5 +49,40 @@ class InboundController < ActionController::API
     )
 
     head :ok
+  end
+
+  private
+
+  def webhook_signing_key
+    ENV["MAILGUN_WEBHOOK_SIGNING_KEY"].presence || ENV["MAILGUN_SIGNING_KEY"].presence
+  end
+
+  def valid_mailgun_signature?
+    timestamp = params[:timestamp].to_s
+    token     = params[:token].to_s
+    signature = params[:signature].to_s
+    return false if timestamp.blank? || token.blank? || signature.blank?
+    return false if webhook_timestamp_expired?(timestamp)
+    return false if replayed_mailgun_token?(timestamp, token)
+
+    digest = OpenSSL::HMAC.hexdigest("SHA256", webhook_signing_key, "#{timestamp}#{token}")
+    ActiveSupport::SecurityUtils.secure_compare(digest, signature)
+  rescue
+    false
+  end
+
+  def webhook_timestamp_expired?(timestamp)
+    issued_at = Time.zone.at(timestamp.to_i)
+    issued_at < WEBHOOK_TTL.ago || issued_at > 5.minutes.from_now
+  rescue
+    true
+  end
+
+  def replayed_mailgun_token?(timestamp, token)
+    cache_key = "mailgun:webhook:#{timestamp}:#{token}"
+    return true if Rails.cache.exist?(cache_key)
+
+    Rails.cache.write(cache_key, true, expires_in: 1.day)
+    false
   end
 end

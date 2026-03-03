@@ -8,6 +8,10 @@ class SessionsController < ApplicationController
 
     return_to = session.delete(:user_return_to)
     redirect_to (return_to || rails_admin.dashboard_path)
+  rescue StaffUser::UnauthorizedDomainError => e
+    Rails.logger.warn("Rejected staff login: #{e.message}")
+    reset_session
+    redirect_to '/admin/login', alert: "That account is not authorized for staff access."
   end
 
   # DELETE /logout

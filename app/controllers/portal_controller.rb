@@ -7,15 +7,14 @@ class PortalController < ApplicationController
   EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
 
   # Need a logged-in patron for dashboard/show/create_message
-  before_action :load_patron, only: %i[dashboard show create_message]
-  before_action :load_job,    only: %i[show create_message]
+  before_action :load_patron, only: %i[dashboard show create_message attach_model_files]
+  before_action :load_job,    only: %i[show create_message attach_model_files]
 
   # Public landing page
   def home
   end
 
   def attach_model_files
-    @job = Job.find(params[:id])
     param_key = @job.model_name.param_key
     incoming = Array(params.dig(param_key, :model_files)).reject(&:blank?)
 
@@ -23,17 +22,17 @@ class PortalController < ApplicationController
     valid, invalid = incoming.partition do |f|
       ext = File.extname(f.original_filename.to_s).downcase
       cty = (f.content_type || '').downcase
-      ext == '.stl' && !%w[application/zip application/x-zip-compressed multipart/x-zip].include?(cty)
+      ext.in?(%w[.stl .3mf]) && !(ext != '.3mf' && %w[application/zip application/x-zip-compressed multipart/x-zip].include?(cty))
     end
 
     if valid.any?
       @job.model_files.attach(valid)
-      flash[:notice] = "Attached #{valid.size} STL #{'file'.pluralize(valid.size)}."
+      flash[:notice] = "Attached #{valid.size} model #{'file'.pluralize(valid.size)}."
     end
 
     if invalid.any?
       names = invalid.map(&:original_filename).join(', ')
-      flash[:alert] = "Rejected non-STL files: #{names}."
+      flash[:alert] = "Rejected invalid model files: #{names}."
     end
 
     redirect_to job_path(@job)
@@ -196,12 +195,8 @@ class PortalController < ApplicationController
     end
 
     @patron = Patron.find_by(email: email)
-    unless @patron
-      flash.now[:alert] = "We couldn't find that email address."
-      return render :token_request, status: :unprocessable_entity
-    end
-
-    send_magic_link
+    rate_limited = magic_link_rate_limited?(email: email)
+    send_magic_link if @patron && !rate_limited
     redirect_to token_thank_you_path
   end
 
@@ -260,6 +255,21 @@ class PortalController < ApplicationController
     PatronMailer.access_link(@patron).deliver_later
   end
 
+  def magic_link_rate_limited?(email:)
+    ip_key = "magic-link:ip:#{request.remote_ip}"
+    email_key = "magic-link:email:#{email}"
+
+    ip_count = Rails.cache.read(ip_key).to_i
+    email_count = Rails.cache.read(email_key).to_i
+    limited = ip_count >= 10 || email_count >= 3
+
+    Rails.cache.write(ip_key, ip_count + 1, expires_in: 15.minutes)
+    Rails.cache.write(email_key, email_count + 1, expires_in: 15.minutes)
+
+    Rails.logger.warn("Magic link rate limited for #{email} from #{request.remote_ip}") if limited
+    limited
+  end
+
   def scan_job_params
     params.require(:job).permit(
       :scan_image,
@@ -283,7 +293,7 @@ class PortalController < ApplicationController
     if params[:token].present?
       # 1) find by token, validate, set cookie…
       @patron = Patron.find_by(access_token: params[:token])
-      unless @patron&.token_valid?
+      unless @patron&.consume_access_token!(params[:token])
         return redirect_to login_path
       end
 
