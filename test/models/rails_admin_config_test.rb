@@ -29,4 +29,24 @@ class RailsAdminConfigTest < ActiveSupport::TestCase
     assert ready_action.send(:visible?)
     assert_not pending_action.send(:visible?)
   end
+
+  test "merge patron action is only visible to admins on patrons" do
+    patron = create_patron
+    controller_class = Struct.new(:current_staff_user, :current_ability)
+    admin_user = create_staff_user(admin: true)
+    non_admin_user = create_staff_user(admin: false)
+    admin_controller = controller_class.new(admin_user, Ability.new(admin_user))
+    non_admin_controller = controller_class.new(non_admin_user, Ability.new(non_admin_user))
+    registered_action = RailsAdmin::Config::Actions.all.detect { |action| action.action_name == :merge_patron }
+
+    admin_action = registered_action.dup
+    admin_action.bindings = { controller: admin_controller, object: patron, abstract_model: RailsAdmin::AbstractModel.new(Patron) }
+
+    non_admin_action = registered_action.dup
+    non_admin_action.bindings = { controller: non_admin_controller, object: patron, abstract_model: RailsAdmin::AbstractModel.new(Patron) }
+
+    assert_not_nil registered_action
+    assert admin_action.send(:visible?)
+    assert_not non_admin_action.send(:visible?)
+  end
 end

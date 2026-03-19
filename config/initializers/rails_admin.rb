@@ -2,6 +2,7 @@
 require Rails.root.join('lib/rails_admin/config/actions/conversation')
 require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
 require Rails.root.join('lib/rails_admin/config/actions/files')
+require Rails.root.join('lib/rails_admin/config/actions/merge_patron')
 require Rails.root.join('lib/rails_admin/config/actions/picked_up')
 
 # Global alphabetical ordering helper for association dropdowns (never use :position)
@@ -71,6 +72,7 @@ RailsAdmin.config do |config|
     end
     conversation { only ['Job'] }
     files        { only ['Job'] }
+    merge_patron { only ['Patron'] }
     picked_up
     delete do
       visible do
