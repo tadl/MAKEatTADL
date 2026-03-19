@@ -46,6 +46,11 @@ en:
         link: "Files"
         title: "Files for %{object_label}"
         breadcrumb: "Files"
+      merge_patron:
+        menu: "Merge Patron"
+        link: "Merge Patron"
+        title: "Merge Patron %{object_label}"
+        breadcrumb: "Merge Patron"
   rails_admin:
     conversation:
       menu: "Conversation"
@@ -65,3 +70,8 @@ en:
       link: "Open Files"
       title: "Files Section"
       breadcrumb: "Files"
+    merge_patron:
+      menu: "Merge Patron"
+      link: "Merge Patron"
+      title: "Merge Patron"
+      breadcrumb: "Merge Patron"
