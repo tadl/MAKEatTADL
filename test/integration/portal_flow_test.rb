@@ -1,11 +1,25 @@
 require "test_helper"
 
 class PortalFlowTest < ActionDispatch::IntegrationTest
-  test "magic links are one-time while the issued cookie remains usable" do
+  test "magic link get shows an interstitial without consuming the token" do
     patron = create_patron
     token = patron.access_token
 
     get dashboard_path(token: token)
+
+    assert_response :success
+    assert_match "Continue to Your Dashboard", response.body
+    assert_equal token, patron.reload.access_token
+  end
+
+  test "magic links are one-time after the interstitial post while the issued cookie remains usable" do
+    patron = create_patron
+    token = patron.access_token
+
+    get dashboard_path(token: token)
+    assert_response :success
+
+    post consume_dashboard_token_path, params: { token: token }
     assert_redirected_to dashboard_path
 
     follow_redirect!
@@ -15,9 +29,27 @@ class PortalFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     open_session do |fresh_session|
-      fresh_session.get dashboard_path(token: token)
+      fresh_session.post consume_dashboard_token_path, params: { token: token }
       fresh_session.assert_redirected_to login_path
     end
+  end
+
+  test "job magic link get shows an interstitial and post signs the patron in" do
+    patron = create_patron
+    job = create_print_job(patron: patron)
+    token = patron.access_token
+
+    get job_path(job, token: token)
+    assert_response :success
+    assert_match "Continue to Your Job", response.body
+    assert_equal token, patron.reload.access_token
+
+    post consume_job_token_job_path(job), params: { token: token }
+    assert_redirected_to job_path(job)
+
+    follow_redirect!
+    assert_response :success
+    assert_match "##{job.id}", response.body
   end
 
   test "magic link requests stay neutral for unknown email addresses" do
@@ -44,6 +76,7 @@ class PortalFlowTest < ActionDispatch::IntegrationTest
     job = create_print_job(patron: owner)
 
     get dashboard_path(token: intruder.access_token)
+    post consume_dashboard_token_path, params: { token: intruder.access_token }
     follow_redirect!
 
     patch attach_model_files_job_path(job), params: {
@@ -61,6 +94,7 @@ class PortalFlowTest < ActionDispatch::IntegrationTest
     job = create_print_job(patron: patron)
 
     get dashboard_path(token: patron.access_token)
+    post consume_dashboard_token_path, params: { token: patron.access_token }
     follow_redirect!
 
     patch attach_model_files_job_path(job), params: {

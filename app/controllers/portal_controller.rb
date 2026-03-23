@@ -209,13 +209,25 @@ class PortalController < ApplicationController
 
   # Patron dashboard (list of all jobs)
   def dashboard
+    return if render_magic_link_interstitial(:dashboard)
+
     @pagy, @jobs = pagy(@patron.jobs.order(created_at: :desc), limit: 10, items: 10)
   end
 
   # Show a single job (and its messages)
   def show
+    return if render_magic_link_interstitial(:job)
+
     @messages    = @job.conversation&.messages&.where(staff_note_only: false)&.order(:created_at) || []
     @new_message = Message.new
+  end
+
+  def consume_dashboard_token
+    consume_magic_link!(:dashboard)
+  end
+
+  def consume_job_token
+    consume_magic_link!(:job)
   end
 
   # Patron posts a message
@@ -293,24 +305,10 @@ class PortalController < ApplicationController
 
   # Load or authenticate the patron, handling ?token=… for both dashboard and show
   def load_patron
-    if params[:token].present?
-      # 1) find by token, validate, set cookie…
+    if request.get? && params[:token].present?
       @patron = Patron.find_by(access_token: params[:token])
-      unless @patron&.consume_access_token!(params[:token])
+      unless @patron&.token_valid?
         return redirect_to login_path
-      end
-
-      cookies.encrypted[:patron_id] = {
-        value:    @patron.id,
-        httponly: true,
-        expires:  4.hours.from_now.to_time
-      }
-
-      # 2) redirect to the clean URL
-      if action_name == 'dashboard'
-        return redirect_to dashboard_path
-      else
-        return redirect_to job_path(params[:id])
       end
 
     elsif cookies.encrypted[:patron_id].present?
@@ -329,6 +327,37 @@ class PortalController < ApplicationController
   # Scoped load of this user’s job (STI)
   def load_job
     @job = @patron.jobs.find(params[:id])
+  end
+
+  def render_magic_link_interstitial(kind)
+    return false unless request.get? && params[:token].present?
+
+    @magic_link_kind = kind
+    @magic_link_target_path = kind == :dashboard ? dashboard_path : job_path(params[:id])
+    @magic_link_consume_path = kind == :dashboard ? consume_dashboard_token_path : consume_job_token_job_path(params[:id])
+    @magic_link_destination_label = kind == :dashboard ? "dashboard" : "job ##{params[:id]}"
+
+    render :magic_link
+    true
+  end
+
+  def consume_magic_link!(kind)
+    token = params[:token].to_s
+    patron = Patron.find_by(access_token: token)
+    return redirect_to login_path unless patron&.consume_access_token!(token)
+
+    if kind == :job
+      job = patron.jobs.find_by(id: params[:id])
+      return redirect_to login_path unless job
+    end
+
+    cookies.encrypted[:patron_id] = {
+      value: patron.id,
+      httponly: true,
+      expires: 4.hours.from_now.to_time
+    }
+
+    redirect_to(kind == :dashboard ? dashboard_path : job_path(params[:id]))
   end
 
   def form_template_for(type)

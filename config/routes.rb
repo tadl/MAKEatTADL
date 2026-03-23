@@ -58,7 +58,9 @@ Rails.application.routes.draw do
 
   # Patron dashboard & job details (requires token in params or cookie)
   get  '/dashboard',                to: 'portal#dashboard',      as: :dashboard
+  post '/dashboard/consume_token', to: 'portal#consume_dashboard_token', as: :consume_dashboard_token
   get  '/jobs/:id',                 to: 'portal#show',           as: :job
+  post '/jobs/:id/consume_token',   to: 'portal#consume_job_token', as: :consume_job_token_job
   post '/jobs/:id/conversation',    to: 'portal#create_message', as: :job_conversation
   patch '/jobs/:id/attach_model_files', to: 'portal#attach_model_files', as: :attach_model_files_job
 
@@ -74,4 +76,3 @@ Rails.application.routes.draw do
   match "*path", to: "errors#not_found", via: :all,
     constraints: lambda { |req| !req.path.start_with?("/rails/active_storage") }
 end
-

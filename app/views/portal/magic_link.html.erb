@@ -1,0 +1,28 @@
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9">
+      <div class="card shadow-sm">
+        <div class="card-body p-4 p-md-5 text-center">
+          <div class="mb-4">
+            <i class="bi bi-link-45deg display-4 text-primary"></i>
+          </div>
+
+          <h1 class="mb-3">Continue to Your <%= @magic_link_destination_label.to_s.titleize %></h1>
+          <p class="lead mb-4">
+            For your security, we wait for a button click before activating emailed sign-in links.
+            This helps protect against automated email scanners opening the link before you do.
+          </p>
+
+          <%= form_with url: @magic_link_consume_path, method: :post, local: true do %>
+            <%= hidden_field_tag :token, params[:token] %>
+            <%= submit_tag "Continue", class: "btn btn-primary btn-lg px-4" %>
+          <% end %>
+
+          <p class="text-muted small mt-4 mb-0">
+            This sign-in link remains valid for up to one week unless a newer login email is issued.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
