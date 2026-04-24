@@ -180,7 +180,9 @@ class PrintJob < Job
     update_columns(
       completion_date: (completion_date.presence || Date.current),
       actual_cost:     cost,
-      status_id:       ready_status.id
+      status_id:       ready_status.id,
+      finished_by_id:  finished_by_id || Current.staff_user&.id,
+      finished_at:     finished_at || Time.current
     )
 
     location_name = PickupLocation.find_by(code: pickup_location)&.name || pickup_location
@@ -215,7 +217,9 @@ class PrintJob < Job
     update_columns(
       completion_date: (completion_date.presence || Date.current),
       actual_cost:     cost,
-      status_id:       ready_status.id
+      status_id:       ready_status.id,
+      finished_by_id:  finished_by_id || Current.staff_user&.id,
+      finished_at:     finished_at || Time.current
     )
 
     location_name = PickupLocation.find_by(code: pickup_location)&.name || pickup_location

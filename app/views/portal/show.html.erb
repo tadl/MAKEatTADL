@@ -200,8 +200,11 @@
                 </summary>
                 <div class="mt-3">
                   <%= form_with model: @job, url: attach_model_files_job_path(@job), local: true, multipart: true, method: :patch do |f| %>
-                    <%= f.file_field :model_files, multiple: true, accept: '.stl', class: "form-control form-control-sm mb-2" %>
-                    <div class="form-text mb-2">You can upload one or more STL files.</div>
+                    <%= f.file_field :model_files,
+                          multiple: true,
+                          accept: '.stl,.3mf,model/stl,application/sla,model/3mf,application/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel',
+                          class: "form-control form-control-sm mb-2" %>
+                    <div class="form-text mb-2">You can upload one or more STL or 3MF files.</div>
                     <%= f.submit "Attach Files", class: "btn btn-sm btn-primary rounded-pill px-3" %>
                   <% end %>
                 </div>

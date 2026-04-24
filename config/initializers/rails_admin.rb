@@ -151,7 +151,7 @@ RailsAdmin.config do |config|
                 <div>
                   <details id="stl-details-#{i}">
                     <summary class="btn btn-sm btn-primary ">Show 3D Preview</summary>
-                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width: 400px; height: 300px; border:1px solid #ccc"></div>
+                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width:min(100%,640px);height:420px;border:1px solid #ccc"></div>
                   </details>
                   <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
                 </div>
@@ -473,7 +473,7 @@ RailsAdmin.config do |config|
                 <div>
                   <details id="stl-details-#{file.id}">
                     <summary class="btn btn-sm btn-primary">Show 3D Preview</summary>
-                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width: 400px; height: 300px; border:1px solid #ccc"></div>
+                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width:min(100%,640px);height:420px;border:1px solid #ccc"></div>
                   </details>
                   <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
                 </div>

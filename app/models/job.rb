@@ -77,7 +77,7 @@ class Job < ApplicationRecord
 
   # Set origin once at creation; persists through Scan→Print flips
   def set_origin_default
-    self.origin ||= (is_a?(ScanJob) ? 'scan' : 'print')
+    self.origin = is_a?(ScanJob) ? 'scan' : (origin.presence || 'print')
   end
 
   def build_conversation!

@@ -60,7 +60,7 @@ module RailsAdmin
 
               unless winner
                 flash.now[:error] = "Choose the patron record that should remain after the merge."
-                return render @action.template_name, status: :unprocessable_entity
+                return render @action.template_name, status: :unprocessable_content
               end
 
               result = PatronMergeService.call(winner: winner, loser: @patron)
@@ -69,7 +69,7 @@ module RailsAdmin
             end
           rescue PatronMergeService::MergeError => e
             flash.now[:error] = e.message
-            render @action.template_name, status: :unprocessable_entity
+            render @action.template_name, status: :unprocessable_content
           end
         end
       end

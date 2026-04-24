@@ -83,21 +83,13 @@ class PortalController < ApplicationController
     email = params.dig(:patron, :email).to_s.strip.downcase
     unless valid_email?(email)
       flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
-      return render form_template_for(@type), status: :unprocessable_entity
+      return render form_template_for(@type), status: :unprocessable_content
     end
-
-    @patron = find_or_create_patron
-    unless @patron
-      flash.now[:alert] = "We couldn’t create your account with that email."
-      return render form_template_for(@type), status: :unprocessable_entity
-    end
-
-    @job.patron = @patron
 
     # STAFF‐ONLY: enforce @tadl.org email
-    if @type == 'staff' && !@patron.email.ends_with?('@tadl.org')
+    if @type == 'staff' && !email.ends_with?('@tadl.org')
       flash.now[:alert] = "Please use your work email for staff requests."
-      return render :submit_staff, status: :unprocessable_entity
+      return render :submit_staff, status: :unprocessable_content
     end
 
     # FIDGET & ASSISTIVE: force FDM & attach chosen model
@@ -124,8 +116,16 @@ class PortalController < ApplicationController
 
     unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
       flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
-      return render form_template_for(@type), status: :unprocessable_entity
+      return render form_template_for(@type), status: :unprocessable_content
     end
+
+    @patron = find_or_create_patron
+    unless @patron
+      flash.now[:alert] = "We couldn’t create your account with that email."
+      return render form_template_for(@type), status: :unprocessable_content
+    end
+
+    @job.patron = @patron
 
     if @job.save
       JobMailer.job_received(@job).deliver_later
@@ -133,7 +133,7 @@ class PortalController < ApplicationController
       redirect_to thank_you_path(kind: @type)
     else
       flash.now[:alert] = @job.errors.full_messages.to_sentence
-      render form_template_for(@type), status: :unprocessable_entity
+      render form_template_for(@type), status: :unprocessable_content
     end
   end
 
@@ -152,23 +152,24 @@ class PortalController < ApplicationController
     email = params.dig(:patron, :email).to_s.strip.downcase
     unless valid_email?(email)
       flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
-      return render :submit_scan, status: :unprocessable_entity
+      return render :submit_scan, status: :unprocessable_content
     end
 
-    @patron = find_or_create_patron
-    unless @patron
-      flash.now[:alert] = "We couldn’t create your account with that email."
-      return render :submit_scan, status: :unprocessable_entity
-    end
-
-    @job.patron   = @patron
     @job.category = Category.find_by!(name: 'Patron')
     @job.status   = Status.find_by!(code: 'pending')
 
     unless verify_recaptcha_with_logging!(model: @job, action: 'submit', min_score: 0.5)
       flash.now[:alert] = @job.errors.full_messages.to_sentence.presence || "reCAPTCHA failed. Please try again."
-      return render :submit_scan, status: :unprocessable_entity
+      return render :submit_scan, status: :unprocessable_content
     end
+
+    @patron = find_or_create_patron
+    unless @patron
+      flash.now[:alert] = "We couldn’t create your account with that email."
+      return render :submit_scan, status: :unprocessable_content
+    end
+
+    @job.patron = @patron
 
     if @job.save
       JobMailer.job_received(@job).deliver_later
@@ -176,7 +177,7 @@ class PortalController < ApplicationController
       redirect_to thank_you_path(kind: 'scan')
     else
       flash.now[:alert] = @job.errors.full_messages.to_sentence
-      render :submit_scan, status: :unprocessable_entity
+      render :submit_scan, status: :unprocessable_content
     end
   end
 
@@ -194,7 +195,7 @@ class PortalController < ApplicationController
     email = params.dig(:patron, :email).to_s.strip.downcase
     unless valid_email?(email)
       flash.now[:alert] = "Please enter a valid email address (e.g., name@example.org)."
-      return render :token_request, status: :unprocessable_entity
+      return render :token_request, status: :unprocessable_content
     end
 
     @patron = Patron.find_by(email: email)
@@ -344,12 +345,14 @@ class PortalController < ApplicationController
   def consume_magic_link!(kind)
     token = params[:token].to_s
     patron = Patron.find_by(access_token: token)
-    return redirect_to login_path unless patron&.consume_access_token!(token)
+    return redirect_to login_path unless patron&.token_valid?
 
     if kind == :job
       job = patron.jobs.find_by(id: params[:id])
       return redirect_to login_path unless job
     end
+
+    return redirect_to login_path unless patron.consume_access_token!(token)
 
     cookies.encrypted[:patron_id] = {
       value: patron.id,

@@ -50,7 +50,7 @@ function initStlStuff() {
     if (!fileUrl) return;
 
     function initViewer() {
-      if (typeof THREE === "undefined" || typeof THREE.STLLoader === "undefined") {
+      if (typeof THREE === "undefined" || typeof THREE.STLLoader === "undefined" || typeof THREE.OrbitControls === "undefined") {
         setTimeout(initViewer, 50);
         return;
       }
@@ -67,26 +67,145 @@ function initStlStuff() {
       if (container.dataset.rendered) return;
       container.dataset.rendered = "1";
 
+      container.style.position = "relative";
+      container.style.width = "min(100%, 640px)";
+      container.style.height = "420px";
+
       var scene = new THREE.Scene();
-      var camera = new THREE.PerspectiveCamera(75, 400/300, 0.1, 1000);
+      scene.background = new THREE.Color(0xf8f9fa);
+
+      var width = container.clientWidth || 640;
+      var height = container.clientHeight || 420;
+      var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100000);
       var renderer = new THREE.WebGLRenderer({antialias: true});
-      renderer.setSize(400, 300);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height);
       container.appendChild(renderer.domElement);
+
+      var controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.screenSpacePanning = false;
+
+      var ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 1.4);
+      scene.add(ambient);
+
+      var keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      keyLight.position.set(1, 1, 1);
+      scene.add(keyLight);
+
+      var buttonBar = document.createElement("div");
+      buttonBar.className = "stlviewer-controls btn-group btn-group-sm";
+      buttonBar.style.position = "absolute";
+      buttonBar.style.top = "8px";
+      buttonBar.style.right = "8px";
+      buttonBar.style.zIndex = "2";
+
+      var zoomIn = document.createElement("button");
+      zoomIn.type = "button";
+      zoomIn.className = "btn btn-light border";
+      zoomIn.title = "Zoom in";
+      zoomIn.textContent = "+";
+
+      var zoomOut = document.createElement("button");
+      zoomOut.type = "button";
+      zoomOut.className = "btn btn-light border";
+      zoomOut.title = "Zoom out";
+      zoomOut.textContent = "-";
+
+      var reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "btn btn-light border";
+      reset.title = "Reset view";
+      reset.textContent = "Reset";
+
+      buttonBar.appendChild(zoomIn);
+      buttonBar.appendChild(zoomOut);
+      buttonBar.appendChild(reset);
+      container.appendChild(buttonBar);
+
+      var initialCameraPosition = null;
+      var initialTarget = null;
+      function render() {
+        renderer.render(scene, camera);
+      }
+
+      function zoomBy(multiplier) {
+        camera.zoom = Math.max(0.2, Math.min(8, camera.zoom * multiplier));
+        camera.updateProjectionMatrix();
+        render();
+      }
+
+      zoomIn.addEventListener("click", function(event) {
+        event.preventDefault();
+        zoomBy(1.25);
+      });
+
+      zoomOut.addEventListener("click", function(event) {
+        event.preventDefault();
+        zoomBy(0.8);
+      });
+
+      reset.addEventListener("click", function(event) {
+        event.preventDefault();
+        if (!initialCameraPosition || !initialTarget) return;
+        camera.position.copy(initialCameraPosition);
+        camera.zoom = 1;
+        camera.updateProjectionMatrix();
+        controls.target.copy(initialTarget);
+        controls.update();
+        render();
+      });
 
       var loader = new THREE.STLLoader();
       loader.load(fileUrl, function (geometry) {
-        var material = new THREE.MeshNormalMaterial();
+        geometry.computeBoundingBox();
+        geometry.center();
+        geometry.computeVertexNormals();
+
+        var material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
         var mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
-        camera.position.z = 100;
+
+        var box = new THREE.Box3().setFromObject(mesh);
+        var size = new THREE.Vector3();
+        box.getSize(size);
+        var center = new THREE.Vector3();
+        box.getCenter(center);
+        var maxDim = Math.max(size.x, size.y, size.z) || 1;
+        var fov = camera.fov * (Math.PI / 180);
+        var distance = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.8;
+
+        camera.position.set(center.x + distance, center.y + distance * 0.7, center.z + distance);
+        camera.near = Math.max(distance / 100, 0.01);
+        camera.far = distance * 100;
+        camera.lookAt(center);
+        camera.updateProjectionMatrix();
+
+        controls.target.copy(center);
+        controls.update();
+        initialCameraPosition = camera.position.clone();
+        initialTarget = controls.target.clone();
+
+        render();
+
         function animate() {
           requestAnimationFrame(animate);
-          mesh.rotation.y += 0.002;
-          mesh.rotation.x += 0.001;
-          renderer.render(scene, camera);
+          controls.update();
+          render();
         }
         animate();
       });
+
+      var resizeObserver = new ResizeObserver(function() {
+        var nextWidth = container.clientWidth || 640;
+        var nextHeight = container.clientHeight || 420;
+        camera.aspect = nextWidth / nextHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(nextWidth, nextHeight);
+        render();
+      });
+      resizeObserver.observe(container);
     }
     initViewer();
   });

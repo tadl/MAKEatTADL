@@ -96,6 +96,56 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal({ "black" => 2 }, report.filament_color_counts)
   end
 
+  test "converted scan jobs count as scan completions without inflating print submissions" do
+    date = Date.new(2026, 2, 6)
+    ensure_base_lookups!
+
+    converted_scan = create_scan_job(status_code: "archived")
+    converted_scan.update_columns(
+      type: "PrintJob",
+      print_type_code: "fdm",
+      completion_date: date,
+      actual_weight: 10,
+      created_at: date.noon,
+      updated_at: date.noon
+    )
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 0, report.orders_count
+    assert_equal 1, report.scan_completed_count
+    assert_equal 1, report.category_counts.values.sum
+    assert_equal 10, report.filament_grams
+  end
+
+  test "unconverted completed scan jobs count as scan completions" do
+    date = Date.new(2026, 2, 7)
+    ensure_base_lookups!
+
+    scan = create_scan_job(status_code: "archived")
+    scan.update_columns(
+      completion_date: date,
+      created_at: date.noon,
+      updated_at: date.noon
+    )
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 0, report.orders_count
+    assert_equal 1, report.scan_completed_count
+    assert_equal 0, report.category_counts.values.sum
+  end
+
+  test "filament per day only includes fdm material" do
+    date = Date.new(2026, 2, 8)
+    create_completed_fdm_job(date:, quantity: 1, actual_weight: 25)
+    create_completed_resin_job(date:, quantity: 1, resin_volume_ml: 9)
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal({ date => 25 }, report.filament_per_day)
+  end
+
   private
 
   def create_submitted_job(date:, status_code:)

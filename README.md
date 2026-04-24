@@ -96,6 +96,14 @@ Set up the database:
 bin/rails db:setup
 ```
 
+`db:setup` seeds only required reference data. After logging in to `/admin`,
+create operational records for your installation:
+
+- Add at least one active pickup location, with the scanner/FDM/resin flags that
+  match the services available there.
+- Add any printers that should be assignable to jobs.
+- Add or deactivate filament colors beyond the seeded black and white defaults.
+
 ---
 
 ### Configuration
@@ -205,6 +213,9 @@ docs/
 - Supports standard Heroku/Dokku-style deployment (`git push dokku ...`)
 - Run database migrations after deploy:  
   `bin/rails db:migrate`
+- Do not run `db:seed` as part of normal production deploys. Seeds are intended
+  for initial reference data only; pickup locations, printers, and most filament
+  colors are managed in `/admin`.
 - For persistent storage with Docker, map `storage/` to a volume or use S3.
 
 **Environment Checklist:**

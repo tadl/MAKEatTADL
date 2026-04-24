@@ -52,6 +52,69 @@ class PortalFlowTest < ActionDispatch::IntegrationTest
     assert_match "##{job.id}", response.body
   end
 
+  test "job magic link post does not consume token for a job owned by another patron" do
+    patron = create_patron
+    other_job = create_print_job(patron: create_patron)
+    token = patron.access_token
+
+    post consume_job_token_job_path(other_job), params: { token: token }
+
+    assert_redirected_to login_path
+    assert_equal token, patron.reload.access_token
+  end
+
+  test "failed recaptcha does not create a patron for print submissions" do
+    ensure_base_lookups!
+    email = unique_email("captcha-fail")
+    original_verifier = PortalController.instance_method(:verify_recaptcha_with_logging!)
+    PortalController.define_method(:verify_recaptcha_with_logging!) { |**| false }
+
+    assert_no_difference("Patron.count") do
+      post create_print_job_path, params: {
+        patron: {
+          first_name: "Captcha",
+          last_name: "Failure",
+          email: email
+        },
+        job: {
+          url: "https://example.com/model.stl",
+          filament_color: "red",
+          pickup_location: ensure_pickup_location.code
+        }
+      }
+    end
+
+    assert_response :unprocessable_content
+  ensure
+    PortalController.define_method(:verify_recaptcha_with_logging!, original_verifier) if original_verifier
+  end
+
+  test "failed recaptcha does not create a patron for scan submissions" do
+    ensure_base_lookups!
+    email = unique_email("scan-captcha-fail")
+    original_verifier = PortalController.instance_method(:verify_recaptcha_with_logging!)
+    PortalController.define_method(:verify_recaptcha_with_logging!) { |**| false }
+
+    assert_no_difference("Patron.count") do
+      post create_scan_job_path, params: {
+        patron: {
+          first_name: "Scan",
+          last_name: "Failure",
+          email: email
+        },
+        job: {
+          spray_ok: true,
+          notes: "Scan this",
+          pickup_location: ensure_pickup_location.code
+        }
+      }
+    end
+
+    assert_response :unprocessable_content
+  ensure
+    PortalController.define_method(:verify_recaptcha_with_logging!, original_verifier) if original_verifier
+  end
+
   test "magic link requests stay neutral for unknown email addresses" do
     assert_no_enqueued_jobs do
       post send_login_path, params: { patron: { email: unique_email("missing") } }

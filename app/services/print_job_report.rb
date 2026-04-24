@@ -11,7 +11,7 @@ class PrintJobReport
     @end_date   = end_date.end_of_day
 
     # Base scopes used consistently throughout
-    @submitted   = PrintJob.where(created_at: @start_date..@end_date)
+    @submitted   = PrintJob.where(origin: "print", created_at: @start_date..@end_date)
 
     @completed   = PrintJob.where.not(completion_date: nil)
                            .where(completion_date: @start_date..@end_date)
@@ -62,6 +62,16 @@ class PrintJobReport
     @non_cancelled_completed.where(filament_color: 'multiple').count
   end
 
+  def scan_completed_count
+    Job
+      .joins(:status)
+      .where(origin: "scan")
+      .where.not(completion_date: nil)
+      .where(completion_date: @start_date..@end_date)
+      .where.not(statuses: { code: NON_COMPLETED_STATUS_CODES })
+      .count
+  end
+
   # Sum quantities for completed, non-cancelled jobs; treat nil OR 0 as 1
   def total_quantity
     @non_cancelled_completed.sum(Arel.sql(NORMALIZED_QUANTITY_SQL))
@@ -108,6 +118,7 @@ class PrintJobReport
 
   def filament_per_day
     @non_cancelled_completed
+      .joins(:print_type).where(print_types: { code: 'fdm' })
       .group("DATE(completion_date)")
       .pluck(
         Arel.sql("DATE(completion_date)"),

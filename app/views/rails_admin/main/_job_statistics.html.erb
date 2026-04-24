@@ -48,15 +48,7 @@
 
   popular_code, popular_count = filament_color_counts.max_by { |_, c| c } || [nil, 0]
 
-  # NEW: count completed PrintJobs that ORIGINATED as scans (using jobs.origin)
-  converted_from_scan_completed =
-    PrintJob
-      .joins(:status)
-      .where.not(statuses: { code: 'cancelled' })
-      .where(origin: 'scan')
-      .where.not(completion_date: nil)
-      .where(completion_date: start_date.beginning_of_day..end_date.end_of_day)
-      .count
+  scan_completed_count = report.scan_completed_count
 %>
 
 <div class="card mb-4">
@@ -92,7 +84,7 @@
           <th colspan="2">Submissions (created in date range)</th>
         </tr>
         <tr>
-          <th>Orders Submitted</th>
+          <th>Print Orders Submitted</th>
           <td><%= report.orders_count %></td>
         </tr>
         <tr>
@@ -122,7 +114,7 @@
         </tr>
         <tr>
           <th>Scan Jobs Completed</th>
-          <td><%= converted_from_scan_completed %></td>
+          <td><%= scan_completed_count %></td>
         </tr>
         <tr>
           <th>Total Prints</th>
@@ -233,8 +225,9 @@
     </div>
 
     <p class="text-muted small mb-0">
-      <strong>Notes:</strong> “Submissions” reflect jobs created in the date range.
+      <strong>Notes:</strong> “Submissions” reflect print-origin jobs created in the date range.
       “Completions” reflect jobs finished in the date range, excluding cancelled and rejected jobs.
+      Scan completions use the preserved original request type, so scan requests still count as scans after conversion to print jobs.
       Quantities of 0/blank count as 1.
     </p>
 

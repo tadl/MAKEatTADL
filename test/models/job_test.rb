@@ -38,6 +38,39 @@ class JobTest < ActiveSupport::TestCase
     Current.staff_user = nil
   end
 
+  test "setting actual weight records completion staff and timestamp" do
+    job = create_print_job(status_code: "in_progress")
+    staff = create_staff_user(email: "actual-finisher@tadl.org")
+
+    Current.staff_user = staff
+    job.update!(actual_weight: 12.5)
+
+    job.reload
+    assert_equal Status.find_by!(code: "ready_for_pickup").id, job.status_id
+    assert_equal staff.id, job.finished_by_id
+    assert_not_nil job.finished_at
+  ensure
+    Current.staff_user = nil
+  end
+
+  test "setting resin volume records completion staff and timestamp" do
+    job = create_print_job(
+      status_code: "in_progress",
+      attrs: { print_type: ensure_print_type("resin", name: "Resin") }
+    )
+    staff = create_staff_user(email: "resin-finisher@tadl.org")
+
+    Current.staff_user = staff
+    job.update!(resin_volume_ml: 8.5)
+
+    job.reload
+    assert_equal Status.find_by!(code: "ready_for_pickup").id, job.status_id
+    assert_equal staff.id, job.finished_by_id
+    assert_not_nil job.finished_at
+  ensure
+    Current.staff_user = nil
+  end
+
   test "rejects zip typed stl uploads" do
     job = create_print_job
 
