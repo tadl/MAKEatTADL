@@ -200,11 +200,13 @@
                 </summary>
                 <div class="mt-3">
                   <%= form_with model: @job, url: attach_model_files_job_path(@job), local: true, multipart: true, method: :patch do |f| %>
+                    <%= f.label :model_files, "Choose model files to attach", class: "form-label" %>
                     <%= f.file_field :model_files,
                           multiple: true,
                           accept: '.stl,.3mf,model/stl,application/sla,model/3mf,application/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel',
+                          aria: { describedby: "attach_model_files_help" },
                           class: "form-control form-control-sm mb-2" %>
-                    <div class="form-text mb-2">You can upload one or more STL or 3MF files.</div>
+                    <div id="attach_model_files_help" class="form-text mb-2">You can upload one or more STL or 3MF files.</div>
                     <%= f.submit "Attach Files", class: "btn btn-sm btn-primary rounded-pill px-3" %>
                   <% end %>
                 </div>
@@ -233,6 +235,7 @@
     <h5>Send us a message</h5>
     <%= form_with url: job_conversation_path(@job), scope: :message, local: true do |f| %>
       <div class="mb-3">
+        <%= f.label :body, "Message", class: "form-label" %>
         <%= f.text_area :body, class: 'form-control', rows: 4, placeholder: 'Type your message…' %>
       </div>
       <%= f.submit 'Send', class: 'btn btn-primary' %>
@@ -241,19 +244,55 @@
 </main>
 
 <style>
-  .mlbx-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1050}
+  .mlbx-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1050;padding:2rem}
+  .mlbx-dialog{position:relative;max-width:90vw;max-height:90vh}
   .mlbx-backdrop img{max-width:90vw;max-height:90vh;box-shadow:0 10px 30px rgba(0,0,0,.5);border-radius:8px}
+  .mlbx-close{position:absolute;top:.5rem;right:.5rem}
 </style>
-<div class="mlbx-backdrop" id="mlbx"><img alt=""></div>
+<div class="mlbx-backdrop"
+     id="mlbx"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Image preview"
+     aria-hidden="true">
+  <div class="mlbx-dialog">
+    <button type="button" class="btn btn-light btn-sm mlbx-close" aria-label="Close image preview">Close</button>
+    <img alt="">
+  </div>
+</div>
 <script>
+  let mlbxPreviouslyFocused = null;
+
+  function closeMessageLightbox() {
+    const box = document.getElementById('mlbx');
+    if (!box) return;
+    box.style.display = 'none';
+    box.setAttribute('aria-hidden', 'true');
+    box.querySelector('img').removeAttribute('src');
+    if (mlbxPreviouslyFocused && typeof mlbxPreviouslyFocused.focus === 'function') {
+      mlbxPreviouslyFocused.focus();
+    }
+  }
+
   document.addEventListener('click', function(e){
     const a = e.target.closest('.message-images a');
     if(!a) return;
     e.preventDefault();
     const box = document.getElementById('mlbx');
-    box.querySelector('img').src = a.href;
+    const img = box.querySelector('img');
+    mlbxPreviouslyFocused = a;
+    img.src = a.href;
+    img.alt = a.querySelector('img')?.alt || 'Attached message image';
     box.style.display='flex';
+    box.setAttribute('aria-hidden', 'false');
+    box.querySelector('.mlbx-close').focus();
   });
-  document.getElementById('mlbx').addEventListener('click', function(){ this.style.display='none'; });
-  document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('mlbx').style.display='none'; });
+
+  document.getElementById('mlbx').addEventListener('click', function(e){
+    if (e.target === this || e.target.closest('.mlbx-close')) closeMessageLightbox();
+  });
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') closeMessageLightbox();
+  });
 </script>

@@ -13,15 +13,18 @@
   </div>
   <% if message.images.attached? %>
     <div class="message-images mt-2">
-      <% message.images.each do |img| %>
+      <% message.images.each_with_index do |img, index| %>
+        <% image_label = "Image #{index + 1} attached to message from #{author_display_name(message.author)}" %>
         <%= link_to main_app.rails_blob_path(img, disposition: 'inline'),
                     target:   '_blank',
-                    rel:      'noopener' do %>
+                    rel:      'noopener',
+                    aria:     { label: "Open #{image_label}" } do %>
           <%= image_tag(
                 main_app.rails_representation_path(
                   img.variant(resize_to_limit: [250, 250]).processed,
                   only_path: true
                 ),
+                alt: image_label,
                 class: 'img-thumbnail me-2 mb-2'
               ) %>
         <% end %>

@@ -22,6 +22,32 @@ body {
   line-height: 1.5;
 }
 
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1100;
+  transform: translateY(-120%);
+  background: #002F5F;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: 3px solid #FFB81C;
+  outline-offset: 2px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
 /* Header */
 .header {
   background-color: #004B8D;
@@ -129,7 +155,13 @@ a.back-link {
 
 /* “View details” link */
 .view-link {
-  @extend a.view-link;
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #005BA8;
+  font-weight: bold;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
 }
 
 /* Stats boxes */

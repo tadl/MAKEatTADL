@@ -4,7 +4,10 @@
        when :alert  then "flash flash--danger"
        else "flash flash--#{type}"
      end %>
-  <div class="<%= css_class %>">
+  <% live_role = type.to_sym == :alert ? "alert" : "status" %>
+  <div class="<%= css_class %>"
+       role="<%= live_role %>"
+       aria-live="<%= type.to_sym == :alert ? "assertive" : "polite" %>">
     <span class="flash__message"><%= message %></span>
     <button type="button"
             class="flash__close"
