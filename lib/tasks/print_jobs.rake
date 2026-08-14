@@ -1,5 +1,7 @@
 # lib/tasks/print_jobs.rake
 module PrintJobsTasks
+  PICKUP_ABANDON_AFTER_DAYS = 30
+
   module_function
 
   # ---------- Shared helpers ----------
@@ -17,6 +19,14 @@ module PrintJobsTasks
     job.build_conversation! unless job.conversation
   end
 
+  def with_automation_user(author)
+    previous_staff_user = Current.staff_user
+    Current.staff_user = author
+    Audited.audit_class.as_user(author) { yield }
+  ensure
+    Current.staff_user = previous_staff_user
+  end
+
   # ---------- Info Requested helpers ----------
 
   def info_requested_scope
@@ -26,33 +36,12 @@ module PrintJobsTasks
       .includes(conversation: :messages)
   end
 
-  # (kept for compatibility; not used by the new logic)
-  def last_public_message_at(job)
-    job.conversation&.messages&.where(staff_note_only: false)&.maximum(:created_at)
-  end
-
-  def last_patron_public_message_at(job)
-    job.conversation&.messages
-       &.where(staff_note_only: false)
-       &.where.not(author_type: 'StaffUser')
-       &.maximum(:created_at)
-  end
-
-  def first_staff_public_message_at(job)
-    job.conversation&.messages
-       &.where(staff_note_only: false, author_type: 'StaffUser')
-       &.minimum(:created_at)
-  end
-
-  # Returns [:patron_reply|:first_staff_request|:job_created, Date]
+  # Returns [:information_requested_at, Time] or [:missing_anchor, nil].
+  # Never infer this age from job creation or unrelated conversation history.
   def info_request_anchor(job)
-    if (t = last_patron_public_message_at(job))
-      [:patron_reply, t.to_date]
-    elsif (t = first_staff_public_message_at(job))
-      [:first_staff_request, t.to_date]
-    else
-      [:job_created, job.created_at.to_date]
-    end
+    return [:missing_anchor, nil] if job.information_requested_at.blank?
+
+    [:information_requested_at, job.information_requested_at]
   end
 
   def category_is_patron?(job)
@@ -63,42 +52,43 @@ module PrintJobsTasks
     category_is_patron?(job) && job.slicer_cost.to_f > 0
   end
 
-  # NEW: find the most recent automated "Just checking in" quote nudge we sent
-  # We key off a distinctive substring to avoid a schema change.
   def last_quote_nudge_at(job)
-    return nil unless job.conversation
-    job.conversation.messages
-       .where(author_type: 'StaffUser', staff_note_only: false)
-       .where("body ILIKE ?", "%Just checking in — the estimated cost%")
-       .maximum(:created_at)
+    job.last_quote_reminder_sent_at
   end
 
   def resend_quote!(job, author)
     ensure_conversation!(job)
-    msg = job.conversation.messages.create!(
-      body: <<~EOS.strip,
-        Hello,
+    with_automation_user(author) do
+      msg = job.conversation.messages.create!(
+        body: <<~EOS.strip,
+          Hello,
 
-        Just checking in — the estimated cost for this order is $#{format('%.2f', job.slicer_cost)}.
-        If that sounds ok, reply here and we’ll add you to the print queue.
+          Just checking in — the estimated cost for this order is $#{format('%.2f', job.slicer_cost)}.
+          If that sounds ok, reply here and we’ll add you to the print queue.
 
-        Thank you
-      EOS
-      author:          author,
-      staff_note_only: false
-    )
-    JobMailer.notify_patron(msg).deliver_later
+          Thank you
+        EOS
+        author:          author,
+        staff_note_only: false
+      )
+      JobMailer.notify_patron(msg).deliver_later
+      job.update_column(:last_quote_reminder_sent_at, Time.current)
+    end
   end
 
-  def cancel_job!(job, author)
-    prev = Current.staff_user
-    Current.staff_user = author
-    begin
-      cancelled = Status.find_by!(code: 'cancelled')
-      job.update!(status: cancelled) # triggers your callback to notify the patron
-    ensure
-      Current.staff_user = prev
+  def cancel_job!(job, author, expected_anchor_at:)
+    job.with_lock do
+      job.reload
+      return false unless job.status.code == 'information_requested'
+      return false unless job.information_requested_at == expected_anchor_at
+
+      with_automation_user(author) do
+        cancelled = Status.find_by!(code: 'cancelled')
+        job.update!(status: cancelled) # triggers the callback to notify the patron
+      end
     end
+
+    true
   end
 
   # ---------- Pickup Reminder helpers ----------
@@ -119,6 +109,10 @@ module PrintJobsTasks
   # Intuitive rule: send if today >= next_due (no modulo gymnastics)
   def should_send_pickup_reminder?(job, today)
     return [false, "no completion_date"] if job.completion_date.blank?
+    if today >= job.completion_date + PICKUP_ABANDON_AFTER_DAYS
+      return [false, "eligible for abandonment"]
+    end
+
     next_due = next_pickup_reminder_due_date(job)
     if today >= next_due
       [true, nil]
@@ -143,27 +137,27 @@ module PrintJobsTasks
 
     MSG
 
-    msg = job.conversation.messages.create!(
-      body:            body,
-      author:          author,
-      staff_note_only: false
-    )
-    JobMailer.notify_patron(msg).deliver_later
+    with_automation_user(author) do
+      msg = job.conversation.messages.create!(
+        body:            body,
+        author:          author,
+        staff_note_only: false
+      )
+      JobMailer.notify_patron(msg).deliver_later
 
-    job.update_column(:last_pickup_reminder_sent_at, Time.current)
+      job.update_column(:last_pickup_reminder_sent_at, Time.current)
+    end
   end
 
   # ---------- Abandon helpers (30+ days in ready_for_pickup) ----------
 
   def overdue_for_abandon_scope(today)
-    ready_for_pickup_scope.where('completion_date <= ?', today - 30)
+    ready_for_pickup_scope.where('completion_date <= ?', today - PICKUP_ABANDON_AFTER_DAYS)
   end
 
   def abandon_job!(job, author)
     ensure_conversation!(job)
-    prev = Current.staff_user
-    Current.staff_user = author
-    begin
+    with_automation_user(author) do
       abandoned = Status.find_by!(code: 'abandoned')
       job.update!(status: abandoned)
 
@@ -182,8 +176,6 @@ module PrintJobsTasks
         staff_note_only: false
       )
       JobMailer.notify_patron(msg).deliver_later
-    ensure
-      Current.staff_user = prev
     end
   end
 end
@@ -210,7 +202,16 @@ namespace :print_jobs do
     reasons    = Hash.new(0)
 
     jobs.find_each do |job|
-      kind, anchor_date = info_request_anchor(job)
+      kind, anchor_at = info_request_anchor(job)
+      unless anchor_at
+        skipped += 1
+        reasons['missing information_requested_at'] += 1
+        printf "Job #%-6d %-30s anchor:%-18s %-10s        | skip — missing request timestamp\n",
+               job.id, job.patron&.email.to_s, kind, '—'
+        next
+      end
+
+      anchor_date = anchor_at.to_date
       days = (today - anchor_date).to_i
 
       if days >= 14
@@ -271,13 +272,24 @@ namespace :print_jobs do
     skipped   = 0
 
     jobs.find_each do |job|
-      kind, anchor_date = info_request_anchor(job)
+      kind, anchor_at = info_request_anchor(job)
+      unless anchor_at
+        skipped += 1
+        puts "Job ##{job.id} — skip: missing information_requested_at"
+        next
+      end
+
+      anchor_date = anchor_at.to_date
       days = (today - anchor_date).to_i
 
       if days >= 14
-        cancel_job!(job, robot)
-        cancelled += 1
-        puts "Job ##{job.id} — CANCELLED (≥14 days since #{kind.to_s.tr('_', ' ')})"
+        if cancel_job!(job, robot, expected_anchor_at: anchor_at)
+          cancelled += 1
+          puts "Job ##{job.id} — CANCELLED (≥14 days since #{kind.to_s.tr('_', ' ')})"
+        else
+          skipped += 1
+          puts "Job ##{job.id} — skip: status or request timestamp changed during processing"
+        end
       elsif days >= 7
         if can_send_quote?(job)
           last_nudge = last_quote_nudge_at(job)

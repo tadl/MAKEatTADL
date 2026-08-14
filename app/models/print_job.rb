@@ -149,7 +149,11 @@ class PrintJob < Job
     return unless category&.name == 'Patron' # suppress for Assistive/Staff/Fidget
 
     info = Status.find_by!(code: 'information_requested')
-    update_column(:status_id, info.id) if status_id != info.id
+    update_columns(
+      status_id: info.id,
+      information_requested_at: Time.current,
+      last_quote_reminder_sent_at: nil
+    )
 
     msg = conversation.messages.create!(
       body: <<~EOS.strip,

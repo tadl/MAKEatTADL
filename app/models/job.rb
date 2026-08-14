@@ -48,6 +48,7 @@ class Job < ApplicationRecord
   validate :model_files_must_be_allowed_models
 
   # Track start/finish events when status changes
+  before_save :track_information_request, if: :will_save_change_to_status_id?
   before_update :track_start_and_finish, if: :will_save_change_to_status_id?
 
   # Scopes for status filtering
@@ -103,6 +104,13 @@ class Job < ApplicationRecord
       self.finished_by = Current.staff_user
       self.finished_at = Time.current
     end
+  end
+
+  def track_information_request
+    return unless Status.find(status_id).code == 'information_requested'
+
+    self.information_requested_at = Time.current
+    self.last_quote_reminder_sent_at = nil
   end
 
   # -------- Status-driven notifications --------
