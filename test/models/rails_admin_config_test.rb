@@ -1,6 +1,15 @@
 require "test_helper"
 
 class RailsAdminConfigTest < ActiveSupport::TestCase
+  test "stats is a root navigation action authorized like the dashboard" do
+    action = RailsAdmin::Config::Actions.all.detect { |candidate| candidate.action_name == :stats }
+
+    assert_not_nil action
+    assert action.root?
+    assert action.show_in_navigation
+    assert_equal :dashboard, action.authorization_key
+  end
+
   test "job type field is read only in rails admin" do
     field = RailsAdmin.config("Job").edit.fields.detect { |configured_field| configured_field.name == :type }
 

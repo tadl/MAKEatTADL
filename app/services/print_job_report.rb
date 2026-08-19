@@ -1,20 +1,25 @@
 # app/services/print_job_report.rb
 class PrintJobReport
-  attr_reader :start_date, :end_date
+  attr_reader :start_date, :end_date, :pickup_location
 
   NORMALIZED_QUANTITY_SQL = "COALESCE(NULLIF(quantity, 0), 1)".freeze
   NON_COMPLETED_STATUS_CODES = %w[cancelled rejected].freeze
 
   # Expect Date/Time; we normalize to a closed day-range
-  def initialize(start_date:, end_date:)
+  def initialize(start_date:, end_date:, pickup_location: nil)
     @start_date = start_date.beginning_of_day
     @end_date   = end_date.end_of_day
+    @pickup_location = pickup_location.presence
 
     # Base scopes used consistently throughout
-    @submitted   = PrintJob.where(origin: "print", created_at: @start_date..@end_date)
+    @submitted = at_selected_location(
+      PrintJob.where(origin: "print", created_at: @start_date..@end_date)
+    )
 
-    @completed   = PrintJob.where.not(completion_date: nil)
-                           .where(completion_date: @start_date..@end_date)
+    @completed = at_selected_location(
+      PrintJob.where.not(completion_date: nil)
+              .where(completion_date: @start_date..@end_date)
+    )
 
     @non_cancelled_completed = @completed
       .joins(:status)
@@ -63,13 +68,14 @@ class PrintJobReport
   end
 
   def scan_completed_count
-    Job
-      .joins(:status)
-      .where(origin: "scan")
-      .where.not(completion_date: nil)
-      .where(completion_date: @start_date..@end_date)
-      .where.not(statuses: { code: NON_COMPLETED_STATUS_CODES })
-      .count
+    at_selected_location(
+      Job
+        .joins(:status)
+        .where(origin: "scan")
+        .where.not(completion_date: nil)
+        .where(completion_date: @start_date..@end_date)
+        .where.not(statuses: { code: NON_COMPLETED_STATUS_CODES })
+    ).count
   end
 
   # Sum quantities for completed, non-cancelled jobs; treat nil OR 0 as 1
@@ -148,6 +154,12 @@ class PrintJobReport
   end
 
   private
+
+  def at_selected_location(scope)
+    return scope unless pickup_location
+
+    scope.where(pickup_location: pickup_location)
+  end
 
   # One design key per job
   def design_key_for(job)

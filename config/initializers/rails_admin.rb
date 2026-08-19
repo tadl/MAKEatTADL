@@ -1,6 +1,7 @@
 # config/initializers/rails_admin.rb
 require Rails.root.join('lib/rails_admin/config/actions/conversation')
 require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'help')
+require Rails.root.join('lib', 'rails_admin', 'config', 'actions', 'stats')
 require Rails.root.join('lib/rails_admin/config/actions/files')
 require Rails.root.join('lib/rails_admin/config/actions/merge_patron')
 require Rails.root.join('lib/rails_admin/config/actions/picked_up')
@@ -58,6 +59,7 @@ RailsAdmin.config do |config|
   # Actions
   config.actions do
     dashboard
+    stats
     index
     new   { except ['StaffUser', 'Conversation', 'Message'] }
     export

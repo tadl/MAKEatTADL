@@ -31,6 +31,10 @@ en:
   hello: "Hello world"
   admin:
     actions:
+      stats:
+        menu: "Stats"
+        title: "Job Statistics"
+        breadcrumb: "Stats"
       conversation:
         menu: "Conversation"
         link: "Open Conversation"

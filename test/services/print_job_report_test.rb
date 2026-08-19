@@ -146,6 +146,32 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal({ date => 25 }, report.filament_per_day)
   end
 
+  test "location filter applies to submissions completions and scans" do
+    date = Date.new(2026, 2, 9)
+    east_bay = ensure_pickup_location(code: "east_bay", name: "East Bay")
+    woodmere = ensure_pickup_location(code: "wood", name: "Woodmere")
+
+    east_submission = create_submitted_job(date:, status_code: "pending")
+    east_submission.update_column(:pickup_location, east_bay.code)
+    create_submitted_job(date:, status_code: "pending")
+
+    create_completed_fdm_job(date:, quantity: 2, actual_weight: 20).update_column(:pickup_location, east_bay.code)
+    create_completed_fdm_job(date:, quantity: 3, actual_weight: 30).update_column(:pickup_location, woodmere.code)
+
+    east_scan = create_scan_job(status_code: "archived", attrs: { pickup_location: east_bay.code })
+    east_scan.update_columns(completion_date: date, created_at: date.noon, updated_at: date.noon)
+
+    report = PrintJobReport.new(start_date: date, end_date: date, pickup_location: east_bay.code)
+    all_locations = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 1, report.orders_count
+    assert_equal 2, report.total_quantity
+    assert_equal 20, report.filament_grams
+    assert_equal 1, report.scan_completed_count
+    assert_equal 2, all_locations.orders_count
+    assert_equal 5, all_locations.total_quantity
+  end
+
   private
 
   def create_submitted_job(date:, status_code:)

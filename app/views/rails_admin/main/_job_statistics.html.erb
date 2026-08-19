@@ -12,8 +12,16 @@
   # Selected range (default: last 30 days)
   start_date = params[:start].present? ? Date.parse(params[:start]) : last_30_days.begin
   end_date   = params[:end].present?   ? Date.parse(params[:end])   : last_30_days.end
+  locations  = PickupLocation.order(Arel.sql('LOWER(name) ASC'))
+  selected_location = locations.find_by(code: params[:location].presence)
+  location_code = selected_location&.code
+  location_params = location_code ? { location: location_code } : {}
 
-  report = PrintJobReport.new(start_date: start_date, end_date: end_date)
+  report = PrintJobReport.new(
+    start_date: start_date,
+    end_date: end_date,
+    pickup_location: location_code
+  )
 
   # Chart data (completions)
   prints_per_day        = report.prints_per_day          # { Date => qty }
@@ -56,26 +64,39 @@
     <h3 class="mb-0">
       3D Print Stats
       <small class="text-muted">
-        (<%= start_date.strftime("%Y-%m-%d") %> to <%= end_date.strftime("%Y-%m-%d") %>)
+        (<%= start_date.strftime("%Y-%m-%d") %> to <%= end_date.strftime("%Y-%m-%d") %>,
+        <%= selected_location&.name || "All Locations" %>)
       </small>
     </h3>
   </div>
 
   <div class="card-body">
 
-    <%= form_with url: rails_admin.dashboard_path, method: :get, local: true, class: "form-inline mb-3" do %>
-      <label class="mr-2 font-weight-bold">Start:</label>
-      <%= date_field_tag :start, start_date, class: "form-control mr-2" %>
-      <label class="mr-2 font-weight-bold">End:</label>
-      <%= date_field_tag :end, end_date, class: "form-control mr-2" %>
-      <%= submit_tag "Apply", class: "btn btn-primary btn-sm mr-2" %>
-      <%= link_to "Yesterday",    rails_admin.dashboard_path(start: yesterday.begin,    end: yesterday.end),    class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Last 7 Days",  rails_admin.dashboard_path(start: last_7_days.begin,  end: last_7_days.end),  class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Last 30 Days", rails_admin.dashboard_path(start: last_30_days.begin, end: last_30_days.end), class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Current Month",  rails_admin.dashboard_path(start: curr_month.begin, end: curr_month.end),   class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Previous Month", rails_admin.dashboard_path(start: prev_month.begin, end: prev_month.end),   class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Current Year",   rails_admin.dashboard_path(start: curr_year.begin,  end: curr_year.end),    class: "btn btn-outline-secondary btn-sm mr-1" %>
-      <%= link_to "Previous Year",  rails_admin.dashboard_path(start: prev_year.begin,  end: prev_year.end),    class: "btn btn-outline-secondary btn-sm" %>
+    <%= form_with url: rails_admin.stats_path, method: :get, local: true, class: "d-flex flex-wrap align-items-end gap-2 mb-3" do %>
+      <div>
+        <%= label_tag :start, "Start", class: "form-label fw-bold mb-1" %>
+        <%= date_field_tag :start, start_date, class: "form-control" %>
+      </div>
+      <div>
+        <%= label_tag :end, "End", class: "form-label fw-bold mb-1" %>
+        <%= date_field_tag :end, end_date, class: "form-control" %>
+      </div>
+      <div>
+        <%= label_tag :location, "Location", class: "form-label fw-bold mb-1" %>
+        <%= select_tag :location,
+                       options_for_select([["All Locations", ""]] + locations.pluck(:name, :code), location_code.to_s),
+                       class: "form-select" %>
+      </div>
+      <%= submit_tag "Apply", class: "btn btn-primary" %>
+      <div class="d-flex flex-wrap gap-1">
+        <%= link_to "Yesterday", rails_admin.stats_path({ start: yesterday.begin, end: yesterday.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Last 7 Days", rails_admin.stats_path({ start: last_7_days.begin, end: last_7_days.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Last 30 Days", rails_admin.stats_path({ start: last_30_days.begin, end: last_30_days.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Current Month", rails_admin.stats_path({ start: curr_month.begin, end: curr_month.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Previous Month", rails_admin.stats_path({ start: prev_month.begin, end: prev_month.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Current Year", rails_admin.stats_path({ start: curr_year.begin, end: curr_year.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to "Previous Year", rails_admin.stats_path({ start: prev_year.begin, end: prev_year.end }.merge(location_params)), class: "btn btn-outline-secondary btn-sm" %>
+      </div>
     <% end %>
 
     <table class="table table-bordered mb-4">
@@ -234,7 +255,7 @@
   </div>
 
   <div class="card-footer text-end">
-    <small>Stats auto-refresh each time you open or filter the dashboard.</small>
+    <small>Stats refresh each time you open or filter this page.</small>
   </div>
 </div>
 
