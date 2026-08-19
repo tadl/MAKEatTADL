@@ -38,6 +38,20 @@ class JobTest < ActiveSupport::TestCase
     Current.staff_user = nil
   end
 
+  test "staff cancellation outside automation still queues its email" do
+    job = create_print_job(status_code: "approved")
+    staff = create_staff_user(email: "canceller@tadl.org")
+
+    Current.staff_user = staff
+    assert_no_difference -> { ActionMailer::Base.deliveries.size } do
+      assert_enqueued_jobs 1, only: ActionMailer::MailDeliveryJob do
+        job.update!(status: Status.find_by!(code: "cancelled"))
+      end
+    end
+  ensure
+    Current.staff_user = nil
+  end
+
   test "setting actual weight records completion staff and timestamp" do
     job = create_print_job(status_code: "in_progress")
     staff = create_staff_user(email: "actual-finisher@tadl.org")

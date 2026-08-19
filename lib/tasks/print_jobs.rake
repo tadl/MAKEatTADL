@@ -21,10 +21,27 @@ module PrintJobsTasks
 
   def with_automation_user(author)
     previous_staff_user = Current.staff_user
+    previous_delivery_mode = Current.synchronous_mail_delivery
     Current.staff_user = author
+    Current.synchronous_mail_delivery = true
     Audited.audit_class.as_user(author) { yield }
   ensure
     Current.staff_user = previous_staff_user
+    Current.synchronous_mail_delivery = previous_delivery_mode
+  end
+
+  def deliver_automation_mail!(delivery, job:, purpose:)
+    message = delivery.deliver_now
+    Rails.logger.info(
+      "[nightly] Sent #{purpose} email for job ##{job.id} message_id=#{message.message_id}"
+    )
+    message
+  rescue => error
+    Rails.logger.error(
+      "[nightly] Failed to send #{purpose} email for job ##{job.id}: " \
+      "#{error.class}: #{error.message}"
+    )
+    raise
   end
 
   # ---------- Info Requested helpers ----------
@@ -71,7 +88,7 @@ module PrintJobsTasks
         author:          author,
         staff_note_only: false
       )
-      JobMailer.notify_patron(msg).deliver_later
+      deliver_automation_mail!(JobMailer.notify_patron(msg), job: job, purpose: "quote reminder")
       job.update_column(:last_quote_reminder_sent_at, Time.current)
     end
   end
@@ -143,7 +160,7 @@ module PrintJobsTasks
         author:          author,
         staff_note_only: false
       )
-      JobMailer.notify_patron(msg).deliver_later
+      deliver_automation_mail!(JobMailer.notify_patron(msg), job: job, purpose: "pickup reminder")
 
       job.update_column(:last_pickup_reminder_sent_at, Time.current)
     end
@@ -175,7 +192,7 @@ module PrintJobsTasks
         author:          author,
         staff_note_only: false
       )
-      JobMailer.notify_patron(msg).deliver_later
+      deliver_automation_mail!(JobMailer.notify_patron(msg), job: job, purpose: "abandonment notice")
     end
   end
 end

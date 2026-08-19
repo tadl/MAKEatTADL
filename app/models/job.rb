@@ -145,7 +145,7 @@ class Job < ApplicationRecord
       staff_note_only: false
     )
 
-    JobMailer.notify_patron(msg).deliver_later
+    deliver_patron_notification(msg, purpose: "cancellation")
   end
 
   def notify_rejection
@@ -166,7 +166,28 @@ class Job < ApplicationRecord
       staff_note_only: false
     )
 
-    JobMailer.notify_patron(msg).deliver_later
+    deliver_patron_notification(msg, purpose: "rejection")
+  end
+
+  def deliver_patron_notification(message, purpose:)
+    delivery = JobMailer.notify_patron(message)
+    if Current.synchronous_mail_delivery
+      delivered = delivery.deliver_now
+      Rails.logger.info(
+        "[nightly] Sent #{purpose} email for job ##{id} message_id=#{delivered.message_id}"
+      )
+      delivered
+    else
+      delivery.deliver_later
+    end
+  rescue => error
+    if Current.synchronous_mail_delivery
+      Rails.logger.error(
+        "[nightly] Failed to send #{purpose} email for job ##{id}: " \
+        "#{error.class}: #{error.message}"
+      )
+    end
+    raise
   end
 
   # ---- File validation (STL & 3MF only) ----

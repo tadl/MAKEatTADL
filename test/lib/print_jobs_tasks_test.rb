@@ -4,6 +4,8 @@ require "rake"
 load Rails.root.join("lib/tasks/print_jobs.rake") unless defined?(PrintJobsTasks)
 
 class PrintJobsTasksTest < ActiveSupport::TestCase
+  include ActionMailer::TestHelper
+
   test "information request anchor ignores old messages and job creation" do
     job = create_print_job
     staff = create_staff_user
@@ -53,7 +55,11 @@ class PrintJobsTasksTest < ActiveSupport::TestCase
     robot = create_staff_user(email: "robot@tadl.org")
     anchor = job.information_requested_at
 
-    assert PrintJobsTasks.cancel_job!(job, robot, expected_anchor_at: anchor)
+    assert_no_enqueued_jobs do
+      assert_emails 1 do
+        assert PrintJobsTasks.cancel_job!(job, robot, expected_anchor_at: anchor)
+      end
+    end
 
     status_audit = job.audits.reload.reverse.find do |audit|
       audit.audited_changes.key?("status_id")
@@ -69,7 +75,11 @@ class PrintJobsTasksTest < ActiveSupport::TestCase
     )
     robot = create_staff_user(email: "robot@tadl.org")
 
-    PrintJobsTasks.abandon_job!(job, robot)
+    assert_no_enqueued_jobs do
+      assert_emails 1 do
+        PrintJobsTasks.abandon_job!(job, robot)
+      end
+    end
 
     status_audit = job.audits.reload.reverse.find do |audit|
       audit.audited_changes.key?("status_id")
@@ -96,5 +106,37 @@ class PrintJobsTasksTest < ActiveSupport::TestCase
     job.update_column(:last_quote_reminder_sent_at, reminder_at)
 
     assert_equal reminder_at, PrintJobsTasks.last_quote_nudge_at(job.reload)
+  end
+
+  test "quote reminders are delivered before the automation exits" do
+    job = create_print_job(
+      status_code: "information_requested",
+      attrs: { slicer_cost: 4.08 }
+    )
+    robot = create_staff_user(email: "robot@tadl.org")
+
+    assert_no_enqueued_jobs do
+      assert_emails 1 do
+        PrintJobsTasks.resend_quote!(job, robot)
+      end
+    end
+
+    assert_not_nil job.reload.last_quote_reminder_sent_at
+  end
+
+  test "pickup reminders are delivered before the automation exits" do
+    job = create_print_job(
+      status_code: "ready_for_pickup",
+      attrs: { completion_date: 8.days.ago.to_date, actual_cost: 3.25 }
+    )
+    robot = create_staff_user(email: "robot@tadl.org")
+
+    assert_no_enqueued_jobs do
+      assert_emails 1 do
+        PrintJobsTasks.send_pickup_reminder!(job, robot, Date.current)
+      end
+    end
+
+    assert_not_nil job.reload.last_pickup_reminder_sent_at
   end
 end
