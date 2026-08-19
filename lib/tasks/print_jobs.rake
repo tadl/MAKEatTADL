@@ -1,6 +1,11 @@
 # lib/tasks/print_jobs.rake
 module PrintJobsTasks
   PICKUP_ABANDON_AFTER_DAYS = 30
+  NIGHTLY_TASK_NAMES = %w[
+    info_requests_nudge_and_cancel
+    send_pickup_reminders
+    abandon_overdue_pickups
+  ].freeze
 
   module_function
 
@@ -42,6 +47,30 @@ module PrintJobsTasks
       "#{error.class}: #{error.message}"
     )
     raise
+  end
+
+  def run_nightly_tasks(task_resolver: ->(name) { Rake::Task[name] })
+    failures = []
+
+    NIGHTLY_TASK_NAMES.each_with_index do |task_name, index|
+      puts if index.positive?
+      puts "== Nightly: #{task_name} =="
+      begin
+        task = task_resolver.call("print_jobs:#{task_name}")
+        task.reenable
+        task.invoke
+      rescue => error
+        failures << [task_name, error]
+        warn "[nightly] #{task_name} failed: #{error.class}: #{error.message}"
+      end
+    end
+
+    if failures.any?
+      summary = failures.map { |name, error| "#{name} (#{error.class})" }.join(", ")
+      raise "Nightly maintenance failed: #{summary}"
+    end
+
+    puts "\n== Nightly maintenance complete =="
   end
 
   # ---------- Info Requested helpers ----------
@@ -462,33 +491,6 @@ namespace :print_jobs do
 
   desc "Nightly maintenance: nudge/cancel info-requests, send pickup reminders, abandon 30+ day ready items"
   task nightly_maintenance: :environment do
-    puts "== Nightly: info_requests_nudge_and_cancel =="
-    begin
-      t = Rake::Task["print_jobs:info_requests_nudge_and_cancel"]
-      t.reenable
-      t.invoke
-    rescue => e
-      warn "[nightly] info_requests_nudge_and_cancel failed: #{e.class}: #{e.message}"
-    end
-
-    puts "\n== Nightly: send_pickup_reminders =="
-    begin
-      t = Rake::Task["print_jobs:send_pickup_reminders"]
-      t.reenable
-      t.invoke
-    rescue => e
-      warn "[nightly] send_pickup_reminders failed: #{e.class}: #{e.message}"
-    end
-
-    puts "\n== Nightly: abandon_overdue_pickups =="
-    begin
-      t = Rake::Task["print_jobs:abandon_overdue_pickups"]
-      t.reenable
-      t.invoke
-    rescue => e
-      warn "[nightly] abandon_overdue_pickups failed: #{e.class}: #{e.message}"
-    end
-
-    puts "\n== Nightly maintenance complete =="
+    PrintJobsTasks.run_nightly_tasks
   end
 end

@@ -139,4 +139,31 @@ class PrintJobsTasksTest < ActiveSupport::TestCase
 
     assert_not_nil job.reload.last_pickup_reminder_sent_at
   end
+
+  test "nightly maintenance runs every section but fails when one section fails" do
+    invoked = []
+    task_lookup = lambda do |name|
+      fake_task = Object.new
+      fake_task.define_singleton_method(:reenable) {}
+      fake_task.define_singleton_method(:invoke) do
+        invoked << name
+        raise "mail delivery failed" if name == "print_jobs:send_pickup_reminders"
+      end
+      fake_task
+    end
+
+    error = nil
+    capture_io do
+      error = assert_raises(RuntimeError) do
+        PrintJobsTasks.run_nightly_tasks(task_resolver: task_lookup)
+      end
+    end
+
+    assert_equal %w[
+      print_jobs:info_requests_nudge_and_cancel
+      print_jobs:send_pickup_reminders
+      print_jobs:abandon_overdue_pickups
+    ], invoked
+    assert_match "send_pickup_reminders (RuntimeError)", error.message
+  end
 end
