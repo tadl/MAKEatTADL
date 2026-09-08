@@ -76,7 +76,7 @@ class Job < ApplicationRecord
 
   private
 
-  # Set origin once at creation; persists through Scan→Print flips
+  # Record the original request type at creation.
   def set_origin_default
     self.origin = is_a?(ScanJob) ? 'scan' : (origin.presence || 'print')
   end

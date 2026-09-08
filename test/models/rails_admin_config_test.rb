@@ -14,7 +14,7 @@ class RailsAdminConfigTest < ActiveSupport::TestCase
     field = RailsAdmin.config("Job").edit.fields.detect { |configured_field| configured_field.name == :type }
 
     assert field.read_only?
-    assert_match(/convert automatically/i, field.help)
+    assert_match(/remain scan jobs/i, field.help)
   end
 
   test "rails admin disables direct new actions for conversations and messages" do

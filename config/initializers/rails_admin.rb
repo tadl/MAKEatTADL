@@ -256,7 +256,7 @@ RailsAdmin.config do |config|
         enum          { [['Print','PrintJob'], ['Scan','ScanJob']] }
         default_value { bindings[:object].type || 'PrintJob' }
         read_only true
-        help 'Derived from the underlying job record. Scan jobs convert automatically when printable model files are attached.'
+        help 'Derived from the underlying job record. Scan jobs remain scan jobs when model files are attached.'
       end
       field :pickup_location, :enum do
         label    'Pickup Location'
