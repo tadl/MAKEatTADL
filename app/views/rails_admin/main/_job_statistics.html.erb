@@ -262,17 +262,28 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
 <script>
 (function() {
+  const pageScript = document.currentScript;
+  const libraryScript = pageScript.previousElementSibling;
+  window.__raChartEvents?.abort();
+  const events = new AbortController();
+  window.__raChartEvents = events;
   window.__raCharts = window.__raCharts || {};
 
+  function destroyCharts() {
+    Object.values(window.__raCharts).forEach(chart => chart?.destroy());
+    window.__raCharts = {};
+  }
+
   function initDashboardCharts() {
+    if (!pageScript.isConnected || document.documentElement.hasAttribute('data-turbo-preview')) return;
     const ctx1 = document.getElementById('printsPerDayChart');
     const ctx2 = document.getElementById('filamentPerDayChart');
     const ctx3 = document.getElementById('filamentColorChart');
     if (!ctx1 || !ctx2 || !ctx3 || !window.Chart) return;
 
-    ['printsPerDayChart','filamentPerDayChart','filamentColorChart'].forEach((k) => {
-      if (window.__raCharts[k]) { window.__raCharts[k].destroy(); window.__raCharts[k] = null; }
-    });
+    if (window.__raCharts.printsPerDayChart?.canvas === ctx1 &&
+        window.Chart.getChart(ctx1) === window.__raCharts.printsPerDayChart) return;
+    destroyCharts();
 
     window.__raCharts.printsPerDayChart = new window.Chart(ctx1.getContext('2d'), {
       type: 'line',
@@ -337,12 +348,14 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDashboardCharts, { once: true });
-  } else {
-    initDashboardCharts();
-  }
-  document.addEventListener('rails_admin.dom_ready', initDashboardCharts);
-  document.addEventListener('turbo:load', initDashboardCharts);
+  // Turbo inserts body scripts without waiting for an external script to load.
+  libraryScript.addEventListener('load', initDashboardCharts, { once: true, signal: events.signal });
+  document.addEventListener('DOMContentLoaded', initDashboardCharts, { once: true, signal: events.signal });
+  document.addEventListener('turbo:load', initDashboardCharts, { signal: events.signal });
+  document.addEventListener('turbo:before-cache', () => {
+    destroyCharts();
+    events.abort();
+  }, { once: true, signal: events.signal });
+  initDashboardCharts();
 })();
 </script>

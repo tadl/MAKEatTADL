@@ -235,6 +235,12 @@ RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test RBENV_VERSION=3.4.10
 See [the dependency audit](docs/dependency-audit-2026-09-10.md) for security,
 asset-build, and browser regression checks and deferred compatibility work.
 
+With assets precompiled, Playwright available to Node, and Google Chrome
+installed, run `node test/browser/stats_navigation_test.cjs` to check chart
+loading during Turbo navigation, filtering, Back navigation, and reload.
+This check renders synthetic pages using the local test database and delays
+the Chart.js download to reproduce first-visit loading races.
+
 1. Fork the repo and clone your fork.
 2. Create a feature branch: `git checkout -b my-feature`
 3. Run tests and ensure code passes linter.
