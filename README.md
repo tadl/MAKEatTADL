@@ -2,8 +2,8 @@
 
 **A full-featured 3D Print Job Management Platform for Public Libraries**
 
-[![Ruby](https://img.shields.io/badge/Ruby-3.2.10-red)](https://www.ruby-lang.org)
-[![Rails](https://img.shields.io/badge/Rails-7.1.3.3-red)](https://rubyonrails.org/)
+[![Ruby](https://img.shields.io/badge/Ruby-3.4.10-red)](https://www.ruby-lang.org)
+[![Rails](https://img.shields.io/badge/Rails-8.1.3.1-red)](https://rubyonrails.org/)
 
 ---
 
@@ -59,11 +59,10 @@ MAKEatTADL is a web application developed by [Traverse Area District Library (TA
 
 ### Prerequisites
 
-- **Ruby**: 3.2.10 (use [rbenv](https://github.com/rbenv/rbenv) or [asdf](https://asdf-vm.com/))
-- **Rails**: 7.1.3.3
-- **PostgreSQL**: 13+
-- **Redis**: For Sidekiq jobs/queues
-- **Node.js & Yarn**: For JS dependencies
+- **Ruby**: 3.4.10 (use [rbenv](https://github.com/rbenv/rbenv) or [asdf](https://asdf-vm.com/))
+- **Rails**: 8.1.3.1
+- **PostgreSQL**: Use a [currently supported release](https://www.postgresql.org/support/versioning/).
+- **JavaScript**: Importmap and gem-provided Sprockets assets; no npm/Yarn install is required.
 - **ImageMagick**: For image processing (used by ActiveStorage)
 - **libvips**: (optional, for faster image handling)
 
@@ -83,11 +82,10 @@ git clone https://github.com/tadl/MAKEatTADL.git
 cd MAKEatTADL
 ```
 
-Install Ruby gems and JS dependencies:
+Install the locked Ruby dependencies (including bundled JavaScript assets):
 
 ```sh
 bundle install
-yarn install
 ```
 
 Set up the database:
@@ -184,7 +182,7 @@ Visit [http://localhost:3000](http://localhost:3000) to get started.
 
 ## Architecture
 
-- **Rails 7** app, modular design.
+- **Rails 8.1** app, retaining the established Rails 7.1 configuration defaults.
 - **ActiveStorage** for all file uploads (optionally S3).
 - **OmniAuth** for Google OAuth2 staff authentication.
 - **RailsAdmin** for administrative interface.
@@ -227,6 +225,15 @@ docs/
 ---
 
 ## Contributing
+
+Run the Rails suite against the local test database:
+
+```sh
+RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test RBENV_VERSION=3.4.10 rbenv exec bundle exec rails test
+```
+
+See [the dependency audit](docs/dependency-audit-2026-09-10.md) for security,
+asset-build, and browser regression checks and deferred compatibility work.
 
 1. Fork the repo and clone your fork.
 2. Create a feature branch: `git checkout -b my-feature`

@@ -63,7 +63,7 @@ end
 
 
 # authentication for staff
-gem 'omniauth-google-oauth2'
+gem 'omniauth-google-oauth2', '~> 1.2', '>= 1.2.3'
 gem 'omniauth-rails_csrf_protection'
 
 # admin UI for staff
@@ -86,7 +86,8 @@ gem 'bootstrap', '~> 5.3'
 
 gem 'recaptcha', require: 'recaptcha/rails'
 
-gem 'pagy'
+# Newer major versions replace the pagination API used by the patron portal.
+gem 'pagy', '~> 9.3'
 
 gem 'audited', '~> 5.2'
 
