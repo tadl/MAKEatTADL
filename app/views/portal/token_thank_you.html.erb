@@ -11,7 +11,9 @@
     <div class="card__actions">
       <%= link_to 'Resend Login Link', login_path, class: 'btn btn-outline' %>
       <%= link_to 'Submit a Print', submit_print_path, class: 'btn btn-primary' %>
-      <%= link_to 'Submit a Scan',  submit_scan_path,  class: 'btn btn-secondary' %>
+      <% if scanning_available? %>
+        <%= link_to 'Submit a Scan', submit_scan_path, class: 'btn btn-secondary' %>
+      <% end %>
     </div>
   </div>
 </main>

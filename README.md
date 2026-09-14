@@ -164,6 +164,14 @@ Visit [http://localhost:3000](http://localhost:3000) to get started.
 
 ### Staff Workflow
 
+Public scan requests are available whenever at least one active Pickup Location
+has **Scanner** enabled. To pause scanning, clear **Scanner** on every active
+location in the admin interface. Public scanning links and promotional wording
+disappear, and bookmarked scan forms or stale submissions are blocked. Enable
+**Scanner** on an active location to restore requests without a deployment.
+Existing scan jobs, conversations, and files remain available while scanning is
+paused. An inactive location does not enable the service.
+
 - Log in via Google SSO.
 - View, filter, and manage all jobs.
 - Use the RailsAdmin panel for advanced management.

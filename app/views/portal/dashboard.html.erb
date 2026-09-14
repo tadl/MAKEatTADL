@@ -57,7 +57,9 @@
     <div class="no-jobs text-center py-16">
       <p class="text-lg mb-4">You have no jobs yet.</p>
       <%= link_to "Submit a Print", submit_print_path, class: "btn btn-primary me-2" %>
-      <%= link_to "Request a Scan", submit_scan_path, class: "btn btn-outline" %>
+      <% if scanning_available? %>
+        <%= link_to "Request a Scan", submit_scan_path, class: "btn btn-outline" %>
+      <% end %>
     </div>
   <% end %>
 </main>

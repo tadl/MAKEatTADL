@@ -1,13 +1,16 @@
 <main class="home-page">
+  <% service_name = scanning_available? ? '3D Printing & Scanning' : '3D Printing' %>
 
   <!-- Hero -->
   <section class="hero text-center">
     <div class="hero__content container">
       <h1 class="hero__title">MAKE@TADL</h1>
-      <p class="hero__subtitle">Fast, Affordable, and High-Quality 3D Printing &amp; Scanning for Our Community</p>
+      <p class="hero__subtitle">Fast, Affordable, and High-Quality <%= service_name %> for Our Community</p>
       <div class="hero__buttons">
         <%= link_to 'Request a Print', submit_print_path, class: 'btn btn-hero' %>
-        <%= link_to 'Request a Scan',  submit_scan_path,  class: 'btn btn-hero btn-hero--alt' %>
+        <% if scanning_available? %>
+          <%= link_to 'Request a Scan', submit_scan_path, class: 'btn btn-hero btn-hero--alt' %>
+        <% end %>
       </div>
     </div>
   </section>
@@ -42,7 +45,7 @@
     <!-- About Card -->
     <section class="about-card my-8">
       <h2>About Our Service</h2>
-      <p>TADL’s 3D Printing &amp; Scanning service turns your ideas into reality — perfect for prototypes, spare parts, art projects, and more.</p>
+      <p>TADL’s <%= service_name %> service turns your ideas into reality — perfect for prototypes, spare parts, art projects, and more.</p>
       <a href="https://www.tadl.org/services/3d-printing" target="_blank" rel="noopener" class="btn btn-secondary">Learn More</a>
     </section>
 

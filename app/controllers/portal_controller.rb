@@ -9,6 +9,8 @@ class PortalController < ApplicationController
   # Need a logged-in patron for dashboard/show/create_message
   before_action :load_patron, only: %i[dashboard show create_message attach_model_files]
   before_action :load_job,    only: %i[show create_message attach_model_files]
+  before_action :require_scanning_available, only: %i[submit_scan create_scan_job]
+  helper_method :scanning_available?
 
   # Public landing page
   def home
@@ -148,6 +150,11 @@ class PortalController < ApplicationController
     # Build first so the form can re-render with posted values on validation errors
     @job = ScanJob.new(scan_job_params)
 
+    unless PickupLocation.active.scanners.exists?(code: @job.pickup_location)
+      flash.now[:alert] = "Please select a location that currently offers 3D scanning."
+      return render :submit_scan, status: :unprocessable_content
+    end
+
     # Validate email early (authoritative server-side)
     email = params.dig(:patron, :email).to_s.strip.downcase
     unless valid_email?(email)
@@ -245,6 +252,18 @@ class PortalController < ApplicationController
   end
 
   private
+
+  def scanning_available?
+    return @scanning_available if defined?(@scanning_available)
+
+    @scanning_available = PickupLocation.active.scanners.exists?
+  end
+
+  def require_scanning_available
+    return if scanning_available?
+
+    redirect_to root_path, alert: "3D scanning is currently unavailable.", status: :see_other
+  end
 
   def valid_email?(email)
     email.present? && email.match?(EMAIL_REGEX)

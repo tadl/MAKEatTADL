@@ -6,7 +6,7 @@
     <%  
       # if require_scanner is true, only show active locations with scanners  
       locations = if local_assigns[:require_scanner]  
-        PickupLocation.active.where(scanner: true)  
+        PickupLocation.active.scanners
       else  
         PickupLocation.active  
       end.order(:position)
