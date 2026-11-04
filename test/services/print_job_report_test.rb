@@ -172,6 +172,47 @@ class PrintJobReportTest < ActiveSupport::TestCase
     assert_equal 5, all_locations.total_quantity
   end
 
+  test "unique designs preserve model and URL precedence without instantiating records" do
+    date = Date.new(2026, 2, 10)
+    model = PrintableModel.create!(name: "Test model", code: "test_model",
+      category: ensure_category("Fidget"))
+    2.times do |index|
+      create_completed_fdm_job(date:, quantity: 1, actual_weight: 10)
+        .update_columns(printable_model_id: model.id, url: "https://example.org/model-#{index}")
+    end
+    ["https://EXAMPLE.org/shared/?download=1", "https://example.org/shared#preview"].each do |url|
+      create_completed_fdm_job(date:, quantity: 1, actual_weight: 10).update_column(:url, url)
+    end
+    report = PrintJobReport.new(start_date: date, end_date: date)
+    instantiations = []
+    queries = nil
+
+    ActiveSupport::Notifications.subscribed(
+      ->(*event) { instantiations << event.last }, "instantiation.active_record"
+    ) do
+      queries = capture_selects { assert_equal 2, report.unique_designs }
+    end
+
+    assert_equal 1, queries.size
+    assert_empty instantiations
+  end
+
+  test "unique file designs ignore attachment order and retain jobs without identifiers" do
+    date = Date.new(2026, 2, 11)
+    [["first", "second"], ["second", "first"], ["first"], [], []].each do |contents|
+      job = create_completed_fdm_job(date:, quantity: 1, actual_weight: 10)
+      contents.each do |content|
+        job.model_files.attach(io: StringIO.new(content), filename: "#{content}.stl", content_type: "model/stl")
+      end
+      job.update_column(:url, nil)
+    end
+
+    report = PrintJobReport.new(start_date: date, end_date: date)
+
+    assert_equal 4, report.unique_designs
+    assert_equal 5, report.total_quantity
+  end
+
   private
 
   def create_submitted_job(date:, status_code:)

@@ -32,4 +32,52 @@ class AdminFilesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a", text: "test-model.stl"
   end
+
+  test "admin job details escape model filenames while preserving previews and downloads" do
+    job = create_print_job
+    %w[stl 3mf].each do |extension|
+      job.model_files.attach(io: StringIO.new("synthetic model #{extension}"),
+        filename: "part &copy; <img src=x onerror=alert(1)>.#{extension}", content_type: "application/octet-stream")
+    end
+
+    get rails_admin.show_path(model_name: "job", id: job.id)
+
+    assert_response :success
+    assert_select "img[onerror]", count: 0
+    assert_select "details .stlviewer[data-file-url]", count: 1
+    job.model_files.each do |file|
+      file_path = Rails.application.routes.url_helpers.rails_blob_path(file, only_path: true)
+      assert_select "a[href='#{file_path}']", text: file.filename.to_s
+    end
+  end
+
+  test "admin job details do not link legacy URLs with executable schemes" do
+    job = create_print_job
+    job.update_column(:url, "javascript:alert(1)//https://example.org/model")
+
+    get rails_admin.show_path(model_name: "job", id: job.id)
+
+    assert_response :success
+    assert_select "a[href^='javascript:']", count: 0
+    assert_includes response.body, "javascript:alert(1)//https://example.org/model"
+  end
+
+  test "catalog model previews and edit links preserve literal filenames" do
+    StaffUser.find_by!(email: "files@example.com").update!(admin: true)
+    model = PrintableModel.create!(name: "Catalog model", code: "catalog_model",
+      category: ensure_category("Fidget"))
+    model.model_file.attach(io: StringIO.new("synthetic STL"),
+      filename: "catalog &copy;.stl", content_type: "model/stl")
+
+    get rails_admin.show_path(model_name: "printable_model", id: model.id)
+
+    assert_response :success
+    assert_select "details .stlviewer[data-file-url]", count: 1
+    assert_select "a", text: model.model_file.filename.to_s
+
+    get rails_admin.edit_path(model_name: "printable_model", id: model.id)
+
+    assert_response :success
+    assert_select "a", text: model.model_file.filename.to_s
+  end
 end

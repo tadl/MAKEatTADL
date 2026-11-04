@@ -63,6 +63,13 @@ class Job < ApplicationRecord
   scope :started_between,  ->(start_time, end_time) { where(started_at:  start_time..end_time) }
   scope :finished_between, ->(start_time, end_time) { where(finished_at: end_time ? (start_time..end_time) : start_time..start_time) }
 
+  def http_model_url?
+    uri = URI.parse(url.to_s)
+    uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    false
+  end
+
   # --------------------
   # Automation guard �
   # --------------------

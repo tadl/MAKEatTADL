@@ -219,14 +219,23 @@ class PortalController < ApplicationController
   def dashboard
     return if render_magic_link_interstitial(:dashboard)
 
-    @pagy, @jobs = pagy(@patron.jobs.order(created_at: :desc), limit: 10, items: 10)
+    @pagy, @jobs = pagy(
+      @patron.jobs.includes(:status, :assigned_printer).order(created_at: :desc, id: :desc),
+      limit: 10
+    )
+    @pickup_location_names = PickupLocation
+      .where(code: @jobs.map(&:pickup_location).compact.uniq)
+      .pluck(:code, :name).to_h
   end
 
   # Show a single job (and its messages)
   def show
     return if render_magic_link_interstitial(:job)
 
-    @messages    = @job.conversation&.messages&.where(staff_note_only: false)&.order(:created_at) || []
+    @messages = @job.conversation&.messages
+      &.where(staff_note_only: false)
+      &.includes(:author)
+      &.with_attached_images || []
     @new_message = Message.new
   end
 

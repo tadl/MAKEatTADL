@@ -3,6 +3,23 @@ require_relative "../config/environment"
 require "rails/test_help"
 
 module TestSupport
+  module QueryHelper
+    def capture_selects
+      queries = []
+      ActiveRecord::Base.clear_query_caches_for_current_thread
+      subscriber = ->(_name, _start, _finish, _id, payload) do
+        if payload[:name] != "SCHEMA" && !payload[:cached] && payload[:sql].match?(/\ASELECT\b/i)
+          queries << payload[:sql]
+        end
+      end
+
+      ActiveRecord::Base.uncached do
+        ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+      end
+      queries
+    end
+  end
+
   module EnvHelper
     def with_env(overrides)
       original = overrides.to_h { |key, _value| [key, ENV[key]] }
@@ -129,6 +146,7 @@ end
 class ActiveSupport::TestCase
   parallelize(workers: 1)
 
+  include TestSupport::QueryHelper
   include ActiveJob::TestHelper
   include ActionDispatch::TestProcess::FixtureFile
   include TestSupport::EnvHelper

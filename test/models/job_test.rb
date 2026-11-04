@@ -109,4 +109,19 @@ class JobTest < ActiveSupport::TestCase
 
     assert job.valid?
   end
+
+  test "model URLs must be complete HTTP or HTTPS URLs" do
+    job = create_print_job
+    ["javascript:alert(1)//https://example.org/model", "ftp://example.org/model",
+     "https:", "https://", "https://example.org/model with spaces"].each do |url|
+      job.url = url
+      assert_not job.valid?, "Should reject #{url.inspect}"
+      assert_includes job.errors[:url], "must be a valid HTTP or HTTPS URL"
+    end
+
+    ["https://example.org/model?part=1#preview", "http://example.org/model", nil].each do |url|
+      job.url = url
+      assert job.valid?, "Should allow #{url.inspect}"
+    end
+  end
 end

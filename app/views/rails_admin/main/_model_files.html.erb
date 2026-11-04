@@ -1,0 +1,12 @@
+<% files.each_with_index do |file, index| %>
+  <% file_url = main_app.rails_blob_path(file, only_path: true) %>
+  <div>
+    <% if File.extname(file.filename.to_s).downcase == '.stl' %>
+      <details id="stl-details-<%= index %>">
+        <summary class="btn btn-sm btn-primary">Show 3D Preview</summary>
+        <div id="stlviewer-<%= index %>" class="stlviewer" data-file-url="<%= file_url %>" style="width:min(100%,640px);height:420px;border:1px solid #ccc"></div>
+      </details>
+    <% end %>
+    <div class="py-2"><%= link_to file.filename, file_url %></div>
+  </div>
+<% end %>

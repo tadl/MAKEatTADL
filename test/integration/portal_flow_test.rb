@@ -1,6 +1,19 @@
 require "test_helper"
 
 class PortalFlowTest < ActionDispatch::IntegrationTest
+  test "patron job details do not link legacy URLs with executable schemes" do
+    patron = create_patron
+    job = create_print_job(patron: patron)
+    job.update_column(:url, "javascript:alert(1)//https://example.org/model")
+    post consume_dashboard_token_path, params: { token: patron.access_token }
+
+    get job_path(job)
+
+    assert_response :success
+    assert_select "a[href^='javascript:']", count: 0
+    assert_includes response.body, "javascript:alert(1)//https://example.org/model"
+  end
+
   test "magic link get shows an interstitial without consuming the token" do
     patron = create_patron
     token = patron.access_token

@@ -30,11 +30,7 @@
                   <%= bootstrap_status_badge(job.status) %>
                 </td>
                 <td>
-                  <% if (loc = PickupLocation.find_by(code: job.pickup_location)) %>
-                    <%= loc.name %>
-                  <% else %>
-                    <%= job.pickup_location.humanize %>
-                  <% end %>
+                  <%= @pickup_location_names[job.pickup_location] || job.pickup_location.to_s.humanize %>
                 </td>
                 <td><%= job.assigned_printer&.printer_model || "—" %></td>
                 <td class="text-end">

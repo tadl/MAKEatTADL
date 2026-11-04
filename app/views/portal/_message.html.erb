@@ -21,7 +21,7 @@
                     aria:     { label: "Open #{image_label}" } do %>
           <%= image_tag(
                 main_app.rails_representation_path(
-                  img.variant(resize_to_limit: [250, 250]).processed,
+                  img.variant(resize_to_limit: [250, 250]),
                   only_path: true
                 ),
                 alt: image_label,

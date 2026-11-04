@@ -183,7 +183,11 @@
             <% if has_url %>
               <h6 class="mb-2 <%= 'mt-3' if has_files %>">URL</h6>
               <p class="mb-0">
-                <%= link_to @job.url, @job.url, target: '_blank', rel: 'noopener', class: 'text-decoration-none' %>
+                <% if @job.http_model_url? %>
+                  <%= link_to @job.url, @job.url, target: '_blank', rel: 'noopener', class: 'text-decoration-none' %>
+                <% else %>
+                  <%= @job.url %>
+                <% end %>
               </p>
             <% end %>
 

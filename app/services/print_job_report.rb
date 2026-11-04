@@ -24,8 +24,6 @@ class PrintJobReport
     @non_cancelled_completed = @completed
       .joins(:status)
       .where.not(statuses: { code: NON_COMPLETED_STATUS_CODES })
-
-    @non_cancelled_completed_with_files = @non_cancelled_completed.with_attached_model_files
   end
 
   # ---------------------------
@@ -103,8 +101,12 @@ class PrintJobReport
 
   # Per-job design identity (never more than completed orders)
   def unique_designs
-    keys = @non_cancelled_completed_with_files.map { |job| design_key_for(job) }
-    keys.uniq.size
+    # Only design identifiers are needed, not full jobs, blobs, or variant records.
+    rows = @non_cancelled_completed
+      .left_joins(model_files_attachments: :blob)
+      .pluck("jobs.id", :printable_model_id, :url, "active_storage_blobs.checksum")
+
+    rows.group_by(&:first).values.map { |files| design_key_for(files) }.uniq.size
   end
 
   # ---------------------------
@@ -162,29 +164,27 @@ class PrintJobReport
   end
 
   # One design key per job
-  def design_key_for(job)
-    if job.printable_model_id.present?
-      "pm:#{job.printable_model_id}"
-    elsif job.url.present?
-      "url:#{normalize_url(job.url)}"
-    elsif job.model_files.attached?
-      sums = job.model_files.map { |att| att.blob&.checksum }.compact.sort
-      sums.any? ? "files:#{sums.join('|')}" : "job:#{job.id}"
+  def design_key_for(files)
+    job_id, printable_model_id, url = files.first
+
+    if printable_model_id.present?
+      "pm:#{printable_model_id}"
+    elsif url.present?
+      "url:#{normalize_url(url)}"
     else
-      "job:#{job.id}"
+      sums = files.map(&:last).compact.sort
+      sums.any? ? "files:#{sums.join('|')}" : "job:#{job_id}"
     end
   end
 
   # Gentle URL normalizer so the same design link doesn’t count multiple times
   def normalize_url(url)
-    begin
-      u = URI.parse(url.to_s.strip)
-      host   = (u.host || '').downcase
-      path   = (u.path || '').chomp('/')
-      scheme = (u.scheme || 'https').downcase
-      "#{scheme}://#{host}#{path}"
-    rescue
-      url.to_s.strip.downcase
-    end
+    u = URI.parse(url.to_s.strip)
+    host   = (u.host || '').downcase
+    path   = (u.path || '').chomp('/')
+    scheme = (u.scheme || 'https').downcase
+    "#{scheme}://#{host}#{path}"
+  rescue URI::InvalidURIError
+    url.to_s.strip.downcase
   end
 end

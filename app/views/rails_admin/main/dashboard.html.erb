@@ -22,9 +22,9 @@
          } %>
 
       <div class="row g-3">
-        <% Status.order(:position).each do |status| %>
+        <% @dashboard.statuses.each do |status| %>
           <% link_scope = %w[archived cancelled rejected abandoned].include?(status.code) ? 'inactive' : 'active' %>
-          <% count = Job.with_status(status.code).count %>
+          <% count = @dashboard.job_counts.fetch(status.id, 0) %>
 
           <div class="col-6 col-md-4 col-lg-2">
             <%= link_to(
@@ -48,9 +48,8 @@
     </div>
   </div>
 
-  <% ready_status = Status.find_by(code: 'ready_for_pickup') %>
-  <% ready_jobs   = ready_status ? Job.where(status_id: ready_status.id).includes(:patron).order(Arel.sql('COALESCE(completion_date, created_at) ASC')) : Job.none %>
-  <% pl_names     = PickupLocation.pluck(:code, :name).to_h %>
+  <% ready_jobs = @dashboard.ready_jobs %>
+  <% pl_names = @dashboard.pickup_location_names %>
 
   <div class="card mb-4">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -190,18 +189,14 @@
     <% end %>
   </div>
 
-  <% unread_by_job = Message.unread.joins(conversation: :job)
-                         .select('jobs.id as job_id, jobs.patron_id, COUNT(messages.*) as cnt')
-                         .group('jobs.id') %>
-
-  <% if unread_by_job.any? %>
+  <% if @dashboard.unread_counts.any? %>
     <div class="card mb-4">
       <div class="card-header">
         <h3 class="mb-0">Unread Messages</h3>
       </div>
       <ul class="list-group list-group-flush">
-        <% unread_by_job.each do |row| %>
-          <% job = Job.find(row.job_id) %>
+        <% @dashboard.unread_counts.each do |job_id, count| %>
+          <% job = @dashboard.message_jobs.fetch(job_id) %>
           <li class="list-group-item d-flex justify-content-between align-items-center">
             <%= link_to "Job ##{job.id} — #{job.patron.name}",
                         url_for(
@@ -210,7 +205,7 @@
                           model_name: "job",
                           id:         job.id
                         ) %>
-            <span class="badge bg-danger rounded-pill"><%= row.cnt %></span>
+            <span class="badge bg-danger rounded-pill"><%= count %></span>
           </li>
         <% end %>
       </ul>
@@ -222,19 +217,15 @@
     </div>
   <% end %>
 
-  <% my_mentions = Notification.unread.where(staff_user: current_staff_user).joins(message: { conversation: :job })
-                     .select('jobs.id AS job_id, COUNT(notifications.*) AS cnt')
-                     .group('jobs.id') %>
-
   <div class="card mb-4">
     <div class="card-header">
       <h3 class="mb-0">Mentions for You</h3>
     </div>
 
-    <% if my_mentions.any? %>
+    <% if @dashboard.mention_counts.any? %>
       <ul class="list-group list-group-flush">
-        <% my_mentions.each do |row| %>
-          <% job = Job.find(row.job_id) %>
+        <% @dashboard.mention_counts.each do |job_id, count| %>
+          <% job = @dashboard.message_jobs.fetch(job_id) %>
           <li class="list-group-item d-flex justify-content-between align-items-center">
             <%= link_to "Job ##{job.id} — #{job.patron.name}",
                         url_for(
@@ -243,7 +234,7 @@
                           model_name: "job",
                           id:         job.id
                         ) %>
-            <span class="badge bg-warning rounded-pill"><%= row.cnt %></span>
+            <span class="badge bg-warning rounded-pill"><%= count %></span>
           </li>
         <% end %>
       </ul>

@@ -29,10 +29,7 @@ class PrintJob < Job
   validates :status,         presence: true
   validates :filament_color, length: { maximum: 50 }, allow_blank: true
 
-  validates :url,
-            format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]),
-                      message: 'must be a valid URL' },
-            allow_blank: true
+  validate :url_must_be_http
 
   validates :pickup_location,
             presence: true,
@@ -68,6 +65,10 @@ class PrintJob < Job
   end
 
   private
+
+  def url_must_be_http
+    errors.add(:url, "must be a valid HTTP or HTTPS URL") if url.present? && !http_model_url?
+  end
 
   def sync_print_type_from_printer
     return unless assigned_printer

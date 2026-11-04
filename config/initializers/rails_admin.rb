@@ -58,7 +58,14 @@ RailsAdmin.config do |config|
 
   # Actions
   config.actions do
-    dashboard
+    dashboard do
+      controller do
+        proc do
+          @dashboard = StaffDashboard.new(staff_user: current_staff_user)
+          render @action.template_name
+        end
+      end
+    end
     stats
     index
     new   { except ['StaffUser', 'Conversation', 'Message'] }
@@ -144,24 +151,7 @@ RailsAdmin.config do |config|
       field :model_files, :active_storage do
         label 'Model Files'
         pretty_value do
-          value.map.with_index do |file, i|
-            file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
-            html_id  = "stlviewer-#{i}"
-
-            if File.extname(file.filename.to_s).downcase == '.stl'
-              %Q{
-                <div>
-                  <details id="stl-details-#{i}">
-                    <summary class="btn btn-sm btn-primary ">Show 3D Preview</summary>
-                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width:min(100%,640px);height:420px;border:1px solid #ccc"></div>
-                  </details>
-                  <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
-                </div>
-              }.html_safe
-            else
-              %Q{<div><a href="#{file_url}">#{file.filename}</a></div>}
-            end
-          end.join.html_safe
+          bindings[:view].render(partial: 'rails_admin/main/model_files', locals: { files: value })
         end
       end
 
@@ -177,8 +167,10 @@ RailsAdmin.config do |config|
         field :url do
           label 'URL'
           pretty_value do
-            if value.present?
+            if bindings[:object].http_model_url?
               bindings[:view].link_to(value, value, target: '_blank', rel: 'noopener')
+            elsif value.present?
+              bindings[:view].content_tag(:span, value)
             else
               bindings[:view].content_tag(:span, '(none)', class: 'text-muted')
             end
@@ -445,9 +437,12 @@ RailsAdmin.config do |config|
         pretty_value do
           if value&.attached?
             file_url = Rails.application.routes.url_helpers.rails_blob_url(value, only_path: true)
-            %Q{<div class="mb-2">Currently attached: <a href="#{file_url}">#{value.filename}</a></div>}.html_safe
+            view = bindings[:view]
+            view.content_tag(:div, class: 'mb-2') do
+              view.safe_join(['Currently attached: ', view.link_to(value.filename, file_url)])
+            end
           else
-            '<span class="text-muted">(No file attached)</span>'.html_safe
+            bindings[:view].content_tag(:span, '(No file attached)', class: 'text-muted')
           end
         end
       end
@@ -466,23 +461,7 @@ RailsAdmin.config do |config|
         label 'Model File (STL)'
         pretty_value do
           if value.present?
-            file = value
-            file_url = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
-            html_id  = "stlviewer-#{file.id}"
-
-            if File.extname(file.filename.to_s).downcase == '.stl'
-              %Q{
-                <div>
-                  <details id="stl-details-#{file.id}">
-                    <summary class="btn btn-sm btn-primary">Show 3D Preview</summary>
-                    <div id="#{html_id}" class="stlviewer" data-file-url="#{file_url}" style="width:min(100%,640px);height:420px;border:1px solid #ccc"></div>
-                  </details>
-                  <div class="py-2"><a href="#{file_url}">#{file.filename}</a></div>
-                </div>
-              }.html_safe
-            else
-              %Q{<div><a href="#{file_url}">#{file.filename}</a></div>}.html_safe
-            end
+            bindings[:view].render(partial: 'rails_admin/main/model_files', locals: { files: [value] })
           else
             '(none)'
           end
