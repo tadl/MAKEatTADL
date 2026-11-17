@@ -51,10 +51,7 @@ class PortalController < ApplicationController
     @job  = PrintJob.new
 
     if %w[fidget assistive].include?(@type)
-      @printable_models = PrintableModel
-        .joins(:category)
-        .where(categories: { name: @type.capitalize })
-        .order(:position)
+      @printable_models = public_printable_models
 
       return render :"submit_#{@type}"
     end
@@ -71,6 +68,7 @@ class PortalController < ApplicationController
   #
   def create_print_job
     @type = params[:type]&.downcase.presence || 'patron'
+    @printable_models = public_printable_models if %w[fidget assistive].include?(@type)
 
     # PATCH: Accept both model_file (old) and model_files (new)
     if params[:job][:model_file].present?
@@ -95,20 +93,27 @@ class PortalController < ApplicationController
     end
 
     # FIDGET & ASSISTIVE: force FDM & attach chosen model
-    if @type.in?(%w[fidget assistive])
-      @job.print_type = PrintType.find_by!(code: 'fdm')
-      if (pm_id = params.dig(:job, :printable_model_id)).present?
-        pm = PrintableModel.find(pm_id)
-        @job.printable_model = pm
-
-        # Pre-fill single-copy weight and default quantity
-        if pm.respond_to?(:weight_grams) && pm.weight_grams.present? && @job.slicer_weight.blank?
-          @job.slicer_weight = pm.weight_grams
-        end
-        @job.quantity = 1 if @job.quantity.blank?
-
-        @job.model_files.attach(pm.model_file.blob) if pm.model_file.attached?
+    if @printable_models
+      model_id = Integer(params.dig(:job, :printable_model_id), exception: false)
+      pm = @printable_models.find_by(id: model_id)
+      unless pm
+        flash.now[:alert] = "Please select a model from the #{@type} collection."
+        return render form_template_for(@type), status: :unprocessable_content
       end
+
+      @job.print_type = PrintType.find_by!(code: 'fdm')
+      @job.printable_model = pm
+
+      # Pre-fill single-copy weight and default quantity
+      if pm.respond_to?(:weight_grams) && pm.weight_grams.present? && @job.slicer_weight.blank?
+        @job.slicer_weight = pm.weight_grams
+      end
+      @job.quantity = 1 if @job.quantity.blank?
+
+      @job.model_files.attach(pm.model_file.blob) if pm.model_file.attached?
+    elsif params.dig(:job, :printable_model_id).present?
+      flash.now[:alert] = "Please use the appropriate device form to select a catalog model."
+      return render form_template_for(@type), status: :unprocessable_content
     end
 
     # common attrs
@@ -400,13 +405,18 @@ class PortalController < ApplicationController
     end
   end
 
+  def public_printable_models
+    PrintableModel.joins(:category)
+      .where(categories: { name: @type.capitalize })
+      .order(:position)
+  end
+
   def print_job_params
     params.require(:job).permit(
       :url,
       :filament_color,
       :notes,
       :pickup_location,
-      :printable_model_id,
       :print_type,
       :print_notify,
       :quantity,

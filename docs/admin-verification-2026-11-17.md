@@ -13,9 +13,9 @@ the application's conversation route.
 
 ## Latest verification and review readiness
 
-The latest local run after the pagination, appearance, and CI changes passed
-**247 Rails tests and 8,791 assertions** with `CI=1`, with no failures, errors,
-or skips. Both Chrome suites passed: 27 desktop/mobile page checks, 19 viewport
+The latest local run after the pagination, appearance, CI, and catalog-selection
+changes passed **256 Rails tests and 9,075 assertions** with `CI=1`, with no
+failures, errors, or skips. Both Chrome suites passed: 27 desktop/mobile page checks, 19 viewport
 confirmation controls, user-menu/appearance behavior, and chart navigation,
 theme changes, and failure recovery. Production-mode assets and eager loading
 also passed. The dependency audit and reviewed scanner result below were
@@ -36,6 +36,13 @@ release or whether the proposed shared Needs response queue is required.
 Controlled live Google login/CAPTCHA, outbound email, and inbound-reply smoke
 tests remain outstanding. The browser CAPTCHA checks simulate the SDK.
 Production scheduling and a Dokku build/release have not been validated here.
+
+The review also corrected a pre-existing public catalog-selection boundary:
+Fidget and Assistive POSTs now resolve models through their matching collection,
+and generic requests reject catalog IDs. Missing, invalid, cross-collection, and
+staff-only selections return a validation error without creating requests or
+copying files. Regressions retain valid public model files, pricing/status,
+CAPTCHA checks, and eligible choices after form errors.
 
 ## Initial implementation checks
 
