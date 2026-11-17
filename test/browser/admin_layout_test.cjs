@@ -128,8 +128,49 @@ const { chromium } = require('playwright');
     assert.equal(await page.locator('form[action*="/files/"]').count(), 0, 'File deletion stays on the Files screen.');
     await page.locator('nav a', { hasText: 'Jobs', exact: true }).click();
     await page.waitForURL('**/admin/jobs');
+    await page.evaluate(() => { window.navigationSentinel = true; });
+    const jobRow = page.locator('tr[data-controller="row-link"]').filter({ has: page.locator(`a[href="${jobPath}"]`) });
+    const waitForRowController = () => page.waitForFunction(jobPath => {
+      const link = document.querySelector(`a[href="${jobPath}"]`);
+      return link && window.Stimulus?.getControllerForElementAndIdentifier(link.closest('tr'), 'row-link');
+    }, jobPath);
+    await waitForRowController();
+    const selectionCell = jobRow.locator('[data-row-link-ignore]');
+    const checkbox = selectionCell.locator('input[type="checkbox"]');
+    await checkbox.check();
+    assert.equal(await checkbox.isChecked(), true);
+    await selectionCell.click({ position: { x: 2, y: 2 } });
+    assert.equal(new URL(page.url()).pathname, '/admin/jobs', 'Checkbox cell padding does not open the job.');
+    await checkbox.uncheck();
+
+    const patronCell = jobRow.locator('td').nth(1);
+    const patronBounds = await patronCell.boundingBox();
+    await page.mouse.move(patronBounds.x + 8, patronBounds.y + 22);
+    await page.mouse.down();
+    await page.mouse.move(patronBounds.x + patronBounds.width - 8, patronBounds.y + 22, { steps: 12 });
+    await page.mouse.up();
+    assert.ok(await page.evaluate(() => window.getSelection().toString().length > 0), 'Patron text can be selected.');
+    assert.equal(new URL(page.url()).pathname, '/admin/jobs', 'Selecting patron text does not open the job.');
+    await page.evaluate(() => window.getSelection().removeAllRanges());
+
+    await patronCell.click({ modifiers: ['Meta'] });
+    assert.equal(new URL(page.url()).pathname, '/admin/jobs', 'Modified row clicks do not hijack normal link behavior.');
+    await patronCell.click();
+    await page.waitForURL(origin + jobPath);
+    assert.equal(await page.evaluate(() => window.navigationSentinel), true, 'Row clicks keep Turbo navigation.');
+
+    await page.goto(origin + '/admin/jobs');
+    await jobRow.locator('[data-row-link-target="link"]').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL(origin + jobPath);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(origin + '/admin/jobs');
+    await waitForRowController();
+    await patronCell.click();
+    await page.waitForURL(origin + jobPath);
     assert.deepEqual(errors, []);
-    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, collection choices, actual thumbnails, library-save discovery, Turbo navigation, reprint link, and live STL controls.`);
+    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, clickable job rows and independent checkboxes/text selection, collection choices, actual thumbnails, library-save discovery, Turbo navigation, reprint link, and live STL controls.`);
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

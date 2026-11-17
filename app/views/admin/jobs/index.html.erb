@@ -43,9 +43,9 @@
     </tr></thead>
     <tbody>
       <% @jobs.each do |job| %>
-        <tr>
-          <% if can?(:destroy, Job) %><td><%= check_box_tag "ids[]", job.id, false, form: "bulk-jobs", aria: { label: "Select job #{job.id}" }, class: "rounded border-slate-300" %></td><% end %>
-          <th scope="row"><%= link_to "##{job.id}", admin_job_path(job), class: "font-semibold text-brand-700 hover:underline" %></th>
+        <tr class="cursor-pointer focus-within:bg-brand-50" data-controller="row-link" data-action="click->row-link#open">
+          <% if can?(:destroy, Job) %><td class="cursor-default" data-row-link-ignore><%= check_box_tag "ids[]", job.id, false, form: "bulk-jobs", aria: { label: "Select job #{job.id}" }, class: "rounded border-slate-300" %></td><% end %>
+          <th scope="row"><%= link_to "##{job.id}", admin_job_path(job), class: "font-semibold text-brand-700 hover:underline", data: { row_link_target: "link" } %></th>
           <td><%= job.patron.name.presence || job.patron.email %><div class="admin-muted text-xs"><%= job.patron.email %></div></td>
           <td><%= admin_status_badge(job.status) %></td>
           <td><%= job.category.name %></td><td><%= job.is_a?(ScanJob) ? "Scan" : "Print" %></td>
