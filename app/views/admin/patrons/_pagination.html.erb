@@ -1,0 +1,7 @@
+<% if @total_pages > 1 %>
+  <nav class="mt-6 flex items-center justify-between gap-3" aria-label="Pagination">
+    <div><%= link_to "Previous", url_for(request.query_parameters.merge(page: @page - 1)), class: "admin-btn" if @page > 1 %></div>
+    <span class="admin-muted">Page <%= @page %> of <%= @total_pages %></span>
+    <div><%= link_to "Next", url_for(request.query_parameters.merge(page: @page + 1)), class: "admin-btn" if @page < @total_pages %></div>
+  </nav>
+<% end %>

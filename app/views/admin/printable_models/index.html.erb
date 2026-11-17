@@ -1,0 +1,35 @@
+<div class="admin-page-header">
+  <div><h1>Model library</h1><p>Keep useful designs and the knowledge to print them again.</p></div>
+  <div class="admin-actions">
+    <% if can?(:export, PrintableModel) %><%= link_to "Export CSV", export_admin_printable_models_path(format: :csv, q: params[:q], category_id: params[:category_id]), class: "admin-btn" %><% end %>
+    <% if can?(:create, PrintableModel) %><%= link_to "Add model", new_admin_printable_model_path, class: "admin-btn admin-btn-primary" %><% end %>
+  </div>
+</div>
+<%= form_with url: admin_printable_models_path, method: :get, class: "mb-6 flex flex-wrap items-end gap-3" do %>
+  <div class="min-w-48 flex-1"><%= label_tag :q, "Search models", class: "admin-label" %><%= search_field_tag :q, params[:q], placeholder: "Search names, codes, and notes…", class: "admin-input" %></div>
+  <div class="min-w-40"><%= label_tag :category_id, "Category", class: "admin-label" %><%= select_tag :category_id, options_from_collection_for_select(Category.reorder(:name), :id, :name, params[:category_id]), include_blank: "All categories", class: "admin-input" %></div>
+  <%= submit_tag "Search", class: "admin-btn" %>
+<% end %>
+<% if @models.any? %>
+  <%= form_with url: bulk_destroy_admin_printable_models_path, method: :post, data: { turbo_confirm: "Delete the selected models? This cannot be undone." } do %>
+    <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <% @models.each do |model| %>
+        <article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+          <%= link_to admin_printable_model_path(model), class: "flex aspect-[16/10] items-center justify-center bg-slate-100", "aria-label": "View #{model.name}" do %>
+            <% if model.preview_image.attached? && model.preview_image.content_type.in?(%w[image/jpeg image/png image/webp]) %><%= image_tag rails_blob_path(model.preview_image), alt: model.name, class: "h-full w-full object-contain", loading: "lazy" %><% else %><%= admin_icon(:models, classes: "h-14 w-14 text-slate-300") %><% end %>
+          <% end %>
+          <div class="p-5">
+            <div class="mb-2 flex items-center justify-between gap-3"><span class="admin-badge"><%= model.category.name %></span><% if can?(:destroy, model) %><%= check_box_tag "ids[]", model.id, false, "aria-label": "Select #{model.name}" %><% end %></div>
+            <h2 class="font-semibold tracking-tight text-slate-950"><%= link_to model.name, admin_printable_model_path(model), class: "hover:text-brand-700" %></h2>
+            <p class="mt-1 text-xs text-slate-500"><%= model.code %><%= " · #{model.weight_grams} g per copy" if model.weight_grams.present? %></p>
+            <p class="mt-3 line-clamp-2 text-sm leading-6 text-slate-500"><%= model.notes.presence || "No printing notes yet." %></p>
+          </div>
+        </article>
+      <% end %>
+    </div>
+    <% if can?(:destroy, PrintableModel) %><%= submit_tag "Delete selected", class: "admin-btn admin-btn-danger mt-5" %><% end %>
+  <% end %>
+<% else %>
+  <div class="admin-card admin-empty"><%= admin_icon(:models, classes: "mx-auto mb-4 h-12 w-12 text-slate-300") %><p class="font-medium text-slate-700">No models found</p><p class="mt-2">Add a model or save a file from an existing job to start your library.</p></div>
+<% end %>
+<%= render "admin/shared/pagination" %>

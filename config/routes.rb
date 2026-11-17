@@ -5,18 +5,55 @@ Rails.application.routes.draw do
   # OmniAuth callback for external providers (login)
   get '/auth/:provider/callback', to: 'sessions#create'
 
-  get '/admin/login', to: 'sessions#choose_login'
+  get '/admin/login', to: 'sessions#choose_login', as: :admin_login
 
   # Sign out route
   delete '/logout', to: 'sessions#destroy', as: :logout
 
-  # Admin interface (RailsAdmin)
-  mount RailsAdmin::Engine => '/admin', as: 'rails_admin'
-  # RailsAdmin conversation action for Job (formerly PrintJob)
-  match '/admin/job/:id/conversation',
-        to: 'rails_admin/main#conversation',
-        via: [:get, :post],
-        as: :admin_job_conversation
+  namespace :admin do
+    root to: 'dashboard#show'
+    get 'stats', to: 'statistics#index', as: :stats
+    get 'help', to: 'help#show', as: :help
+
+    resources :jobs do
+      collection do
+        get :export
+        post :bulk_destroy
+      end
+      member do
+        get :conversation
+        post 'conversation', to: 'jobs#create_message', as: nil
+        get :files
+        post 'files', to: 'jobs#attach_files', as: nil
+        delete 'files/:file_id', to: 'jobs#destroy_file', as: :file
+        post :picked_up
+      end
+    end
+    resources :patrons do
+      collection do
+        get :export
+        post :bulk_destroy
+      end
+      member { match :merge, via: [:get, :post] }
+    end
+    resources :printable_models, path: 'models' do
+      collection do
+        get :export
+        post :bulk_destroy
+      end
+    end
+
+    resources :resources, path: 'settings/:resource' do
+      collection do
+        get :export
+        post :bulk_destroy
+      end
+    end
+
+    # Keep links in existing staff emails and bookmarks useful after the port.
+    get ':model_name(/:id)(/:legacy_action)', to: 'legacy#show',
+      constraints: { model_name: /job|patron|printable_model|printer|filament_color|pickup_location|print_type|status|category|staff_user|conversation|message|audited~audit/ }
+  end
 
   # Public home page
   root to: 'portal#home'

@@ -1,0 +1,48 @@
+<h1 class="mb-6 text-3xl font-semibold tracking-tight text-slate-950"><%= @page_title %></h1>
+<div class="mb-6 flex flex-wrap gap-2">
+  <%= link_to "All patrons", admin_patrons_path, class: "admin-btn" %>
+  <% if can?(:update, @patron) %><%= link_to "Edit contact details", edit_admin_patron_path(@patron), class: "admin-btn admin-btn-primary" %><% end %>
+  <% if can?(:merge_patron, @patron) %><%= link_to "Merge patron", merge_admin_patron_path(@patron), class: "admin-btn" %><% end %>
+</div>
+
+<div class="admin-card mb-6">
+  <h2 class="mb-4 text-lg font-semibold">Contact details</h2>
+  <dl class="grid gap-4 sm:grid-cols-2">
+    <div><dt class="admin-muted">Name</dt><dd class="mt-1"><%= @patron.name.presence || "Not provided" %></dd></div>
+    <div><dt class="admin-muted">Email</dt><dd class="mt-1 break-all"><%= @patron.email %></dd></div>
+    <div><dt class="admin-muted">Patron</dt><dd class="mt-1">#<%= @patron.id %></dd></div>
+    <div><dt class="admin-muted">Created</dt><dd class="mt-1"><%= l(@patron.created_at.to_date, format: :long) %></dd></div>
+  </dl>
+</div>
+
+<section class="admin-card">
+  <h2 class="mb-4 text-lg font-semibold">Job history <span class="admin-muted font-normal">(<%= @total_count %>)</span></h2>
+  <% if @jobs.any? %>
+    <div class="overflow-x-auto">
+      <table class="admin-table">
+        <thead><tr><th scope="col">Job</th><th scope="col">Type</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Received</th></tr></thead>
+        <tbody>
+          <% @jobs.each do |job| %>
+            <tr>
+              <td><%= link_to "##{job.id}", admin_job_path(job), class: "font-medium text-teal-700 hover:underline" %></td>
+              <td><%= job.is_a?(ScanJob) ? "Scan" : "Print" %></td>
+              <td><%= job.category.name %></td>
+              <td><%= job.status.name %></td>
+              <td><%= l(job.created_at.to_date, format: :long) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <%= render "pagination" %>
+  <% else %>
+    <p class="admin-muted">This patron has no jobs.</p>
+  <% end %>
+</section>
+
+<% if can?(:destroy, @patron) %>
+  <div class="mt-8 flex flex-wrap items-center gap-4">
+    <%= button_to "Delete patron", admin_patron_path(@patron), method: :delete, class: "admin-btn admin-btn-danger", form: { data: { turbo_confirm: "Delete this patron and all their jobs? This cannot be undone." } } %>
+    <p class="admin-muted text-sm">Deleting a patron also deletes their jobs and conversations.</p>
+  </div>
+<% end %>

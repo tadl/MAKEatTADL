@@ -1,0 +1,129 @@
+<div class="mb-8">
+  <h1 class="text-3xl font-semibold tracking-tight text-slate-950">Statistics</h1>
+  <p class="admin-muted mt-2">Submissions, completed work, and materials used across the makerspace.</p>
+</div>
+
+<section class="admin-card p-5 mb-6" aria-label="Report filters">
+  <%= form_with url: admin_stats_path, method: :get, class: "flex flex-wrap items-end gap-4" do %>
+    <div class="admin-field">
+      <%= label_tag :start, "Start date", class: "admin-label" %>
+      <%= date_field_tag :start, @start_date, class: "admin-input", required: true %>
+    </div>
+    <div class="admin-field">
+      <%= label_tag :end, "End date", class: "admin-label" %>
+      <%= date_field_tag :end, @end_date, class: "admin-input", required: true %>
+    </div>
+    <div class="admin-field min-w-48 flex-1">
+      <%= label_tag :location, "Location", class: "admin-label" %>
+      <%= select_tag :location, options_for_select([["All Locations", ""]] + @locations.map { |location| [location.name, location.code] }, @selected_location&.code.to_s), class: "admin-input" %>
+    </div>
+    <%= submit_tag "Apply filters", class: "admin-btn admin-btn-primary" %>
+  <% end %>
+  <div class="flex flex-wrap gap-x-4 gap-y-2 mt-4" aria-label="Date presets">
+    <% @presets.each do |label, (first_day, last_day)| %>
+      <%= link_to label, admin_stats_path(start: first_day.iso8601, end: last_day.iso8601, location: @selected_location&.code), class: "text-sm font-medium text-teal-800 hover:underline" %>
+    <% end %>
+  </div>
+</section>
+
+<% if @filter_error %>
+  <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900" role="alert"><%= @filter_error %></div>
+<% else %>
+  <p class="admin-muted mb-5"><%= @start_date.strftime("%b %-d, %Y") %>–<%= @end_date.strftime("%b %-d, %Y") %> · <%= @selected_location&.name || "All Locations" %></p>
+
+  <div class="grid grid-cols-2 gap-4 xl:grid-cols-4 mb-6">
+    <% [["Print jobs completed", @completed_jobs], ["Total prints", @total_quantity], ["Filament used", "#{number_with_delimiter(@filament_grams)} g"], ["Scan jobs completed", @scan_completions]].each do |label, value| %>
+      <div class="admin-card p-5">
+        <p class="text-sm font-medium text-slate-600"><%= label %></p>
+        <p class="mt-3 text-3xl font-semibold tracking-tight tabular-nums"><%= value.is_a?(Numeric) ? number_with_delimiter(value) : value %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="grid gap-6 xl:grid-cols-2 mb-6">
+    <section class="admin-card overflow-hidden p-0" aria-labelledby="submissions-heading">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h2 id="submissions-heading" class="text-lg font-semibold mb-0">Submissions</h2>
+        <p class="admin-muted text-sm mt-1">Print requests received in the selected period.</p>
+      </div>
+      <dl class="divide-y divide-slate-100">
+        <% @submission_metrics.each do |label, count| %>
+          <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600"><%= label %></dt><dd class="font-medium tabular-nums"><%= number_with_delimiter(count) %></dd></div>
+        <% end %>
+      </dl>
+    </section>
+
+    <section class="admin-card overflow-hidden p-0" aria-labelledby="completions-heading">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h2 id="completions-heading" class="text-lg font-semibold mb-0">Completions</h2>
+        <p class="admin-muted text-sm mt-1">Finished in the selected period, excluding cancelled and rejected jobs.</p>
+      </div>
+      <dl class="divide-y divide-slate-100">
+        <% @completion_metrics.each do |label, count| %>
+          <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600"><%= label %></dt><dd class="font-medium tabular-nums"><%= number_with_delimiter(count) %></dd></div>
+        <% end %>
+      </dl>
+    </section>
+  </div>
+
+  <div class="grid gap-6 xl:grid-cols-2 mb-6">
+    <section class="admin-card overflow-hidden p-0" aria-labelledby="materials-heading">
+      <h2 id="materials-heading" class="text-lg font-semibold mb-0 px-5 py-4 border-b border-slate-200">Materials and averages</h2>
+      <dl class="divide-y divide-slate-100">
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Filament used</dt><dd class="font-medium tabular-nums"><%= number_with_delimiter(@filament_grams) %> g</dd></div>
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Resin used</dt><dd class="font-medium tabular-nums"><%= number_with_delimiter(@resin_ml) %> mL</dd></div>
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Most popular filament color</dt><dd class="font-medium text-right"><%= @popular_color&.titleize || "—" %><% if @popular_color %><span class="admin-muted block text-sm"><%= pluralize(@popular_color_count, "print") %></span><% end %></dd></div>
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Average prints per completed job</dt><dd class="font-medium tabular-nums"><%= number_with_precision(@completed_jobs.positive? ? @total_quantity.to_f / @completed_jobs : 0, precision: 2) %></dd></div>
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Average filament per FDM job</dt><dd class="font-medium tabular-nums"><%= @fdm_jobs.positive? ? "#{number_with_precision(@filament_grams.to_f / @fdm_jobs, precision: 1)} g" : "—" %></dd></div>
+        <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-slate-600">Average resin per resin job</dt><dd class="font-medium tabular-nums"><%= @resin_jobs.positive? ? "#{number_with_precision(@resin_ml.to_f / @resin_jobs, precision: 1)} mL" : "—" %></dd></div>
+      </dl>
+    </section>
+
+    <section class="admin-card overflow-hidden p-0" aria-labelledby="category-heading">
+      <h2 id="category-heading" class="text-lg font-semibold mb-0 px-5 py-4 border-b border-slate-200">Completed jobs by category</h2>
+      <% if @category_counts.any? %>
+        <table class="admin-table"><thead><tr><th scope="col">Category</th><th scope="col">Jobs</th></tr></thead><tbody>
+          <% @category_counts.sort_by { |name, _count| name.downcase }.each do |name, count| %>
+            <tr><td><%= name %></td><td class="tabular-nums"><%= number_with_delimiter(count) %></td></tr>
+          <% end %>
+        </tbody></table>
+      <% else %>
+        <p class="admin-muted px-5 py-6">No completed print jobs in this period.</p>
+      <% end %>
+    </section>
+  </div>
+
+  <section data-controller="admin-stats" data-admin-stats-data-value="<%= @chart_data.to_json %>" data-action="turbo:before-cache@document->admin-stats#clear" aria-label="Completion charts" class="mb-6">
+    <p data-admin-stats-target="error" class="admin-muted mb-4" role="status" hidden>Charts could not load. The same report data is available in the tables below.</p>
+    <div class="grid gap-6 xl:grid-cols-2">
+      <div class="admin-card p-5"><h2 class="text-lg font-semibold mb-4">Prints per day</h2><div class="relative h-64"><canvas id="printsPerDayChart" data-admin-stats-target="prints" role="img" aria-label="Completed print quantities per day. See daily totals table below."></canvas></div></div>
+      <div class="admin-card p-5"><h2 class="text-lg font-semibold mb-4">Filament per day</h2><div class="relative h-64"><canvas id="filamentPerDayChart" data-admin-stats-target="filament" role="img" aria-label="Filament used in grams per day. See daily totals table below."></canvas></div></div>
+      <div class="admin-card p-5 xl:col-span-2"><h2 class="text-lg font-semibold mb-4">Filament color popularity</h2><div class="relative h-72 max-w-xl mx-auto"><canvas id="filamentColorChart" data-admin-stats-target="colors" role="img" aria-label="Filament colors by print quantity. See filament colors table below."></canvas></div></div>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-2 mb-6">
+    <details class="admin-card overflow-hidden p-0">
+      <summary class="cursor-pointer px-5 py-4 font-semibold">Daily totals</summary>
+      <div class="max-h-96 overflow-auto"><table class="admin-table"><thead><tr><th scope="col">Date</th><th scope="col">Prints</th><th scope="col">Filament (g)</th></tr></thead><tbody>
+        <% @daily_rows.each do |row| %>
+          <tr><th scope="row" class="font-normal"><%= row[:date].iso8601 %></th><td><%= row[:prints] %></td><td><%= number_with_precision(row[:filament], precision: 1) %></td></tr>
+        <% end %>
+      </tbody></table></div>
+    </details>
+    <details class="admin-card overflow-hidden p-0">
+      <summary class="cursor-pointer px-5 py-4 font-semibold">Filament colors</summary>
+      <% if @filament_counts.any? %>
+        <table class="admin-table"><thead><tr><th scope="col">Color</th><th scope="col">Prints</th></tr></thead><tbody>
+          <% @filament_counts.sort_by { |code, _count| code }.each do |code, count| %>
+            <tr><th scope="row" class="font-normal"><%= code.titleize %></th><td><%= number_with_delimiter(count) %></td></tr>
+          <% end %>
+        </tbody></table>
+      <% else %>
+        <p class="admin-muted px-5 pb-5">No filament colors recorded for this period.</p>
+      <% end %>
+    </details>
+  </div>
+
+  <p class="admin-muted text-sm">Submissions use the original print request type. Scan completions use the original scan request type, even when model files were added later. Quantities of zero or blank count as one. Reports refresh whenever you open or filter this page.</p>
+<% end %>

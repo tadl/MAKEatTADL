@@ -7,10 +7,13 @@ class SessionsController < ApplicationController
   def create
     auth  = request.env['omniauth.auth']
     staff = StaffUser.from_omniauth(auth)
+    return_to = safe_admin_return_path(session[:user_return_to])
+
+    # Rotate the session identifier when gaining staff privileges.
+    reset_session
     session[:staff_user_id] = staff.id
 
-    return_to = session.delete(:user_return_to)
-    redirect_to (return_to || rails_admin.dashboard_path)
+    redirect_to(return_to || admin_root_path)
   rescue StaffUser::UnauthorizedDomainError => e
     Rails.logger.warn("Rejected staff login: #{e.message}")
     reset_session
@@ -47,6 +50,14 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  def safe_admin_return_path(path)
+    return unless path.is_a?(String)
+    return unless path.match?(%r{\A/admin(?:/|\?|\z)})
+    return if path.match?(/[\\\r\n]/) || path.split("?", 2).first == "/admin/login"
+
+    path
+  end
 
   # (Optional) Example OAuth revoke helper—call it above if needed
   def revoke_oauth_token(token)

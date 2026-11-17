@@ -3,6 +3,10 @@
 # Version of your assets, change this if you want to expire all your assets.
 Rails.application.config.assets.version = "1.0"
 
+# Tailwind minifies its own modern CSS. SassC still compiles the public SCSS,
+# but its legacy compressor cannot parse Tailwind's media queries and layers.
+Rails.application.config.assets.css_compressor = nil
+
 # Add additional assets to the asset load path.
 # Rails.application.config.assets.paths << Emoji.images_path
 

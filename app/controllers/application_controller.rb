@@ -1,7 +1,6 @@
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
   before_action { Current.staff_user = current_staff_user }
-  before_action :authenticate_staff_user!, if: -> { respond_to?(:rails_admin_controller?) && rails_admin_controller? }
 
   helper_method :current_staff_user
   def current_staff_user

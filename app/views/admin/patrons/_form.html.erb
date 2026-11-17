@@ -1,0 +1,22 @@
+<div class="admin-card max-w-2xl">
+  <% if @patron.errors.any? %>
+    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+      <p class="font-semibold">Please check these details.</p>
+      <ul class="mt-2 list-disc pl-5"><% @patron.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+  <%= form_with model: [:admin, @patron], class: "space-y-5" do |form| %>
+    <div class="admin-field">
+      <%= form.label :name, class: "admin-label" %>
+      <%= form.text_field :name, class: "admin-input", autocomplete: "name" %>
+    </div>
+    <div class="admin-field">
+      <%= form.label :email, class: "admin-label" %>
+      <%= form.email_field :email, required: true, maxlength: 254, class: "admin-input", autocomplete: "email" %>
+    </div>
+    <div class="flex flex-wrap gap-3 pt-2">
+      <%= form.submit @patron.persisted? ? "Save changes" : "Create patron", class: "admin-btn admin-btn-primary" %>
+      <%= link_to "Cancel", @patron.persisted? ? admin_patron_path(@patron) : admin_patrons_path, class: "admin-btn" %>
+    </div>
+  <% end %>
+</div>

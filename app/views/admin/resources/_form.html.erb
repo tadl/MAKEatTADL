@@ -1,0 +1,16 @@
+<%= render "admin/shared/errors", record: @record %>
+<%= form_with model: @record, scope: :record, url: @record.persisted? ? admin_resource_path(resource: resource_key, id: @record.id) : admin_resources_path(resource: resource_key) do |form| %>
+  <section class="admin-card">
+    <% if resource_key == "staff_users" %><p class="mb-6 text-sm text-slate-600"><%= @record.name %> · <%= @record.email %><br>Staff identities are managed through Google sign-in.</p><% end %>
+    <div class="admin-form-grid">
+      <% resource_definition[:fields].each do |field| %>
+        <div class="admin-field <%= 'sm:col-span-2' if field == :body %>"><%= form.label field, admin_resource_label(field), class: "admin-label" %><%= admin_resource_field(form, field) %></div>
+      <% end %>
+      <% if resource_key == "pickup_locations" %>
+        <fieldset class="sm:col-span-2"><legend class="admin-label">Printers at this location</legend><div class="space-y-2"><%= form.collection_check_boxes :printer_ids, Printer.order(Arel.sql("LOWER(name) ASC")), :id, :name do |choice| %><label class="flex items-center gap-2 text-sm"><%= choice.check_box %><%= choice.text %></label><% end %></div></fieldset>
+        <p class="admin-muted sm:col-span-2">Public scanning is available when at least one active location has Scanning enabled.</p>
+      <% end %>
+    </div>
+    <div class="admin-actions mt-7 border-t border-slate-100 pt-6"><%= form.submit "Save changes", class: "admin-btn admin-btn-primary" %><%= link_to "Cancel", admin_resources_path(resource: resource_key), class: "admin-btn" %></div>
+  </section>
+<% end %>

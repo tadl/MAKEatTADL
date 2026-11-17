@@ -7,20 +7,7 @@ class MentionMailer < ApplicationMailer
     @message    = message
     @job        = message.conversation.job
 
-    # Build the RailsAdmin URL for the custom "conversation" action
-    host = ActionMailer::Base.default_url_options&.[](:host) ||
-           Rails.application.routes.default_url_options&.[](:host) ||
-           ENV['APP_HOST'] || 'localhost:3000'
-
-    @admin_conversation_url =
-      RailsAdmin::Engine.routes.url_helpers.url_for(
-        controller: 'rails_admin/main',
-        action:     'conversation',
-        model_name: 'job',
-        id:         @job.id,
-        host:       host,
-        only_path:  false
-      )
+    @admin_conversation_url = conversation_admin_job_url(@job)
 
     mail(
       to:      @staff_user.email,

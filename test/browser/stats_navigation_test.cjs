@@ -42,7 +42,12 @@ const { chromium } = require('playwright');
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const page = await browser.newPage();
     const errors = [];
+    const legacyAssets = [];
     page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+      if (request.url().includes('/rails_admin/')) legacyAssets.push(request.url());
+    });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.route('https://example.com/avatar.png', route => route.fulfill({ status: 204 }));
     // Delay the first Chart.js response beyond turbo:load to expose the cold-navigation race.
     await page.route('https://cdn.jsdelivr.net/npm/chart.js@*/**', async route => {
@@ -81,8 +86,36 @@ const { chromium } = require('playwright');
     await assertCharts(1);
     await page.reload();
     await assertCharts(1);
+
+    // The custom workspace keeps its mobile navigation and reports within the viewport.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const navigationButton = page.getByRole('button', { name: 'Toggle navigation' });
+    await navigationButton.click();
+    assert.equal(await navigationButton.getAttribute('aria-expanded'), 'true');
+    await page.getByRole('navigation', { name: 'Staff navigation' }).getByRole('link', { name: 'Statistics', exact: true }).click();
+    await page.waitForURL('**/admin/stats');
+    await assertCharts(30);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true,
+      'The narrow staff page should not overflow horizontally');
+    assert.equal(await page.locator('details summary').filter({ hasText: 'Daily totals' }).count(), 1);
+
+    // Failed optional chart loading leaves readable report data and an explicit fallback.
+    const fallbackPage = await browser.newPage();
+    const fallbackErrors = [];
+    fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
+    await fallbackPage.route('https://cdn.jsdelivr.net/npm/chart.js@*/**', route => route.abort());
+    await fallbackPage.goto(origin + '/admin/stats');
+    const fallback = fallbackPage.locator('[data-admin-stats-target="error"]');
+    await fallback.waitFor({ state: 'visible' });
+    assert.equal(await fallbackPage.getByRole('heading', { name: 'Submissions', exact: true }).count(), 1);
+    await fallbackPage.locator('details summary').filter({ hasText: 'Daily totals' }).click();
+    assert.equal(await fallbackPage.getByRole('columnheader', { name: 'Filament (g)', exact: true }).count(), 1);
+    assert.deepEqual(fallbackErrors, []);
+    await fallbackPage.close();
+
     assert.deepEqual(errors, []);
-    console.log('Stats charts passed: delayed cold Turbo visit, filtering, leaving, history restoration, and reload.');
+    assert.deepEqual(legacyAssets, [], 'Custom staff pages should not load RailsAdmin assets');
+    console.log('Custom stats passed: delayed Turbo visit, filtering, chart cleanup, history, reload, mobile layout, and readable failure fallback.');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

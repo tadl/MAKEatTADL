@@ -1,0 +1,34 @@
+<div class="admin-page-header">
+  <div><h1><%= @page_title %></h1><p>Manage the settings and records used by your makerspace.</p></div>
+  <div class="admin-actions">
+    <% if can?(:export, resource_definition[:model]) %><%= link_to "Export CSV", export_admin_resources_path(resource: resource_key, **request.query_parameters.except("resource", "format", "page").symbolize_keys, format: :csv), class: "admin-btn" %><% end %>
+    <% if can?(:create, resource_definition[:model]) && resource_definition[:create] != false && !resource_definition[:readonly] %><%= link_to "Add record", new_admin_resource_path(resource: resource_key), class: "admin-btn admin-btn-primary" %><% end %>
+  </div>
+</div>
+<section class="admin-card">
+  <%= form_with url: admin_resources_path(resource: resource_key), method: :get, class: "mb-6 flex flex-wrap items-end gap-3" do %>
+    <div class="min-w-48 flex-1"><%= label_tag :q, "Search #{@page_title.downcase}", class: "admin-label" %><%= search_field_tag :q, params[:q], class: "admin-input", placeholder: "Search records…" %></div>
+    <% if resource_key == "filament_colors" %><div><%= label_tag :scope, "Availability", class: "admin-label" %><%= select_tag :scope, options_for_select([["All colors", ""], ["Active", "active"]], params[:scope]), class: "admin-input" %></div><% end %>
+    <%= submit_tag "Search", class: "admin-btn" %>
+  <% end %>
+  <% if @records.any? %>
+    <%= form_with url: bulk_destroy_admin_resources_path(resource: resource_key), method: :post, data: { turbo_confirm: "Delete the selected records? This cannot be undone." } do %>
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead><tr>
+            <% if can?(:destroy, resource_definition[:model]) && !resource_definition[:readonly] %><th><span class="sr-only">Select</span></th><% end %>
+            <% resource_definition[:columns].each do |field| %><th><%= link_to admin_resource_label(field), admin_resources_path(resource: resource_key, **request.query_parameters.except("resource").symbolize_keys, sort: field, direction: params[:sort] == field.to_s && params[:direction] != "desc" ? "desc" : "asc", page: 1) %></th><% end %>
+            <th><span class="sr-only">Open record</span></th>
+          </tr></thead>
+          <tbody><% @records.each do |record| %><tr>
+            <% if can?(:destroy, resource_definition[:model]) && !resource_definition[:readonly] %><td><%= check_box_tag "ids[]", record.id, false, "aria-label": "Select record #{record.id}" %></td><% end %>
+            <% resource_definition[:columns].each_with_index do |field, index| %><td class="max-w-sm break-words"><% if index.zero? %><%= link_to admin_resource_value(record, field), admin_resource_path(resource: resource_key, id: record.id) %><% else %><%= truncate(admin_resource_value(record, field).to_s, length: 150) %><% end %></td><% end %>
+            <td><%= link_to "View", admin_resource_path(resource: resource_key, id: record.id), "aria-label": "View record #{record.id}" %></td>
+          </tr><% end %></tbody>
+        </table>
+      </div>
+      <% if can?(:destroy, resource_definition[:model]) && !resource_definition[:readonly] %><%= submit_tag "Delete selected", class: "admin-btn admin-btn-danger mt-5" %><% end %>
+    <% end %>
+  <% else %><p class="admin-empty">No records match your search.</p><% end %>
+  <%= render "admin/shared/pagination" %>
+</section>

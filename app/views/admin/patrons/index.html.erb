@@ -1,0 +1,39 @@
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div><h1 class="text-3xl font-semibold tracking-tight text-slate-950">Patrons</h1><p class="admin-muted mt-2">Find contact details and a patron’s printing history.</p></div>
+  <div class="flex flex-wrap gap-2">
+    <% if can?(:export, Patron) %>
+      <%= link_to "Export CSV", export_admin_patrons_path(q: @query), class: "admin-btn", data: { turbo: false } %>
+    <% end %>
+    <% if can?(:create, Patron) %>
+      <%= link_to "New patron", new_admin_patron_path, class: "admin-btn admin-btn-primary" %>
+    <% end %>
+  </div>
+</div>
+
+<div class="admin-card mb-6">
+  <%= form_with url: admin_patrons_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
+    <div class="min-w-48 flex-1">
+      <%= form.label :q, "Search by name or email", class: "admin-label" %>
+      <%= form.search_field :q, value: @query, maxlength: 200, class: "admin-input" %>
+    </div>
+    <%= form.submit "Search", class: "admin-btn admin-btn-primary" %>
+    <% if @query.present? %><%= link_to "Clear", admin_patrons_path, class: "admin-btn" %><% end %>
+  <% end %>
+</div>
+
+<div class="admin-card">
+  <p class="admin-muted mb-4"><%= number_with_delimiter(@total_count) %> <%= "patron".pluralize(@total_count) %></p>
+  <% if @patrons.any? %>
+    <% if can?(:destroy, Patron) %>
+      <%= form_with url: bulk_destroy_admin_patrons_path, method: :post, data: { turbo_confirm: "Delete the selected patrons and all their jobs? This cannot be undone." } do |form| %>
+        <%= render "table", selectable: true %>
+        <div class="mt-4"><%= form.submit "Delete selected", class: "admin-btn admin-btn-danger" %></div>
+      <% end %>
+    <% else %>
+      <%= render "table", selectable: false %>
+    <% end %>
+    <%= render "pagination" %>
+  <% else %>
+    <p class="py-8 text-center admin-muted">No patrons match this search.</p>
+  <% end %>
+</div>

@@ -1,0 +1,13 @@
+<% content_for :title, "Files · Job ##{@job.id}" %>
+<%= link_to "← Jobs", admin_jobs_path, class: "admin-muted text-sm hover:underline" %>
+<h1 class="mb-5 mt-2 text-3xl font-semibold tracking-tight">Files for job #<%= @job.id %></h1>
+<%= render "navigation" %>
+<div class="grid items-start gap-6 xl:grid-cols-3">
+  <section class="admin-card xl:col-span-2"><div class="mb-5 flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">Model files</h2><span class="admin-badge"><%= pluralize(@job.model_files.size, "file") %></span></div><%= render "admin/shared/model_files", files: @job.model_files, job: @job %></section>
+  <section class="admin-card"><h2 class="mb-2 text-lg font-semibold">Attach files</h2><p class="admin-muted mb-5 text-sm">Add models or completed scan results to this job. Existing files are kept.</p>
+    <%= form_with url: files_admin_job_path(@job), scope: :job, method: :post, multipart: true, class: "space-y-4" do |f| %>
+      <div class="admin-field"><%= f.label :model_files, "STL or 3MF files", class: "admin-label" %><%= f.file_field :model_files, multiple: true, required: true, accept: ".stl,.3mf", class: "admin-input" %></div>
+      <%= f.submit "Attach files", class: "admin-btn admin-btn-primary" %>
+    <% end %>
+  </section>
+</div>

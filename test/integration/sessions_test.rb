@@ -6,6 +6,7 @@ class SessionsTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Staff Login Required", response.body
-    assert_match "/auth/google_oauth2", response.body
+    assert_select "form[action='/auth/google_oauth2'][method='post']"
+    assert_select "form[action='/auth/google_oauth2'][data-turbo='false']"
   end
 end

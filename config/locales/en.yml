@@ -55,27 +55,3 @@ en:
         link: "Merge Patron"
         title: "Merge Patron %{object_label}"
         breadcrumb: "Merge Patron"
-  rails_admin:
-    conversation:
-      menu: "Conversation"
-      link: "Open Conversation"
-      title: "Conversation for %{model} #%{id}"
-      breadcrumb: "Conversation"
-      placeholder: "Type your message..."
-      send: "Send"
-      staff_note_only: "Staff note only (don't email patron)"
-    help:
-      menu: "Help"
-      link: "Open Help"
-      title: "Help Section"
-      breadcrumb: "Help"
-    files:
-      menu: "Files"
-      link: "Open Files"
-      title: "Files Section"
-      breadcrumb: "Files"
-    merge_patron:
-      menu: "Merge Patron"
-      link: "Merge Patron"
-      title: "Merge Patron"
-      breadcrumb: "Merge Patron"

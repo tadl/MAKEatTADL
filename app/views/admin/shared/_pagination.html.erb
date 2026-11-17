@@ -1,0 +1,9 @@
+<% if @total_pages.to_i > 1 %>
+  <nav aria-label="Pagination" class="mt-6 flex items-center justify-between gap-4">
+    <p class="admin-muted">Page <%= @page %> of <%= @total_pages %><%= " · #{@total_count} records" if @total_count %></p>
+    <div class="admin-actions">
+      <% if @page > 1 %><%= link_to "Previous", url_for(request.query_parameters.merge(page: @page - 1)), class: "admin-btn" %><% end %>
+      <% if @page < @total_pages %><%= link_to "Next", url_for(request.query_parameters.merge(page: @page + 1)), class: "admin-btn" %><% end %>
+    </div>
+  </nav>
+<% end %>

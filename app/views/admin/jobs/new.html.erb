@@ -1,0 +1,5 @@
+<% content_for :title, "New job" %>
+<%= link_to "← Jobs", admin_jobs_path, class: "admin-muted text-sm hover:underline" %>
+<h1 class="mb-6 mt-2 text-3xl font-semibold tracking-tight">New <%= @job.is_a?(ScanJob) ? "scan" : "print" %> job</h1>
+<div class="mb-5 flex gap-2"><%= link_to "Print request", new_admin_job_path(type: "PrintJob"), class: "admin-btn admin-btn-secondary" %><%= link_to "Scan request", new_admin_job_path(type: "ScanJob"), class: "admin-btn admin-btn-secondary" %></div>
+<%= render "form" %>

@@ -1,0 +1,29 @@
+<%= render "admin/shared/errors", record: @model %>
+<%= form_with model: @model, url: @model.persisted? ? admin_printable_model_path(@model) : admin_printable_models_path do |form| %>
+  <section class="admin-card">
+    <% if @source_job %><div class="mb-6 rounded-lg bg-brand-50 p-4 text-sm text-brand-800">Saving <strong><%= @source_file.filename %></strong> from Job #<%= @source_job.id %>. The original job keeps its file.</div><%= hidden_field_tag :source_job_id, @source_job.id %><%= hidden_field_tag :attachment_id, @source_file.id %><% end %>
+    <div class="admin-form-grid">
+      <div class="admin-field"><%= form.label :name, class: "admin-label" %><%= form.text_field :name, required: true, class: "admin-input" %></div>
+      <div class="admin-field"><%= form.label :code, class: "admin-label" %><%= form.text_field :code, class: "admin-input" %><p class="admin-muted">Unique identifier. Generated from the name when left blank.</p></div>
+      <div class="admin-field"><%= form.label :category_id, "Category", class: "admin-label" %><%= form.collection_select :category_id, Category.reorder(:name), :id, :name, { include_blank: "Choose category" }, class: "admin-input", required: true %><p class="admin-muted">Fidget and Assistive models also appear in their public request forms.</p></div>
+      <div class="admin-field"><%= form.label :weight_grams, "Default weight per copy (g)", class: "admin-label" %><%= form.number_field :weight_grams, min: 0, class: "admin-input" %></div>
+      <div class="admin-field sm:col-span-2"><%= form.label :notes, "Printing notes", class: "admin-label" %><%= form.text_area :notes, rows: 6, class: "admin-input", placeholder: "Successful settings, material, preparation, source, and reuse permissions…" %></div>
+      <div class="admin-field">
+        <%= form.label :model_file, "Model file", class: "admin-label" %>
+        <%= form.file_field :model_file, accept: ".stl,.3mf", class: "admin-input" %>
+        <% if @model.model_file.attached? %>
+          <p class="admin-muted">
+            <% if @model.model_file.blob.persisted? %>
+              Current file: <%= link_to @model.model_file.filename, rails_blob_path(@model.model_file, disposition: "attachment"), class: "admin-link" %>
+            <% else %>
+              Selected file: <%= @model.model_file.filename %>
+            <% end %>
+          </p>
+        <% end %>
+      </div>
+      <div class="admin-field"><%= form.label :preview_image, "Preview image", class: "admin-label" %><%= form.file_field :preview_image, accept: "image/jpeg,image/png,image/webp", class: "admin-input" %></div>
+      <div class="admin-field"><%= form.label :position, "Catalog position", class: "admin-label" %><%= form.number_field :position, class: "admin-input" %><p class="admin-muted">Controls ordering on the public model selection forms.</p></div>
+    </div>
+    <div class="admin-actions mt-7 border-t border-slate-100 pt-6"><%= form.submit "Save model", class: "admin-btn admin-btn-primary" %><%= link_to "Cancel", admin_printable_models_path, class: "admin-btn" %></div>
+  </section>
+<% end %>

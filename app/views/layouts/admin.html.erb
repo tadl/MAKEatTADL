@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<% page_title = content_for(:title).presence || @page_title.presence || "Overview" %>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title><%= page_title %> · MAKE@TADL</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="turbo-prefetch" content="false">
+    <meta name="turbo-cache-control" content="no-cache">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3">Skip to content</a>
+    <div class="min-h-screen lg:grid lg:grid-cols-[232px_minmax(0,1fr)]" data-controller="admin-navigation">
+      <aside class="border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0">
+        <div class="flex h-20 items-center justify-between px-6">
+          <%= link_to admin_root_path, class: "flex items-center gap-3 font-semibold tracking-tight text-slate-950", "aria-label": "MAKE at TADL staff home" do %>
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-700 text-white"><%= admin_icon(:models, classes: "h-6 w-6") %></span>
+            <span class="text-lg">MAKE<span class="font-normal text-slate-400">@</span>TADL</span>
+          <% end %>
+          <button type="button" class="rounded-lg p-2 lg:hidden" data-action="admin-navigation#toggle" data-admin-navigation-target="button" aria-expanded="false" aria-controls="staff-navigation" aria-label="Toggle navigation"><%= admin_icon(:menu) %></button>
+        </div>
+        <nav id="staff-navigation" aria-label="Staff navigation" class="hidden px-3 pb-5 lg:block" data-admin-navigation-target="menu">
+          <div class="space-y-1">
+            <%= admin_navigation_link "Overview", admin_root_path, icon: :dashboard, active: controller_name == "dashboard" %>
+            <%= admin_navigation_link "Jobs", admin_jobs_path, icon: :jobs, active: controller_name == "jobs" %>
+            <%= admin_navigation_link "Model library", admin_printable_models_path, icon: :models, active: controller_name == "printable_models" %>
+            <%= admin_navigation_link "Patrons", admin_patrons_path, icon: :patrons, active: controller_name == "patrons" %>
+            <%= admin_navigation_link "Statistics", admin_stats_path, icon: :statistics, active: controller_name == "statistics" %>
+            <%= admin_navigation_link "Help", admin_help_path, icon: :help, active: controller_name == "help" %>
+          </div>
+          <% if current_staff_user.admin? %>
+            <details class="mt-7 border-t border-slate-100 pt-4" <%= "open" if controller_name == "resources" %>>
+              <summary class="admin-nav-link"><%= admin_icon(:settings) %><span>Administration</span></summary>
+              <div class="mt-1 space-y-1 pl-8">
+                <% Admin::ResourcesController::RESOURCES.each do |key, definition| %>
+                  <%= link_to definition[:label], admin_resources_path(resource: key), class: "block rounded-lg px-3 py-2 text-sm #{params[:resource] == key ? 'bg-brand-50 font-medium text-brand-800' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}", "aria-current": ("page" if params[:resource] == key) %>
+                <% end %>
+              </div>
+            </details>
+          <% end %>
+          <div class="mt-7 border-t border-slate-100 px-3 pt-5">
+            <%= link_to "Open public site ↗", root_path, class: "text-sm text-slate-500 hover:text-brand-700", target: "_blank", rel: "noopener" %>
+          </div>
+        </nav>
+      </aside>
+      <div class="min-w-0">
+        <header class="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-5 py-4 sm:px-8 lg:px-10">
+          <div class="text-sm text-slate-500"><span class="hidden sm:inline">Staff workspace<span class="mx-3 text-slate-300">/</span></span><span class="font-medium text-slate-800"><%= page_title %></span></div>
+          <div class="flex items-center gap-4 text-sm">
+            <span class="hidden text-slate-600 sm:inline"><%= current_staff_user.name.presence || current_staff_user.email %></span>
+            <% if current_staff_user.admin? %><span class="admin-badge">Admin</span><% end %>
+            <%= button_to "Sign out", logout_path, method: :delete, class: "text-sm text-slate-500 hover:text-slate-900" %>
+          </div>
+        </header>
+        <main id="main-content" class="mx-auto max-w-[1600px] px-5 py-7 sm:px-8 lg:px-10 lg:py-9" tabindex="-1">
+          <% flash.each do |kind, message| %>
+            <div role="<%= %w[alert error danger].include?(kind) ? 'alert' : 'status' %>" class="mb-6 rounded-lg border p-4 text-sm <%= %w[alert error danger].include?(kind) ? 'border-red-200 bg-red-50 text-red-800' : 'border-brand-100 bg-brand-50 text-brand-800' %>"><%= message %></div>
+          <% end %>
+          <%= yield %>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

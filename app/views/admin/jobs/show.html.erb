@@ -1,0 +1,47 @@
+<% content_for :title, "Job ##{@job.id}" %>
+<div class="mb-5 flex flex-wrap items-start justify-between gap-4">
+  <div><%= link_to "← Jobs", admin_jobs_path, class: "admin-muted text-sm hover:underline" %><h1 class="mt-2 text-3xl font-semibold tracking-tight">Job #<%= @job.id %></h1><p class="admin-muted mt-2"><%= @job.is_a?(ScanJob) ? "Scan" : "Print" %> request from <%= @job.patron.name.presence || @job.patron.email %></p></div>
+  <%= admin_status_badge(@job.status) %>
+</div>
+<%= render "navigation" %>
+<div class="grid items-start gap-6 xl:grid-cols-3">
+  <div class="space-y-6 xl:col-span-2">
+    <section class="admin-card"><h2 class="mb-5 text-lg font-semibold">Request details</h2>
+      <dl class="grid gap-5 sm:grid-cols-2">
+        <div><dt class="admin-muted text-sm">Patron</dt><dd class="mt-1"><%= @job.patron.name.presence || "Unnamed patron" %><div class="text-sm"><%= mail_to @job.patron.email %></div></dd></div>
+        <div><dt class="admin-muted text-sm">Category</dt><dd class="mt-1"><%= @job.category.name %></dd></div>
+        <div><dt class="admin-muted text-sm">Pickup location</dt><dd class="mt-1"><%= PickupLocation.find_by(code: @job.pickup_location)&.name || @job.pickup_location.presence || "—" %></dd></div>
+        <div><dt class="admin-muted text-sm">Received</dt><dd class="mt-1"><%= @job.created_at.strftime("%b %-d, %Y at %-I:%M %p") %></dd></div>
+        <% if @job.notes.present? %><div class="sm:col-span-2"><dt class="admin-muted text-sm">Request notes</dt><dd class="mt-2 prose max-w-none text-sm"><%= simple_format(@job.notes) %></dd></div><% end %>
+      </dl>
+    </section>
+    <% if @job.is_a?(PrintJob) %>
+      <section class="admin-card"><h2 class="mb-5 text-lg font-semibold">Print details</h2>
+        <dl class="grid gap-5 sm:grid-cols-3">
+          <% [["Printer", @job.assigned_printer&.name], ["Print type", @job.print_type&.name], ["Filament color", @job.filament_color], ["Quantity", @job.quantity.presence || 1], ["Estimated duration", @job.print_time_estimate_hm], ["Estimated weight", @job.slicer_weight.present? ? "#{@job.slicer_weight} g" : nil], ["Estimated cost", @job.slicer_cost.present? ? number_to_currency(@job.slicer_cost) : nil], ["Actual weight", @job.actual_weight.present? ? "#{@job.actual_weight} g" : nil], ["Resin used", @job.resin_volume_ml.present? ? "#{@job.resin_volume_ml} mL" : nil], ["Actual cost", @job.actual_cost.present? ? number_to_currency(@job.actual_cost) : nil], ["Completed", @job.completion_date&.strftime("%b %-d, %Y")], ["Picked up", @job.pickup_date&.strftime("%b %-d, %Y")]].each do |label, value| %>
+            <div><dt class="admin-muted text-sm"><%= label %></dt><dd class="mt-1 font-medium"><%= value.presence || "—" %></dd></div>
+          <% end %>
+          <div class="sm:col-span-3"><dt class="admin-muted text-sm">Model URL</dt><dd class="mt-1 break-all"><% if @job.http_model_url? %><%= link_to @job.url, @job.url, target: "_blank", rel: "noopener noreferrer", class: "text-blue-700 hover:underline" %><% else %><%= @job.url.presence || "—" %><% end %></dd></div>
+          <div class="sm:col-span-3"><dt class="admin-muted text-sm">Notify when printing starts</dt><dd class="mt-1"><%= @job.print_notify? ? "Enabled for public printers" : "Off" %></dd></div>
+        </dl>
+      </section>
+    <% else %>
+      <section class="admin-card"><h2 class="mb-5 text-lg font-semibold">Scan details</h2><p class="mb-4">Scanning spray permitted: <strong><%= @job.spray_ok? ? "Yes" : "No" %></strong></p>
+        <% if @job.scan_image.attached? %><%= link_to rails_blob_path(@job.scan_image, disposition: "attachment"), class: "text-blue-700 hover:underline" do %><%= @job.scan_image.filename %><% end %>
+          <% if @job.scan_image.variable? %><%= image_tag @job.scan_image.variant(resize_to_limit: [500, 400]), alt: "Object submitted for scanning", class: "mt-4 max-w-full rounded-xl" %><% end %>
+        <% else %><p class="admin-muted">No reference photo attached.</p><% end %>
+      </section>
+    <% end %>
+    <section class="admin-card"><div class="mb-5 flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">Model files</h2><%= link_to "Manage files", files_admin_job_path(@job), class: "text-sm font-medium text-blue-700 hover:underline" if can?(:files, @job) %></div><%= render "admin/shared/model_files", files: @job.model_files %></section>
+  </div>
+  <div class="space-y-6">
+    <section class="admin-card"><h2 class="mb-4 text-lg font-semibold">Activity</h2><dl class="space-y-4">
+      <% [["Started by", @job.started_by&.name], ["Started", @job.started_at&.strftime("%b %-d, %Y at %-I:%M %p")], ["Finished by", @job.finished_by&.name], ["Finished", @job.finished_at&.strftime("%b %-d, %Y at %-I:%M %p")], ["Last updated", @job.updated_at.strftime("%b %-d, %Y at %-I:%M %p")]].each do |label, value| %><div><dt class="admin-muted text-sm"><%= label %></dt><dd class="mt-1"><%= value.presence || "—" %></dd></div><% end %>
+    </dl></section>
+    <section class="admin-card"><h2 class="mb-4 text-lg font-semibold">Recent conversation</h2>
+      <% if @messages.any? %><div class="space-y-4"><% @messages.each do |message| %><div class="border-b border-slate-100 pb-4 last:border-0 last:pb-0"><p class="text-sm font-medium"><%= message.author&.name.presence || message.author_type %><% if message.staff_note_only? %> <span class="admin-badge">Staff note</span><% end %></p><p class="admin-muted mt-1 text-sm"><%= truncate(message.body, length: 160) %></p></div><% end %></div><% else %><p class="admin-muted text-sm">No messages yet.</p><% end %>
+      <%= link_to "Open conversation", conversation_admin_job_path(@job), class: "admin-btn admin-btn-secondary mt-5" if can?(:conversation, @job) %>
+    </section>
+    <% if can?(:destroy, @job) %><section class="admin-card"><h2 class="mb-2 text-lg font-semibold">Delete job</h2><p class="admin-muted mb-4 text-sm">Permanently remove this request and its conversation.</p><%= button_to "Delete job", admin_job_path(@job), method: :delete, class: "admin-btn admin-btn-danger", data: { turbo_confirm: "Delete job ##{@job.id} and its conversation? This cannot be undone." } %></section><% end %>
+  </div>
+</div>

@@ -1,0 +1,5 @@
+<% content_for :title, "Edit job ##{@job.id}" %>
+<%= link_to "← Job ##{@job.id}", admin_job_path(@job), class: "admin-muted text-sm hover:underline" %>
+<h1 class="mb-5 mt-2 text-3xl font-semibold tracking-tight">Edit job #<%= @job.id %></h1>
+<%= render "navigation" %>
+<%= render "form" %>

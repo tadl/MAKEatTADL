@@ -1,0 +1,73 @@
+<div class="mb-8">
+  <h1 class="text-3xl font-semibold tracking-tight text-slate-950">Workflow guide</h1>
+  <p class="admin-muted mt-2">A reference for the current workflow and the actions that happen automatically.</p>
+</div>
+
+<div class="grid gap-6 xl:grid-cols-3 mb-8">
+  <section class="admin-card p-5 xl:col-span-2" aria-labelledby="workflow-heading">
+    <h2 id="workflow-heading" class="text-xl font-semibold mb-5">From request to pickup</h2>
+    <ol class="space-y-6 list-decimal pl-5 marker:text-teal-700 marker:font-semibold">
+      <li class="pl-2"><h3 class="font-semibold mb-0">Review the request</h3><p class="admin-muted mt-1">Open the job, check the model or scan photo, and ask for clarification in the conversation. New patron print and scan requests begin as Pending. Fidget, assistive, and staff print requests begin as Approved.</p></li>
+      <li class="pl-2"><h3 class="font-semibold mb-0">Prepare an estimate</h3><p class="admin-muted mt-1">Record the slicer’s estimated weight and print time. Enter time as hours:minutes. The first saved weight estimate on a patron print job sends an estimate message and moves it to Information requested. Review the calculated cost before communicating any changes.</p></li>
+      <li class="pl-2"><h3 class="font-semibold mb-0">Review the patron’s reply</h3><p class="admin-muted mt-1">A reply to a job in Information requested moves it to Response received. Staff then choose Approved or Cancelled after reviewing the response. A reply alone does not approve a job.</p></li>
+      <li class="pl-2"><h3 class="font-semibold mb-0">Assign a printer</h3><p class="admin-muted mt-1">Assigning a different printer sets the print type from that printer and normally moves the job to In progress. Ongoing and closed jobs retain their status. The start email is sent only when the job enters In progress, its notification option is enabled, and its printer is publicly viewable.</p></li>
+      <li class="pl-2"><h3 class="font-semibold mb-0">Finish the work</h3><p class="admin-muted mt-1">Post-process the print and enter its actual weight, or resin volume for a resin print. The first saved value calculates the final cost, marks the job Ready for pickup, records completion and staff attribution, and notifies the patron. Enter the number of copies in Quantity.</p></li>
+      <li class="pl-2"><h3 class="font-semibold mb-0">Record pickup</h3><p class="admin-muted mt-1">Set the pickup date when the item is collected. Saving a pickup date archives the job. Administrators can also use Mark picked up on a ready job to record today’s date and archive it in one step.</p></li>
+    </ol>
+  </section>
+
+  <aside class="space-y-6">
+    <section class="admin-card p-5" aria-labelledby="conversation-heading">
+      <h2 id="conversation-heading" class="text-lg font-semibold mb-3">Messages and staff notes</h2>
+      <p class="admin-muted">Regular conversation messages appear in the patron portal and send an email. Staff notes remain internal.</p>
+      <p class="admin-muted mt-3">Use @username to mention a colleague. A message containing a mention becomes a staff note automatically and notifies matching staff.</p>
+      <p class="admin-muted mt-3">Opening a conversation marks its unread patron messages and your mention notifications as read. Other staff members’ mention notifications stay unread.</p>
+    </section>
+    <section class="admin-card p-5" aria-labelledby="ongoing-heading">
+      <h2 id="ongoing-heading" class="text-lg font-semibold mb-3">Ongoing work</h2>
+      <p class="admin-muted">Use Ongoing for continuing internal work. Update Quantity as copies are produced. While the job is Ongoing, the estimate, completion, and print-start notification callbacks are suppressed.</p>
+      <p class="admin-muted mt-3">Moving a job to Cancelled or Rejected still sends its status notification. Recording a pickup date still archives it.</p>
+    </section>
+  </aside>
+</div>
+
+<section class="admin-card overflow-hidden p-0 mb-8" aria-labelledby="automation-heading">
+  <div class="px-5 py-4 border-b border-slate-200">
+    <h2 id="automation-heading" class="text-xl font-semibold mb-0">Automations</h2>
+    <p class="admin-muted mt-1">These rules are carried forward from the existing app. Changing the interface does not change the rules.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="admin-table">
+      <thead><tr><th scope="col">Trigger</th><th scope="col">Result</th><th scope="col">Timing and conditions</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="font-medium">First estimated weight</th><td>Calculate estimate, request information, and notify the patron.</td><td>On an update to a patron print job; requires a conversation. Suppressed for Ongoing jobs.</td></tr>
+        <tr><th scope="row" class="font-medium">Patron replies</th><td>Move Information requested to Response received.</td><td>When the patron’s message is saved, from the portal or inbound email.</td></tr>
+        <tr><th scope="row" class="font-medium">Printer assignment changes</th><td>Set print type and normally move to In progress.</td><td>Ongoing, Cancelled, Rejected, Archived, Ready for pickup, and Abandoned keep their status.</td></tr>
+        <tr><th scope="row" class="font-medium">Enter In progress</th><td>Send start notification and add a portal message.</td><td>Only for an opted-in print job on a publicly viewable printer; suppressed for Ongoing jobs.</td></tr>
+        <tr><th scope="row" class="font-medium">First actual weight or resin volume</th><td>Calculate cost, record completion, mark Ready for pickup, and notify the patron.</td><td>On an update to a print job with a conversation. Resin volume applies to resin printing. Suppressed for Ongoing jobs.</td></tr>
+        <tr><th scope="row" class="font-medium">Pickup date saved</th><td>Archive the job.</td><td>On a job update when the pickup date changes to a populated value.</td></tr>
+        <tr><th scope="row" class="font-medium">Cancelled or Rejected</th><td>Add a conversation message and notify the patron.</td><td>On transition to that status, for either print or scan jobs.</td></tr>
+        <tr><th scope="row" class="font-medium">Quote follow-up</th><td>Send a reminder for an unanswered estimate.</td><td>The maintenance task considers print jobs in Information requested. At 7–13 days since the request, reminders require a Patron category, a positive estimate, and no reminder in the last 7 days.</td></tr>
+        <tr><th scope="row" class="font-medium">Unanswered information request</th><td>Cancel the request and send its cancellation notice.</td><td>The maintenance task cancels print jobs still in Information requested at 14 days. Requests without a recorded information-request timestamp are skipped.</td></tr>
+        <tr><th scope="row" class="font-medium">Pickup reminder</th><td>Send a reminder that the item is waiting.</td><td>The maintenance task checks Ready for pickup jobs with a completion date. First due after 7 days, then 7 days after the last reminder. Stops at 30 days.</td></tr>
+        <tr><th scope="row" class="font-medium">Uncollected item</th><td>Mark Abandoned and send a notice.</td><td>The maintenance task processes Ready for pickup jobs 30 days after completion.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="admin-muted text-sm px-5 py-4 border-t border-slate-200">Scheduled rules run when the server’s maintenance task is invoked. The interface does not run or reschedule that task.</p>
+</section>
+
+<section class="admin-card overflow-hidden p-0 mb-8" aria-labelledby="statuses-heading">
+  <h2 id="statuses-heading" class="text-xl font-semibold mb-0 px-5 py-4 border-b border-slate-200">Configured statuses</h2>
+  <div class="overflow-x-auto"><table class="admin-table">
+    <thead><tr><th scope="col">Status</th><th scope="col">Code</th></tr></thead>
+    <tbody><% @statuses.each do |status| %><tr><th scope="row" class="font-medium"><%= status.name %></th><td><code class="text-sm"><%= status.code %></code></td></tr><% end %></tbody>
+  </table></div>
+  <p class="admin-muted text-sm px-5 py-4 border-t border-slate-200">Status codes are used by the automations. Administrators should review those dependencies before changing a code.</p>
+</section>
+
+<section class="admin-card p-5" aria-labelledby="reference-heading">
+  <h2 id="reference-heading" class="text-lg font-semibold mb-3">More guidance</h2>
+  <p class="admin-muted mb-3">Model files can be downloaded from a job’s Files page. STL files also have an interactive 3D preview. Attaching finished model files to a scan request keeps its original scan classification.</p>
+  <a class="font-medium text-teal-800 hover:underline" href="https://docs.google.com/document/d/e/2PACX-1vTGbtzPoaN7KHrZ9TnQZ2i-pXsRGGk_GuxUnFAbSKtQt6qKdpnCkvcAKpt6dskEe79w_H_sd2evAPot/pub" target="_blank" rel="noopener">Existing MAKEatTADL staff guide <span class="sr-only">(opens in a new tab)</span>↗</a>
+</section>

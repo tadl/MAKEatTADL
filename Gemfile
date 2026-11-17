@@ -12,7 +12,7 @@ gem "sprockets-rails"
 gem "pg", "~> 1.1"
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem "puma", "~> 7.2", ">= 7.2.1"
+gem "puma", "~> 7.2", ">= 7.2.2"
 
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -66,10 +66,11 @@ end
 gem 'omniauth-google-oauth2', '~> 1.2', '>= 1.2.3'
 gem 'omniauth-rails_csrf_protection'
 
-# admin UI for staff
-gem 'rails_admin'
+# Tailwind builds locally through its bundled CLI; no Node runtime is required.
+gem 'tailwindcss-rails', '~> 4.0'
+gem 'csv', '~> 3.3'
 
-# optional for authorization inside RailsAdmin
+# Authorization for the staff workspace
 gem 'cancancan'
 
 # For SCSS/CSS processing in the asset pipeline

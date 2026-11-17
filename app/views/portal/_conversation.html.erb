@@ -2,8 +2,8 @@
   <h2>Conversation</h2>
 
   <div class="messages">
-    <%= render partial: 'rails_admin/main/message',
-               collection: (@print_job.conversation&.messages || []),
+    <%= render partial: 'portal/message',
+               collection: (@print_job.conversation&.messages&.where(staff_note_only: false) || []),
                as: :message %>
   </div>
 

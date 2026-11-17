@@ -1,4 +1,0 @@
-<%# Just render the collection—no wrapping div with its own id %>
-<%= render partial: 'rails_admin/main/message',
-           collection: conversation.messages.includes(:author).with_attached_images,
-           as:         :message %>

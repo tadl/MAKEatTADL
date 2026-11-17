@@ -1,0 +1,30 @@
+<h1 class="mb-6 text-3xl font-semibold tracking-tight text-slate-950">Merge patron</h1>
+<div class="mb-6"><%= link_to "Back to patron", admin_patron_path(@patron), class: "admin-btn" %></div>
+<div class="admin-card max-w-3xl">
+  <h2 class="text-lg font-semibold">Choose the patron record to keep</h2>
+  <p class="admin-muted mt-2">Jobs and patron-authored messages from <strong><%= @patron.email %></strong> will move to the selected record. The current patron record will be deleted.</p>
+
+  <% if @patron.errors.any? %>
+    <div class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+      <ul class="list-disc pl-5"><% @patron.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <%= form_with url: merge_admin_patron_path(@patron), method: :get, class: "mt-6 flex flex-wrap items-end gap-3" do |form| %>
+    <div class="min-w-48 flex-1">
+      <%= form.label :q, "Find the record to keep", class: "admin-label" %>
+      <%= form.search_field :q, value: @query, maxlength: 200, class: "admin-input" %>
+    </div>
+    <%= form.submit "Search", class: "admin-btn" %>
+  <% end %>
+
+  <%= form_with url: merge_admin_patron_path(@patron), method: :post, class: "mt-6 space-y-5", data: { turbo_confirm: "Merge these patron records? The current record will be deleted." } do |form| %>
+    <%= form.hidden_field :q, value: @query %>
+    <div class="admin-field">
+      <%= form.label :target_patron_id, "Record to keep", class: "admin-label" %>
+      <%= form.select :target_patron_id, @merge_candidates.map { |patron| ["#{patron.name.presence || 'Unnamed patron'} — #{patron.email} (##{patron.id})", patron.id] }, { include_blank: "Choose a patron", selected: params[:target_patron_id] }, required: true, class: "admin-input" %>
+      <p class="admin-muted mt-2 text-sm">Showing up to 100 matching patrons. Use search to narrow the list.</p>
+    </div>
+    <%= form.submit "Merge into selected patron", class: "admin-btn admin-btn-danger" %>
+  <% end %>
+</div>

@@ -1,0 +1,19 @@
+<div class="admin-page-header">
+  <div><h1><%= @record.respond_to?(:name) && @record.name.present? ? @record.name : "#{@page_title.singularize} ##{@record.id}" %></h1><p><%= link_to "Back to #{@page_title.downcase}", admin_resources_path(resource: resource_key), class: "admin-link" %></p></div>
+  <div class="admin-actions">
+    <% unless resource_definition[:readonly] %>
+      <% if can?(:update, @record) %><%= link_to "Edit record", edit_admin_resource_path(resource: resource_key, id: @record.id), class: "admin-btn admin-btn-primary" %><% end %>
+      <% if can?(:destroy, @record) %><%= button_to "Delete", admin_resource_path(resource: resource_key, id: @record.id), method: :delete, class: "admin-btn admin-btn-danger", data: { turbo_confirm: "Delete this record? Associated records may also be removed. This cannot be undone." } %><% end %>
+    <% end %>
+  </div>
+</div>
+<section class="admin-card">
+  <dl class="admin-detail-grid">
+    <% ([:id] + resource_definition[:columns] + resource_definition[:fields] + %i[created_at updated_at]).uniq.each do |field| %>
+      <% next unless @record.respond_to?(field) %>
+      <div class="<%= 'sm:col-span-2 lg:col-span-3' if %i[body audited_changes].include?(field) %>"><dt><%= admin_resource_label(field) %></dt><dd class="whitespace-pre-wrap"><%= admin_resource_value(@record, field) %></dd></div>
+    <% end %>
+  </dl>
+  <% if resource_key == "conversations" %><%= link_to "Open job conversation", conversation_admin_job_path(@record.job_id), class: "admin-btn mt-6" %><% end %>
+  <% if resource_key == "messages" %><%= link_to "Open job conversation", conversation_admin_job_path(@record.conversation.job_id), class: "admin-btn mt-6" %><% end %>
+</section>

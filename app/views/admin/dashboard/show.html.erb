@@ -1,0 +1,120 @@
+<div class="flex flex-wrap items-start justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight text-slate-950">Overview</h1>
+    <p class="admin-muted mt-2">Keep requests moving, follow up with patrons, and hand off finished work.</p>
+  </div>
+  <%= link_to "View all jobs", admin_jobs_path, class: "admin-btn admin-btn-primary" %>
+</div>
+
+<section aria-labelledby="status-heading" class="mb-8">
+  <h2 id="status-heading" class="text-lg font-semibold mb-4">Jobs by status</h2>
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+    <% @dashboard.statuses.each do |status| %>
+      <% scope = if status.code == "ongoing"
+           "ongoing"
+         elsif %w[archived cancelled rejected abandoned].include?(status.code)
+           "inactive"
+         else
+           "active"
+         end %>
+      <%= link_to admin_jobs_path(status_id: status.id, scope: scope), class: "admin-card p-4 transition hover:border-teal-500 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600" do %>
+        <span class="block text-sm font-medium text-slate-600"><%= status.name %></span>
+        <span class="block mt-3 text-3xl font-semibold tabular-nums text-slate-950"><%= number_with_delimiter(@dashboard.job_counts.fetch(status.id, 0)) %></span>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<div class="grid gap-6 lg:grid-cols-2 mb-8">
+  <section class="admin-card overflow-hidden p-0" aria-labelledby="unread-heading">
+    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <h2 id="unread-heading" class="text-lg font-semibold mb-0">Unread messages</h2>
+      <span class="admin-badge"><%= @dashboard.unread_counts.values.sum %></span>
+    </div>
+    <% if @dashboard.unread_counts.any? %>
+      <ul class="divide-y divide-slate-100">
+        <% @dashboard.unread_counts.each do |job_id, count| %>
+          <% job = @dashboard.message_jobs.fetch(job_id) %>
+          <li>
+            <%= link_to conversation_admin_job_path(job), class: "flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50" do %>
+              <span><span class="font-medium">Job #<%= job.id %></span><span class="admin-muted ml-2"><%= job.patron.name.presence || job.patron.email %></span></span>
+              <span class="admin-badge bg-amber-100 text-amber-900"><%= count %><span class="sr-only"> unread messages</span></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="admin-muted px-5 py-6">You’re caught up. No unread patron messages.</p>
+    <% end %>
+  </section>
+
+  <section class="admin-card overflow-hidden p-0" aria-labelledby="mentions-heading">
+    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <h2 id="mentions-heading" class="text-lg font-semibold mb-0">Mentions for you</h2>
+      <span class="admin-badge"><%= @dashboard.mention_counts.values.sum %></span>
+    </div>
+    <% if @dashboard.mention_counts.any? %>
+      <ul class="divide-y divide-slate-100">
+        <% @dashboard.mention_counts.each do |job_id, count| %>
+          <% job = @dashboard.message_jobs.fetch(job_id) %>
+          <li>
+            <%= link_to conversation_admin_job_path(job), class: "flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50" do %>
+              <span><span class="font-medium">Job #<%= job.id %></span><span class="admin-muted ml-2"><%= job.patron.name.presence || job.patron.email %></span></span>
+              <span class="admin-badge bg-teal-100 text-teal-900"><%= count %><span class="sr-only"> unread mentions</span></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="admin-muted px-5 py-6">No new mentions. Use @username in a staff note to notify a colleague.</p>
+    <% end %>
+  </section>
+</div>
+
+<section class="admin-card overflow-hidden p-0 mb-8" aria-labelledby="pickup-heading">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 id="pickup-heading" class="text-lg font-semibold mb-0">Ready for pickup</h2>
+    <span class="admin-badge"><%= @dashboard.ready_jobs.size %></span>
+  </div>
+  <% if @dashboard.ready_jobs.any? %>
+    <div class="overflow-x-auto">
+      <table class="admin-table">
+        <thead><tr><th scope="col">Job</th><th scope="col">Patron</th><th scope="col">Location</th><th scope="col">Completed</th><th scope="col">Cost</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% @dashboard.ready_jobs.each do |job| %>
+            <tr>
+              <td><%= link_to "##{job.id}", conversation_admin_job_path(job), class: "font-medium text-teal-800 hover:underline" %></td>
+              <td><%= job.patron.name.presence || job.patron.email %></td>
+              <td><%= @dashboard.pickup_location_names[job.pickup_location] || job.pickup_location %></td>
+              <td class="whitespace-nowrap"><%= job.completion_date&.strftime("%b %-d, %Y") || "—" %></td>
+              <td class="tabular-nums"><%= job.actual_cost.present? ? number_to_currency(job.actual_cost) : "—" %></td>
+              <td class="text-right">
+                <% if can?(:picked_up, job) %>
+                  <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: "Mark job ##{job.id} as picked up? This sets today’s pickup date and archives the job." } } %>
+                <% else %>
+                  <%= link_to "View job", admin_job_path(job), class: "font-medium text-teal-800 hover:underline whitespace-nowrap" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="admin-muted px-5 py-6">No jobs are waiting for pickup.</p>
+  <% end %>
+</section>
+
+<section class="admin-card p-5" aria-labelledby="forms-heading">
+  <h2 id="forms-heading" class="text-lg font-semibold mb-2">Request forms</h2>
+  <p class="admin-muted mb-4">Open the same forms patrons and staff use to submit a request.</p>
+  <div class="flex flex-wrap gap-2">
+    <%= link_to "3D print", submit_print_path, class: "admin-btn admin-btn-secondary", target: "_blank", rel: "noopener" %>
+    <% if @scanning_available %>
+      <%= link_to "3D scan", submit_scan_path, class: "admin-btn admin-btn-secondary", target: "_blank", rel: "noopener" %>
+    <% end %>
+    <%= link_to "Fidget", submit_fidget_path, class: "admin-btn admin-btn-secondary", target: "_blank", rel: "noopener" %>
+    <%= link_to "Assistive", submit_assistive_path, class: "admin-btn admin-btn-secondary", target: "_blank", rel: "noopener" %>
+    <%= link_to "Staff print", submit_staff_path, class: "admin-btn admin-btn-secondary", target: "_blank", rel: "noopener" %>
+  </div>
+</section>

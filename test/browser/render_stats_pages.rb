@@ -14,15 +14,15 @@ class StatsBrowserPagesTest < ActionDispatch::IntegrationTest
       get "/auth/test/callback", env: { "omniauth.auth" => auth }
     end
 
-    get rails_admin.dashboard_path
+    get admin_root_path
     assert_response :success
     File.write(File.join(directory, "dashboard.html"), response.body)
 
-    get rails_admin.stats_path
+    get admin_stats_path
     assert_response :success
     File.write(File.join(directory, "stats.html"), response.body)
 
-    get rails_admin.stats_path(start: Date.current.iso8601, end: Date.current.iso8601)
+    get admin_stats_path(start: Date.current.iso8601, end: Date.current.iso8601)
     assert_response :success
     File.write(File.join(directory, "filtered.html"), response.body)
   end
