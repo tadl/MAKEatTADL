@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(dirname "$0")/.."
+
+if ! gem list foreman -i --silent; then
+  printf '%s\n' 'Installing Foreman for the current Ruby...'
+  gem install foreman --no-document
+fi
+
+export PORT="${PORT:-3000}"
+
+exec foreman start -f Procfile.dev "$@"

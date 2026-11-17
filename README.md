@@ -139,18 +139,14 @@ SECRET_KEY_BASE=your-secret-key
 
 ### Development
 
-Build Tailwind once, or keep its watcher running in a separate terminal:
+Start Rails and the Tailwind watcher together:
 
 ```sh
-bin/rails tailwindcss:build
-bin/rails tailwindcss:watch
+bin/dev
 ```
 
-Start the Rails server in another terminal:
-
-```sh
-bin/rails server
-```
+The launcher installs Foreman for the current Ruby if needed. Both processes
+stop with Ctrl-C. The default port is 3000; use `bin/dev -p 3001` to change it.
 
 Visit [the public site](http://localhost:3000) or
 [the staff workspace](http://localhost:3000/admin). See

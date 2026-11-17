@@ -32,14 +32,18 @@ development database configured:
 
 ```sh
 bundle install
-bin/rails tailwindcss:build
-bin/rails server
+bin/dev
 ```
 
-In a second terminal, rebuild staff styles as templates change:
+`bin/dev` starts Rails and the Tailwind watcher through `Procfile.dev`, installs
+Foreman for the current Ruby if needed, and stops both processes with Ctrl-C.
+The default port is 3000; use `bin/dev -p 3001` to select another port. Foreman is a local
+development tool and is intentionally kept outside the application's bundle.
+
+To build styles once without starting the development processes:
 
 ```sh
-bin/rails tailwindcss:watch
+bin/rails tailwindcss:build
 ```
 
 Staff styling lives in `app/assets/tailwind/application.css`; generated files
