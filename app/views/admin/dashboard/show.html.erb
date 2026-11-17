@@ -25,6 +25,40 @@
   </div>
 </section>
 
+<section class="admin-card overflow-hidden p-0 mb-8" aria-labelledby="pickup-heading">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 id="pickup-heading" class="text-lg font-semibold mb-0">Ready for pickup</h2>
+    <span class="admin-badge"><%= @dashboard.ready_jobs.size %></span>
+  </div>
+  <% if @dashboard.ready_jobs.any? %>
+    <div class="overflow-x-auto">
+      <table class="admin-table">
+        <thead><tr><th scope="col">Job</th><th scope="col">Patron</th><th scope="col">Location</th><th scope="col">Completed</th><th scope="col">Cost</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% @dashboard.ready_jobs.each do |job| %>
+            <tr>
+              <td><%= link_to "##{job.id}", conversation_admin_job_path(job), class: "font-medium text-brand-700 hover:underline" %></td>
+              <td><%= job.patron.name.presence || job.patron.email %></td>
+              <td><%= @dashboard.pickup_location_names[job.pickup_location] || job.pickup_location %></td>
+              <td class="whitespace-nowrap"><%= job.completion_date&.strftime("%b %-d, %Y") || "—" %></td>
+              <td class="tabular-nums"><%= job.actual_cost.present? ? number_to_currency(job.actual_cost) : "—" %></td>
+              <td class="text-right">
+                <% if can?(:picked_up, job) %>
+                  <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: "Mark job ##{job.id} as picked up? This sets today’s pickup date and archives the job." } } %>
+                <% else %>
+                  <%= link_to "View job", admin_job_path(job), class: "font-medium text-brand-700 hover:underline whitespace-nowrap" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="admin-muted px-5 py-6">No jobs are waiting for pickup.</p>
+  <% end %>
+</section>
+
 <div class="grid gap-6 lg:grid-cols-2 mb-8">
   <section class="admin-card overflow-hidden p-0" aria-labelledby="unread-heading">
     <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -70,40 +104,6 @@
     <% end %>
   </section>
 </div>
-
-<section class="admin-card overflow-hidden p-0 mb-8" aria-labelledby="pickup-heading">
-  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-    <h2 id="pickup-heading" class="text-lg font-semibold mb-0">Ready for pickup</h2>
-    <span class="admin-badge"><%= @dashboard.ready_jobs.size %></span>
-  </div>
-  <% if @dashboard.ready_jobs.any? %>
-    <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th scope="col">Job</th><th scope="col">Patron</th><th scope="col">Location</th><th scope="col">Completed</th><th scope="col">Cost</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody>
-          <% @dashboard.ready_jobs.each do |job| %>
-            <tr>
-              <td><%= link_to "##{job.id}", conversation_admin_job_path(job), class: "font-medium text-brand-700 hover:underline" %></td>
-              <td><%= job.patron.name.presence || job.patron.email %></td>
-              <td><%= @dashboard.pickup_location_names[job.pickup_location] || job.pickup_location %></td>
-              <td class="whitespace-nowrap"><%= job.completion_date&.strftime("%b %-d, %Y") || "—" %></td>
-              <td class="tabular-nums"><%= job.actual_cost.present? ? number_to_currency(job.actual_cost) : "—" %></td>
-              <td class="text-right">
-                <% if can?(:picked_up, job) %>
-                  <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: "Mark job ##{job.id} as picked up? This sets today’s pickup date and archives the job." } } %>
-                <% else %>
-                  <%= link_to "View job", admin_job_path(job), class: "font-medium text-brand-700 hover:underline whitespace-nowrap" %>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <p class="admin-muted px-5 py-6">No jobs are waiting for pickup.</p>
-  <% end %>
-</section>
 
 <section class="admin-card p-5" aria-labelledby="forms-heading">
   <h2 id="forms-heading" class="text-lg font-semibold mb-2">Request forms</h2>
