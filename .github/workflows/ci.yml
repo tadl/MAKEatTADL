@@ -22,6 +22,7 @@ jobs:
       CI: "true"
       RAILS_ENV: test
       DATABASE_URL: postgresql:///make_at_tadl_test
+      APP_URL: http://example.test
       SECRET_KEY_BASE_DUMMY: "1"
       MAILGUN_API_KEY: ""
       MAILGUN_DOMAIN: ""

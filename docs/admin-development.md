@@ -185,7 +185,8 @@ escaped file names, private staff notes, and audit attribution.
 `.github/workflows/ci.yml` runs on source pushes, pull requests targeting `main`,
 and manual dispatch. It uses Ubuntu 24.04, the Ruby in `.ruby-version`, the locked
 bundle, Node 24, and local PostgreSQL. It checks eager loading, runs the Rails
-suite, compiles assets, and runs both Chrome browser regressions. Actions are
+suite, compiles assets, and runs both Chrome browser regressions. Mail templates
+receive the synthetic `APP_URL=http://example.test`. Actions are
 pinned to commit SHAs. The workflow has read-only repository access and no
 deployment steps or production credentials.
 
