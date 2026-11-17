@@ -44,7 +44,7 @@
               <td class="tabular-nums"><%= job.actual_cost.present? ? number_to_currency(job.actual_cost) : "—" %></td>
               <td class="text-right">
                 <% if can?(:picked_up, job) %>
-                  <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: "Mark job ##{job.id} as picked up? This sets today’s pickup date and archives the job." } } %>
+                  <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: admin_pickup_confirmation(job, location_name: @dashboard.pickup_location_names[job.pickup_location] || job.pickup_location) } } %>
                 <% else %>
                   <%= link_to "View job", admin_job_path(job), class: "font-medium text-brand-700 hover:underline whitespace-nowrap" %>
                 <% end %>

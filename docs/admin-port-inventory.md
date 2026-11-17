@@ -1,5 +1,10 @@
 # Custom admin port inventory
 
+The [2026-11-17 parity review](admin-parity-review-2026-11-17.md) records confirmed
+gaps found during iteration, including generic RailsAdmin conveniences that the
+initial port did not retain. This contract remains the target, not a statement
+that every item has been completed.
+
 This is the replacement contract established by inspecting the RailsAdmin configuration, custom actions, templates, authorization, reports, and tests before implementation. The first port keeps the existing data model and automation rules. Public portal redesign and changes to those rules are later work.
 
 ## Staff and administrator boundaries

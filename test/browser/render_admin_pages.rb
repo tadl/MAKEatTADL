@@ -104,8 +104,9 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
           finished_by: @staff, finished_at: 2.days.ago)
       end
       attributes[:pickup_date] = Date.yesterday if status == "archived"
-      create_print_job(patron: @patrons[index % @patrons.size], status_code: status,
+      example_job = create_print_job(patron: @patrons[index % @patrons.size], status_code: status,
         category_name: status == "ongoing" ? "Staff" : "Patron", attrs: attributes)
+      @ready_job = example_job if status == "ready_for_pickup"
     end
     create_scan_job(patron: @patrons.last,
       attrs: { pickup_location: @location.code, notes: "Synthetic scan request: small replacement handle.", spray_ok: true })
@@ -114,22 +115,26 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     export_page(admin_root_path, "overview.html")
     export_page(admin_jobs_path, "jobs.html")
     export_page(admin_job_path(@job), "job.html")
+    export_page(admin_job_path(@ready_job), "job-ready.html")
     export_page(edit_admin_job_path(@job), "job-edit.html")
     export_page(conversation_admin_job_path(@job), "job-conversation.html")
     export_page(files_admin_job_path(@job), "job-files.html")
     export_page(new_admin_job_path, "job-new.html")
     export_page(admin_patrons_path, "patrons.html")
     export_page(admin_patron_path(@patrons.first), "patron.html")
+    export_page(merge_admin_patron_path(@patrons.second), "patron-merge.html")
     export_page(admin_printable_models_path, "models.html")
     export_page(admin_printable_model_path(@model), "model.html")
     export_page(edit_admin_printable_model_path(@model), "model-edit.html")
     export_page(new_admin_printable_model_path, "model-new.html")
     export_page(admin_resources_path(resource: "printers"), "printers.html")
+    export_page(admin_resource_path(resource: "printers", id: @printer.id), "printer.html")
     export_page(edit_admin_resource_path(resource: "printers", id: @printer.id), "printer-edit.html")
     export_page(admin_resources_path(resource: "pickup_locations"), "locations.html")
     export_page(admin_resources_path(resource: "audits"), "activity.html")
     export_page(admin_stats_path, "statistics.html")
     export_page(admin_help_path, "help.html")
+    export_page(submit_print_path, "public-submit-print.html")
 
     export_attachment(@model.model_file, "synthetic-model.stl", SYNTHETIC_STL)
     export_attachment(second_model.model_file, "synthetic-model.stl", SYNTHETIC_STL)

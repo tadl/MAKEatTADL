@@ -3,5 +3,5 @@
   <% if can?(:update, @job) %><%= link_to "Edit job", edit_admin_job_path(@job), class: "admin-btn admin-btn-secondary" %><% end %>
   <% if can?(:conversation, @job) %><%= link_to "Conversation", conversation_admin_job_path(@job), class: "admin-btn admin-btn-secondary" %><% end %>
   <% if can?(:files, @job) %><%= link_to "Files", files_admin_job_path(@job), class: "admin-btn admin-btn-secondary" %><% end %>
-  <% if can?(:picked_up, @job) && @job.status.code == "ready_for_pickup" %><%= button_to "Mark picked up", picked_up_admin_job_path(@job), method: :post, class: "admin-btn admin-btn-primary", form: { data: { turbo_confirm: "Mark job ##{@job.id} as picked up? This sets today’s pickup date and archives the job." } } %><% end %>
+  <% if can?(:picked_up, @job) && @job.status.code == "ready_for_pickup" %><%= button_to "Mark picked up", picked_up_admin_job_path(@job), method: :post, class: "admin-btn admin-btn-primary", form: { data: { turbo_confirm: admin_pickup_confirmation(@job) } } %><% end %>
 </div>

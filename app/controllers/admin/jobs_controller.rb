@@ -197,7 +197,7 @@ module Admin
       end
 
       @job.update!(pickup_date: Date.current)
-      redirect_to admin_job_path(@job), notice: "Job ##{@job.id} marked as picked up and archived.", status: :see_other
+      redirect_to admin_root_path, notice: "Job ##{@job.id} marked as picked up and archived.", status: :see_other
     end
 
     private

@@ -210,6 +210,7 @@ class AdminJobsTest < ActionDispatch::IntegrationTest
 
     job.update!(status: Status.find_by!(code: "ready_for_pickup"))
     post picked_up_admin_job_path(job)
+    assert_redirected_to admin_root_path
     assert_equal Date.current, job.reload.pickup_date
     assert_equal "archived", job.status.code
 

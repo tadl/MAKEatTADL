@@ -61,6 +61,28 @@ class AdminDashboardTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "30 days"
   end
 
+  test "pickup confirmations show the final price on the overview and job pages" do
+    @staff.update!(admin: true)
+    sign_in_staff(@staff)
+
+    [[{ actual_cost: "12.34", slicer_cost: "9.87" }, "Price: $12.34"],
+     [{ actual_cost: "0" }, "Price: $0.00"],
+     [{ slicer_cost: "9.87" }, "Estimated price: $9.87 (final price not recorded)"],
+     [{}, "Price not recorded"]].each do |attributes, price|
+      job = create_print_job(status_code: "ready_for_pickup", attrs: attributes.merge(completion_date: Date.new(2026, 11, 16)))
+      [admin_root_path, admin_job_path(job)].each do |path|
+        get path
+        assert_response :success
+        assert_select "form[action='#{picked_up_admin_job_path(job)}']" do |forms|
+          assert_includes forms.first["data-turbo-confirm"], price
+          assert_includes forms.first["data-turbo-confirm"], "Patron: #{job.patron.name}"
+          assert_includes forms.first["data-turbo-confirm"], "Pickup location: Woodmere"
+          assert_includes forms.first["data-turbo-confirm"], "Completed: Nov 16, 2026"
+        end
+      end
+    end
+  end
+
   private
 
   def sign_in_staff(staff)

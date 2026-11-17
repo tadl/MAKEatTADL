@@ -21,11 +21,12 @@
     document.addEventListener("turbo:load", cb, { once: true });
   }
 
-  function whenGrecaptchaReady(cb) {
+  function whenGrecaptchaReady(cb, deadline) {
+    if (Date.now() >= deadline) return;
     if (window.grecaptcha && typeof window.grecaptcha.ready === 'function') {
       cb();
     } else {
-      setTimeout(() => whenGrecaptchaReady(cb), 100);
+      setTimeout(() => whenGrecaptchaReady(cb, deadline), 100);
     }
   }
 
@@ -44,29 +45,90 @@
 
     // As soon as we know our submit handler is attached, we can safely enable.
     // We’ll also try to wait for grecaptcha to be present, but don’t block forever.
+    let pendingAttempt = null;
+    let submitting = false;
     let enabled = false;
     const enableWhenReady = () => {
       if (enabled) return;
       enabled = true;
-      disableSubmits(false);
+      disableSubmits(Boolean(pendingAttempt || submitting));
     };
 
+    // Back navigation can restore this form and its disabled controls from memory.
+    window.addEventListener("pageshow", (event) => {
+      if (!event.persisted || !form.isConnected) return;
+      if (pendingAttempt) clearTimeout(pendingAttempt.timeout);
+      pendingAttempt = null;
+      submitting = false;
+      enabled = true;
+      delete form.dataset.recaptchaDone;
+      const token = form.querySelector('[name="g-recaptcha-response"]');
+      if (token) token.value = "";
+      disableSubmits(false);
+    });
+
     // If grecaptcha loads quickly, great—enable now.
-    whenGrecaptchaReady(enableWhenReady);
+    whenGrecaptchaReady(enableWhenReady, Date.now() + 2000);
     // Otherwise, fail-safe: enable after 2s so users aren’t stuck if grecaptcha is blocked.
     setTimeout(enableWhenReady, 2000);
 
     form.addEventListener("submit", (e) => {
-      // If we already minted a token for this submission, let it through.
-      if (form.dataset.recaptchaDone === "1") return;
+      if (submitting) {
+        e.preventDefault();
+        return;
+      }
 
-      // If grecaptcha isn’t ready yet, prevent submission and wait until it is.
+      // If we already minted a token for this submission, let it through.
+      if (form.dataset.recaptchaDone === "1") {
+        submitting = true;
+        disableSubmits(true);
+        return;
+      }
+
       e.preventDefault();
+      if (pendingAttempt) return;
+
+      const attempt = {};
+      pendingAttempt = attempt;
+      disableSubmits(true);
+
+      const finish = (failed) => {
+        if (pendingAttempt !== attempt) return;
+        clearTimeout(attempt.timeout);
+        pendingAttempt = null;
+        disableSubmits(false);
+        if (failed && form.isConnected) {
+          document.dispatchEvent(new CustomEvent("app:alert", { detail: {
+            title: "Unable to verify your request",
+            message: "reCAPTCHA couldn’t load. Please try again."
+          } }));
+        }
+      };
+      const isCurrent = () => pendingAttempt === attempt;
+      const deadline = Date.now() + 10000;
+      attempt.timeout = setTimeout(() => finish(true), 10000);
 
       whenGrecaptchaReady(() => {
-        grecaptcha.ready(() => {
-          grecaptcha.execute("<%= site_key %>", { action: "submit" })
+        if (!isCurrent() || !form.isConnected) return finish(false);
+
+        try {
+          grecaptcha.ready(() => {
+            if (!isCurrent() || !form.isConnected) return finish(false);
+
+            let execution;
+            try {
+              execution = grecaptcha.execute("<%= site_key %>", { action: "submit" });
+            } catch (_) {
+              finish(true);
+              return;
+            }
+            Promise.resolve(execution)
             .then((token) => {
+              // A timed-out attempt must never submit a token that arrives later.
+              if (!isCurrent()) return;
+              if (!form.isConnected) return finish(false);
+              if (typeof token !== "string" || !token) return finish(true);
+
               let input = form.querySelector("#g-recaptcha-response") ||
                           form.querySelector('[name="g-recaptcha-response"]');
               if (!input) {
@@ -78,18 +140,30 @@
               }
               input.value = token;
 
-              // Mark so a second submit (double-click/Enter) doesn’t loop.
               form.dataset.recaptchaDone = "1";
+              finish(false);
 
               // Submit for real
               if (form.requestSubmit) form.requestSubmit();
-              else form.submit();
+              else {
+                submitting = true;
+                disableSubmits(true);
+                form.submit();
+              }
+
+              // The patron may have changed a field while the token was pending.
+              // If native validation stopped submission, allow a fresh attempt.
+              if (!submitting) {
+                delete form.dataset.recaptchaDone;
+                input.value = "";
+              }
             })
-            .catch(() => {
-              alert("reCAPTCHA couldn’t load. Please try again.");
-            });
-        });
-      });
+            .catch(() => finish(true));
+          });
+        } catch (_) {
+          finish(true);
+        }
+      }, deadline);
     }, { passive: false });
   });
 })();

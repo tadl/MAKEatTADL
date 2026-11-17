@@ -43,4 +43,20 @@ module Admin::AdminHelper
     end
     tag.span(status&.name || "Unknown", class: "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium #{color}")
   end
+
+  def admin_pickup_confirmation(job, location_name: nil)
+    price = if job.actual_cost.present?
+      "Price: #{number_to_currency(job.actual_cost)}"
+    elsif job.slicer_cost.present?
+      "Estimated price: #{number_to_currency(job.slicer_cost)} (final price not recorded)"
+    else
+      "Price not recorded"
+    end
+    location_name ||= PickupLocation.find_by(code: job.pickup_location)&.name || job.pickup_location
+    ["Mark job ##{job.id} as picked up?",
+     "Patron: #{job.patron.name.presence || job.patron.email}",
+     "Pickup location: #{location_name.presence || 'Not recorded'}",
+     "Completed: #{job.completion_date&.strftime('%b %-d, %Y') || 'Not recorded'}",
+     price, "", "This sets today’s pickup date and archives the job."].join("\n")
+  end
 end
