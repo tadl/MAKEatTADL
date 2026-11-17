@@ -1,0 +1,44 @@
+<% display_name = current_staff_user.name.presence || current_staff_user.email %>
+<details class="admin-user-menu" data-controller="user-menu" data-user-menu-theme-value="<%= current_staff_user.theme %>" data-user-menu-density-value="<%= current_staff_user.ui_density %>" data-action="toggle->user-menu#toggle click@window->user-menu#dismiss keydown.esc@window->user-menu#escape turbo:before-cache@document->user-menu#close">
+  <summary class="admin-user-menu-trigger" aria-label="User menu for <%= display_name %>" aria-expanded="false" aria-controls="user-menu-panel" data-user-menu-target="trigger">
+    <span class="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 font-semibold text-brand-800" aria-hidden="true">
+      <span><%= admin_user_initials(current_staff_user) %></span>
+      <% if (avatar_url = admin_avatar_url(current_staff_user)) %>
+        <%= image_tag avatar_url, alt: "", referrerpolicy: "no-referrer", decoding: "async", class: "absolute inset-0 h-full w-full object-cover", data: { user_menu_target: "avatar", action: "error->user-menu#avatarError" } %>
+      <% end %>
+    </span>
+    <span class="max-w-40 truncate sm:max-w-56"><%= display_name %></span>
+  </summary>
+  <div id="user-menu-panel" class="admin-user-menu-panel">
+    <% if current_staff_user.admin? %>
+      <%= link_to "Overview", admin_root_path, class: "admin-user-menu-link" %>
+    <% end %>
+    <%= form_with url: admin_preferences_path, method: :patch, scope: :preferences, class: "space-y-4", data: { user_menu_target: "form", action: "change->user-menu#save" } do |form| %>
+      <fieldset class="admin-preference-group">
+        <legend class="admin-label">Theme</legend>
+        <div class="admin-segment">
+          <% [["System", "system", :system], ["Dark", "dark", :dark], ["Light", "light", :light]].each do |label, value, icon| %>
+            <label class="admin-segment-option">
+              <%= form.radio_button :theme, value, checked: current_staff_user.theme == value, class: "admin-segment-input sr-only" %>
+              <span class="admin-segment-button"><%= admin_icon(icon, classes: "h-4 w-4") %><span><%= label %></span></span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <fieldset class="admin-preference-group">
+        <legend class="admin-label">UI density</legend>
+        <div class="admin-segment">
+          <% [["Normal", "normal", :density_normal], ["Condensed", "condensed", :density_condensed]].each do |label, value, icon| %>
+            <label class="admin-segment-option">
+              <%= form.radio_button :ui_density, value, checked: current_staff_user.ui_density == value, class: "admin-segment-input sr-only" %>
+              <span class="admin-segment-button"><%= admin_icon(icon, classes: "h-4 w-4") %><span><%= label %></span></span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <p class="admin-muted min-h-6 text-xs" role="status" aria-live="polite" data-user-menu-target="status"></p>
+      <noscript><%= form.submit "Save preferences", class: "admin-btn admin-btn-primary" %></noscript>
+    <% end %>
+    <%= button_to "Log out", logout_path, method: :delete, class: "admin-user-menu-link", form: { class: "admin-user-menu-logout" } %>
+  </div>
+</details>

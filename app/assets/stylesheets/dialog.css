@@ -9,26 +9,26 @@
   margin: auto;
   padding: 1.5rem;
   overflow: auto;
-  border: 1px solid #d6dde4;
+  border: 1px solid var(--admin-border, #d6dde4);
   border-radius: 0.75rem;
-  background: #fff;
-  color: #333;
+  background: var(--admin-surface, #fff);
+  color: var(--admin-text, #333);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  box-shadow: 0 20px 60px rgb(11 47 87 / 25%);
+  box-shadow: 0 20px 60px var(--admin-dialog-shadow, rgb(11 47 87 / 25%));
 }
 
-.app-dialog::backdrop { background: rgb(11 47 87 / 55%); }
-.app-dialog h2 { margin: 0 0 0.75rem; color: #0b2f57; font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
+.app-dialog::backdrop { background: var(--admin-dialog-backdrop, rgb(11 47 87 / 55%)); }
+.app-dialog h2 { margin: 0 0 0.75rem; color: var(--admin-heading, #0b2f57); font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
 .app-dialog p { margin: 0; font-size: 0.9375rem; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
 .app-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
 
 .app-dialog-button {
   min-height: 2.5rem;
   padding: 0.5rem 1rem;
-  border: 1px solid #d6dde4;
+  border: 1px solid var(--admin-border, #d6dde4);
   border-radius: 0.5rem;
-  background: #fff;
-  color: #333;
+  background: var(--admin-surface, #fff);
+  color: var(--admin-text, #333);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -36,9 +36,12 @@
 }
 
 .app-dialog-button[hidden] { display: none; }
-.app-dialog-button:hover { background: #f3f5f7; }
-.app-dialog-button:focus-visible { outline: 2px solid #49688e; outline-offset: 2px; }
-.app-dialog-button-primary { border-color: #49688e; background: #49688e; color: #fff; }
-.app-dialog-button-primary:hover { border-color: #0b2f57; background: #0b2f57; }
-.app-dialog[data-kind="danger"] .app-dialog-button-primary { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
-.app-dialog[data-kind="danger"] .app-dialog-button-primary:hover { background: #fee2e2; }
+.app-dialog-button:hover { background: var(--admin-surface-hover, #f3f5f7); }
+.app-dialog-button:focus-visible { outline: 2px solid var(--admin-focus, #49688e); outline-offset: 2px; }
+.app-dialog-button-primary { border-color: var(--admin-primary, #49688e); background: var(--admin-primary, #49688e); color: var(--admin-primary-text, #fff); }
+.app-dialog-button-primary:hover { border-color: var(--admin-primary-hover, #0b2f57); background: var(--admin-primary-hover, #0b2f57); }
+.app-dialog[data-kind="danger"] .app-dialog-button-primary { border-color: var(--admin-danger-border, #fecaca); background: var(--admin-danger-surface, #fef2f2); color: var(--admin-danger-text, #991b1b); }
+.app-dialog[data-kind="danger"] .app-dialog-button-primary:hover { background: var(--admin-danger-hover, #fee2e2); }
+
+:root[data-density="condensed"] .admin-workspace .app-dialog { padding: 1.25rem; }
+:root[data-density="condensed"] .admin-workspace .app-dialog-actions { margin-top: 1rem; }

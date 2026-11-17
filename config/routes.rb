@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     root to: 'dashboard#show'
     get 'stats', to: 'statistics#index', as: :stats
     get 'help', to: 'help#show', as: :help
+    resource :preferences, only: :update
 
     resources :jobs do
       collection do

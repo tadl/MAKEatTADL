@@ -35,6 +35,26 @@ Bulk actions appear only while items on the current page are selected. Select
 all applies to the visible rows/cards, and its mixed state reflects partial
 selection. Server-side authorization remains independent of those controls.
 
+## User menu and appearance
+
+The header user menu shows the Google profile image and name, with initials as
+a fallback. All staff can log out and choose appearance settings; administrators
+also get an Overview shortcut. Theme and density use labeled icon segments with
+native radio-group keyboard behavior and save automatically.
+
+`StaffUser.theme` defaults to `system`, which follows the device preference;
+explicit `light` and `dark` choices override it. `StaffUser.ui_density` defaults
+to `normal`, with `condensed` reducing row, card, form, and layout spacing while
+keeping full-size controls. Both choices persist with the staff account across
+sign-ins and browsers. Google profile refreshes retain the saved choices.
+
+The staff layout renders the attributes before styles load, and CSS resolves
+System mode without an initialization flash. Charts update their text/grid
+colors after appearance or system-theme changes. The shared dialog uses staff
+theme variables while retaining its existing public-portal styling. Palette
+changes are immediate, with no color fades or dimming of the preference segments
+while saving; the save-status line reserves its space to keep controls steady.
+
 ## Local setup and styles
 
 Use the repository's `.ruby-version` and locked bundle. With a local PostgreSQL

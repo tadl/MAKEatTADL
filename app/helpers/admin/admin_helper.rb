@@ -9,6 +9,11 @@ module Admin::AdminHelper
       help: "M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3 M12 17h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0",
       settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z",
       arrow: "M5 12h14 M14 7l5 5-5 5",
+      system: "M3 3h18v13H3z M8 21h8 M12 16v5",
+      dark: "M20 15.2A9 9 0 0 1 8.8 4 9 9 0 1 0 20 15.2z",
+      light: "M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6 7 7 M17 17l1.4 1.4 M5.6 18.4 7 17 M17 7l1.4-1.4 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
+      density_normal: "M4 5h16v4H4z M4 15h16v4H4z",
+      density_condensed: "M4 4h16v3H4z M4 10.5h16v3H4z M4 17h16v3H4z",
       menu: "M4 6h16 M4 12h16 M4 18h16"
     }
     tag.svg(viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 1.6,
@@ -81,5 +86,17 @@ module Admin::AdminHelper
   def admin_pagination_hidden_fields
     query = request.query_parameters.except("page", "per_page").to_query
     safe_join(URI.decode_www_form(query).map { |name, value| hidden_field_tag(name, value, id: nil) })
+  end
+
+  def admin_avatar_url(user)
+    value = user.avatar_url.to_s.strip
+    uri = URI.parse(value)
+    value if uri.is_a?(URI::HTTPS) && uri.host.present? && uri.userinfo.nil?
+  rescue URI::InvalidURIError
+    nil
+  end
+
+  def admin_user_initials(user)
+    (user.name.presence || user.email).split.first(2).map { |part| part.first }.join.upcase
   end
 end

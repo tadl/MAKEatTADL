@@ -20,4 +20,21 @@ class AdminHelperTest < ActionView::TestCase
     pages = admin_pagination_pages(current_page: 5_000, total_pages: 10_000)
     assert_equal [1, 2, 3, nil, 4_998, 4_999, 5_000, 5_001, 5_002, nil, 9_998, 9_999, 10_000], pages
   end
+
+  test "avatars use HTTPS profile images and reject unsafe URLs" do
+    staff = StaffUser.new(avatar_url: "https://example.org/synthetic-avatar.png")
+    assert_equal staff.avatar_url, admin_avatar_url(staff)
+    [nil, "", "javascript:alert(1)", "http://example.org/avatar.png", "//example.org/avatar.png",
+     "https://synthetic:credentials@example.org/avatar.png", "https://invalid host/avatar.png"].each do |value|
+      staff.avatar_url = value
+      assert_nil admin_avatar_url(staff)
+    end
+  end
+
+  test "avatar fallback uses name initials or the email initial" do
+    staff = StaffUser.new(name: "Morgan Example", email: "morgan@example.org")
+    assert_equal "ME", admin_user_initials(staff)
+    staff.name = ""
+    assert_equal "M", admin_user_initials(staff)
+  end
 end

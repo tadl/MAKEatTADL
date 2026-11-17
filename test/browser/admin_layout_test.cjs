@@ -14,6 +14,8 @@ const { chromium } = require('playwright');
   let browser;
   let server;
   const mutations = [];
+  let persistedPreferences = { theme: 'system', ui_density: 'normal' };
+  let failPreferenceSave = false;
   try {
     const rendered = spawnSync('rbenv', ['exec', 'bundle', 'exec', 'ruby', 'test/browser/render_admin_pages.rb'], {
       cwd: root, encoding: 'utf8', env: { ...process.env, RAILS_ENV: 'test',
@@ -42,7 +44,33 @@ const { chromium } = require('playwright');
         req.setEncoding('utf8');
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
-          mutations.push({ url: req.url, method: req.method, body, contentType: req.headers['content-type'] });
+          const mutation = { url: req.url, method: req.method, body, contentType: req.headers['content-type'] };
+          mutations.push(mutation);
+          if (new URL(req.url, 'http://example.test').pathname === '/admin/preferences') {
+            let preferences;
+            if (req.headers['content-type']?.startsWith('application/json')) {
+              preferences = JSON.parse(body).preferences || {};
+            } else if (req.headers['content-type']?.startsWith('multipart/form-data')) {
+              preferences = Object.fromEntries(['theme', 'ui_density'].map(field => {
+                const match = body.match(new RegExp(`name="preferences\\[${field}\\]"\\r?\\n\\r?\\n([^\\r\\n]*)`));
+                return [field, match?.[1]];
+              }).filter(([, value]) => value !== undefined));
+            } else {
+              const values = new URLSearchParams(body);
+              preferences = Object.fromEntries(['theme', 'ui_density'].map(field => [field, values.get(`preferences[${field}]`)]).filter(([, value]) => value !== null));
+            }
+            mutation.preferences = preferences;
+            const next = { ...persistedPreferences, ...preferences };
+            const valid = Object.keys(preferences).every(field => ['theme', 'ui_density'].includes(field)) &&
+              ['system', 'light', 'dark'].includes(next.theme) && ['normal', 'condensed'].includes(next.ui_density);
+            if (failPreferenceSave || !valid) {
+              res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify({ error: 'Synthetic preference save failed.' }));
+            } else {
+              persistedPreferences = next;
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify(persistedPreferences));
+            }
+            return;
+          }
           res.writeHead(303, { Location: '/admin' }).end();
         });
         return;
@@ -56,6 +84,9 @@ const { chromium } = require('playwright');
       } else if (pageFiles.has(fixtureKey(url.href))) {
         file = path.join(directory, pageFiles.get(fixtureKey(url.href)));
       }
+      if (fixtureKey(url.href) === '/admin/jobs' && persistedPreferences.theme === 'dark' && persistedPreferences.ui_density === 'condensed') {
+        file = path.join(directory, 'jobs-dark-condensed.html');
+      }
       if (!file || !fs.existsSync(file)) return res.writeHead(404).end();
       const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
         '.png': 'image/png', '.svg': 'image/svg+xml', '.stl': 'model/stl' }[path.extname(file)];
@@ -66,6 +97,11 @@ const { chromium } = require('playwright');
     const origin = `http://127.0.0.1:${server.address().port}`;
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    let avatarFails = false;
+    await page.route('https://example.org/synthetic-avatar.png', route => route.fulfill(avatarFails
+      ? { status: 404, body: '' }
+      : { status: 200, contentType: 'image/png', body: fs.readFileSync(path.join(directory, 'synthetic-avatar.png')) }));
+    await page.emulateMedia({ colorScheme: 'light' });
     const errors = [];
     const nativeDialogs = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -115,6 +151,9 @@ const { chromium } = require('playwright');
       assert.equal(await page.locator('link[href*="rails_admin"],script[src*="rails_admin"]').count(), 0);
       assert.equal(await page.locator('link[rel="stylesheet"][href*="bootstrap"]').count(), 0);
       assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).fontFamily.includes('system-ui')), true);
+      assert.equal(await page.locator('html').getAttribute('data-theme'), 'system');
+      assert.equal(await page.locator('html').getAttribute('data-density'), 'normal');
+      assert.equal(await page.locator('details.admin-user-menu').count(), 1);
       if (smallListFiles.has(name)) {
         assert.equal(await page.getByRole('navigation', { name: /^Pagination (top|bottom)$/ }).count(), 0, `${name}: small lists have no pagination UI.`);
         assert.equal(await page.locator('select[name="per_page"]').count(), 0, `${name}: small lists have no page-size selector.`);
@@ -202,6 +241,197 @@ const { chromium } = require('playwright');
       }
       await page.setViewportSize({ width: 1440, height: 1000 });
     }
+
+    // Preference requests use the actual controller contract, while these
+    // static fixtures stand in for Rails' separately tested database writes.
+    await page.goto(origin + '/admin/jobs');
+    await waitForControllers('user-menu');
+    const userMenu = page.locator('details.admin-user-menu');
+    const userTrigger = userMenu.locator('summary.admin-user-menu-trigger');
+    const userPanel = page.locator('#user-menu-panel');
+    const themeRadios = userPanel.locator('input[name="preferences[theme]"]');
+    const densityRadios = userPanel.locator('input[name="preferences[ui_density]"]');
+    const checkedPreference = name => userPanel.locator(`input[name="preferences[${name}]"]:checked`).inputValue();
+    const preferenceStatus = userPanel.locator('[data-user-menu-target="status"]');
+    const cardStyle = () => page.locator('.admin-card').first().evaluate(element => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+
+    async function waitForCardStyle(expected) {
+      await page.waitForFunction(palette => {
+        const style = getComputedStyle(document.querySelector('.admin-card'));
+        return style.backgroundColor === palette.background && style.color === palette.color;
+      }, expected);
+      return cardStyle();
+    }
+
+    async function openUserMenu() {
+      if (!await userMenu.evaluate(element => element.open)) await userTrigger.click();
+      await userPanel.waitFor({ state: 'visible' });
+      await page.waitForFunction(() => document.querySelector('.admin-user-menu-trigger').getAttribute('aria-expanded') === 'true');
+    }
+
+    async function changePreference(action, success = true) {
+      await openUserMenu();
+      const [response] = await Promise.all([
+        page.waitForResponse(item => item.request().method() === 'PATCH' && new URL(item.url()).pathname === '/admin/preferences'),
+        action()
+      ]);
+      assert.equal(response.status(), success ? 200 : 422);
+      await page.waitForFunction(expected => {
+        const status = document.querySelector('[data-user-menu-target="status"]')?.textContent;
+        const fields = [...document.querySelectorAll('#user-menu-panel input[type="radio"]')];
+        return fields.every(field => !field.disabled) && (expected ? status === 'Saved' : status?.includes('Couldn’t save'));
+      }, success);
+      // Color-scheme invalidation can settle after the fetch callback; observe
+      // the rendered frame before measuring inherited light-dark() colors.
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const mutation = mutations.at(-1);
+      assert.equal(mutation.method, 'PATCH');
+      assert.ok(Object.keys(mutation.preferences).every(field => ['theme', 'ui_density'].includes(field)));
+      assert.doesNotMatch(mutation.body, /staff_user_id|user_id|preferences\[id\]/, 'Appearance requests do not select another account.');
+    }
+
+    async function savePreference(name, value, success = true) {
+      const input = page.locator(`input[name="preferences[${name}]"][value="${value}"]`);
+      const label = userPanel.locator('label.admin-segment-option').filter({ has: input });
+      await changePreference(() => label.click(), success);
+    }
+
+    assert.equal(await userTrigger.getAttribute('aria-controls'), 'user-menu-panel');
+    assert.match(await userTrigger.textContent(), /Morgan Example/);
+    assert.deepEqual(await themeRadios.evaluateAll(elements => elements.map(element => [element.type, element.value])),
+      [['radio', 'system'], ['radio', 'dark'], ['radio', 'light']]);
+    assert.deepEqual(await densityRadios.evaluateAll(elements => elements.map(element => [element.type, element.value])),
+      [['radio', 'normal'], ['radio', 'condensed']]);
+    assert.equal(await userPanel.locator('.admin-segment-button svg').count(), 5, 'Every preference segment has an icon.');
+    // The reduced-motion stylesheet intentionally applies a tiny nonzero
+    // duration globally; check the normal user experience before restoring it.
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+    await page.waitForFunction(() => [...document.querySelectorAll('.admin-btn, .admin-nav-link, .admin-segment-button')]
+      .every(element => getComputedStyle(element).transitionDuration.split(',').every(duration => parseFloat(duration) === 0)));
+    assert.equal(await page.locator('.admin-btn, .admin-nav-link, .admin-segment-button').evaluateAll(elements =>
+      elements.every(element => getComputedStyle(element).transitionDuration.split(',').every(duration => parseFloat(duration) === 0))),
+    true, 'Staff controls switch palettes without color transitions.');
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.waitForFunction(() => {
+      const image = document.querySelector('.admin-user-menu-trigger img');
+      return image?.complete && image.naturalWidth > 0;
+    });
+    await userTrigger.focus();
+    await page.keyboard.press('Enter');
+    await userPanel.waitFor({ state: 'visible' });
+    assert.equal(await userPanel.getByRole('group', { name: 'Theme', exact: true }).count(), 1);
+    assert.equal(await userPanel.getByRole('group', { name: 'UI density', exact: true }).count(), 1);
+    assert.equal(await userPanel.getByRole('link', { name: 'Overview', exact: true }).count(), 1);
+    const emptyStatusHeight = await preferenceStatus.evaluate(element => element.getBoundingClientRect().height);
+    assert.ok(emptyStatusHeight >= 24, 'The save-status line reserves space before a preference changes.');
+    if (screenshots) await page.screenshot({ path: path.join(screenshots, 'user-menu-light-desktop.png') });
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.closest('#user-menu-panel') !== null), true);
+    await page.keyboard.press('Escape');
+    await userPanel.waitFor({ state: 'hidden' });
+    await assertFocused(userTrigger, 'Escape returns focus to the user-menu trigger.');
+    await openUserMenu();
+    await page.getByRole('heading', { name: 'Jobs', exact: true }).click();
+    await userPanel.waitFor({ state: 'hidden' });
+    assert.equal(await userTrigger.getAttribute('aria-expanded'), 'false');
+
+    await openUserMenu();
+    await userPanel.locator('input[name="preferences[theme]"][value="system"]').focus();
+    let releasePreferenceRequest;
+    const preferenceRequestReleased = new Promise(resolve => { releasePreferenceRequest = resolve; });
+    await page.route('**/admin/preferences', async route => {
+      await preferenceRequestReleased;
+      await route.continue();
+    }, { times: 1 });
+    const keyboardSave = changePreference(() => page.keyboard.press('ArrowRight'));
+    let savingAppearance;
+    try {
+      await page.waitForFunction(() => {
+        const radios = [...document.querySelectorAll('#user-menu-panel input[type="radio"]')];
+        return radios.length === 5 && radios.every(input => input.disabled) &&
+          document.querySelector('[data-user-menu-target="status"]').textContent === 'Saving…';
+      });
+      savingAppearance = await userPanel.evaluate(panel => ({
+        opacity: [...panel.querySelectorAll('.admin-segment-button')].map(element => getComputedStyle(element).opacity),
+        statusHeight: panel.querySelector('[data-user-menu-target="status"]').getBoundingClientRect().height
+      }));
+    } finally {
+      releasePreferenceRequest();
+    }
+    await keyboardSave;
+    assert.deepEqual(savingAppearance.opacity, ['1', '1', '1', '1', '1'], 'Saving does not dim the selected segments.');
+    assert.equal(savingAppearance.statusHeight, emptyStatusHeight, 'The Saving status keeps the menu controls in place.');
+    assert.equal(await checkedPreference('theme'), 'dark', 'Native arrow keys select and save the next theme segment.');
+    assert.equal(await page.evaluate(() => document.activeElement.value), 'dark');
+    assert.equal(await preferenceStatus.evaluate(element => element.getBoundingClientRect().height), emptyStatusHeight,
+      'A successful save does not move the menu controls.');
+    await savePreference('theme', 'light');
+    const lightStyle = await cardStyle();
+    await savePreference('theme', 'dark');
+    const darkStyle = await cardStyle();
+    assert.notDeepEqual(darkStyle, lightStyle, `Dark mode changes rendered surfaces and text: ${JSON.stringify({ lightStyle, darkStyle })}`);
+    await savePreference('theme', 'system');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'system');
+    assert.deepEqual(await waitForCardStyle(darkStyle), darkStyle, 'System mode follows a dark OS preference.');
+    await page.emulateMedia({ colorScheme: 'light' });
+    assert.deepEqual(await waitForCardStyle(lightStyle), lightStyle, 'System mode follows a light OS preference.');
+    await savePreference('theme', 'dark');
+    const normalRowHeight = await page.locator('.admin-table tbody tr').first().evaluate(element => element.getBoundingClientRect().height);
+    await savePreference('ui_density', 'condensed');
+    const condensedRowHeight = await page.locator('.admin-table tbody tr').first().evaluate(element => element.getBoundingClientRect().height);
+    assert.ok(condensedRowHeight < normalRowHeight - 1, 'Condensed mode measurably reduces table-row height.');
+    await page.reload();
+    await waitForControllers('user-menu');
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    assert.equal(await page.locator('html').getAttribute('data-density'), 'condensed');
+    assert.equal(await checkedPreference('theme'), 'dark');
+    assert.equal(await checkedPreference('ui_density'), 'condensed');
+
+    failPreferenceSave = true;
+    await savePreference('theme', 'light', false);
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark', 'A failed save restores the last confirmed theme.');
+    assert.equal(await checkedPreference('theme'), 'dark');
+    assert.deepEqual(persistedPreferences, { theme: 'dark', ui_density: 'condensed' });
+    assert.match(await preferenceStatus.textContent(), /Couldn’t save/);
+    failPreferenceSave = false;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openUserMenu();
+    const menuBounds = await userPanel.boundingBox();
+    assert.ok(menuBounds.x >= 0 && menuBounds.x + menuBounds.width <= 390, 'The user menu stays within a narrow viewport.');
+    if (screenshots) await page.screenshot({ path: path.join(screenshots, 'user-menu-dark-condensed-mobile.png') });
+    await savePreference('ui_density', 'normal');
+    await savePreference('theme', 'system');
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
+    await page.goto(origin + '/__fixtures__/staff-jobs');
+    await waitForControllers('user-menu');
+    await openUserMenu();
+    assert.match(await userTrigger.innerText(), /Taylor Example/);
+    assert.match(await userTrigger.innerText(), /\bTE\b/, 'Missing avatars use the staff member’s initials.');
+    assert.equal(await userTrigger.locator('img').count(), 0);
+    assert.equal(await userPanel.getByRole('link', { name: 'Overview', exact: true }).count(), 0);
+    assert.equal(await themeRadios.count(), 3, 'Ordinary staff can change their own appearance.');
+    assert.equal(await densityRadios.count(), 2);
+    const [logoutResponse] = await Promise.all([
+      page.waitForResponse(response => new URL(response.url()).pathname === '/logout'),
+      userPanel.getByRole('button', { name: 'Log out', exact: true }).click()
+    ]);
+    assert.equal(logoutResponse.status(), 303);
+    const logout = mutations.at(-1);
+    const logoutMethod = logout.method === 'POST' ? new URLSearchParams(logout.body).get('_method')?.toUpperCase() || 'POST' : logout.method;
+    assert.equal(logoutMethod, 'DELETE', 'Logout retains the Rails DELETE method.');
+    await page.waitForURL(origin + '/admin');
+    avatarFails = true;
+    await page.goto(origin + '/admin/jobs');
+    await waitForControllers('user-menu');
+    await page.waitForFunction(() => document.querySelector('.admin-user-menu-trigger img')?.hidden === true);
+    assert.match(await userTrigger.innerText(), /\bME\b/, 'A failed avatar request falls back to initials.');
+    avatarFails = false;
 
     // Selection is local to the rendered page and participates in the real bulk
     // form, including job checkboxes associated through their form attribute.
@@ -575,7 +805,7 @@ const { chromium } = require('playwright');
     assert.deepEqual(nativeDialogs, [], 'No browser-native confirm or alert dialogs are used.');
     assert.deepEqual(errors, []);
     assert.ok(confirmationCount >= 14, 'Every exported administrative confirmation surface is exercised.');
-    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, pagination/page sizes/bulk selection, ${confirmationCount} branded confirmations, CAPTCHA token submission/failure/timeouts/late-token and validation retries, clickable rows, thumbnails, Turbo navigation, and live STL controls.`);
+    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, user-menu/appearance/avatars, pagination/page sizes/bulk selection, ${confirmationCount} branded confirmations, CAPTCHA token submission/failure/timeouts/late-token and validation retries, clickable rows, thumbnails, Turbo navigation, and live STL controls.`);
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

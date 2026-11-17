@@ -17,7 +17,7 @@
          else
            "active"
          end %>
-      <%= link_to admin_jobs_path(status_id: status.id, scope: scope), class: "admin-card p-4 transition hover:border-brand-600 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" do %>
+      <%= link_to admin_jobs_path(status_id: status.id, scope: scope), class: "admin-card p-4 hover:border-brand-600 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" do %>
         <span class="block text-sm font-medium text-slate-600"><%= status.name %></span>
         <span class="block mt-3 text-3xl font-semibold tabular-nums text-slate-950"><%= number_with_delimiter(@dashboard.job_counts.fetch(status.id, 0)) %></span>
       <% end %>

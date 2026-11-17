@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <% page_title = content_for(:title).presence || @page_title.presence || "Overview" %>
-<html lang="en">
+<html lang="en" data-theme="<%= current_staff_user.theme %>" data-density="<%= current_staff_user.ui_density %>">
   <head>
     <meta charset="utf-8">
     <title><%= page_title %> · MAKE@TADL</title>
@@ -17,7 +17,7 @@
   <body class="admin-workspace">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3">Skip to content</a>
     <div class="min-h-screen lg:grid lg:grid-cols-[232px_minmax(0,1fr)]" data-controller="admin-navigation">
-      <aside class="border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0">
+      <aside class="admin-sidebar border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0">
         <div class="flex h-20 items-center justify-between px-6">
           <%= link_to admin_root_path, class: "flex items-center gap-3 font-semibold tracking-tight text-slate-950", "aria-label": "MAKE at TADL staff home" do %>
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-700 text-white"><%= admin_icon(:models, classes: "h-6 w-6") %></span>
@@ -52,13 +52,9 @@
       <div class="min-w-0">
         <header class="admin-header flex min-h-20 flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8 lg:px-10">
           <div class="text-sm"><span class="hidden text-white/80 sm:inline">Staff workspace<span class="mx-3 text-white/50">/</span></span><span class="font-medium text-white"><%= page_title %></span></div>
-          <div class="flex items-center gap-4 text-sm">
-            <span class="hidden text-white/90 sm:inline"><%= current_staff_user.name.presence || current_staff_user.email %></span>
-            <% if current_staff_user.admin? %><span class="admin-badge">Admin</span><% end %>
-            <%= button_to "Sign out", logout_path, method: :delete, class: "text-sm text-white/90 hover:text-white" %>
-          </div>
+          <%= render "admin/shared/user_menu" %>
         </header>
-        <main id="main-content" class="mx-auto max-w-[1600px] px-5 py-7 sm:px-8 lg:px-10 lg:py-9" tabindex="-1">
+        <main id="main-content" class="admin-main mx-auto max-w-[1600px] px-5 py-7 sm:px-8 lg:px-10 lg:py-9" tabindex="-1">
           <% flash.each do |kind, message| %>
             <div role="<%= %w[alert error danger].include?(kind) ? 'alert' : 'status' %>" class="mb-6 rounded-lg border p-4 text-sm <%= %w[alert error danger].include?(kind) ? 'border-red-200 bg-red-50 text-red-800' : 'border-brand-100 bg-brand-50 text-brand-800' %>"><%= message %></div>
           <% end %>

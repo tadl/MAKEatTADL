@@ -51,6 +51,7 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     ensure_base_lookups!
 
     @staff = create_staff_user(email: "morgan@example.com", name: "Morgan Example", admin: true)
+    @staff.update!(avatar_url: "https://example.org/synthetic-avatar.png", theme: "system", ui_density: "normal")
     colleague = create_staff_user(email: "taylor@example.com", name: "Taylor Example")
     @location = ensure_pickup_location(code: "synthetic_workshop", name: "Example Workshop")
     @printer = Printer.create!(name: "Example FDM printer", pickup_location: @location,
@@ -150,6 +151,16 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     export_attachment(@model.preview_image, "synthetic-preview.png", SYNTHETIC_PNG)
     export_attachment(photo_only_model.preview_image, "synthetic-preview.png", SYNTHETIC_PNG)
     [second_model, legacy_model].each { |model| export_thumbnail(model, "synthetic-thumbnail.svg") }
+    File.binwrite(File.join(@directory, "synthetic-avatar.png"), SYNTHETIC_PNG)
+
+    # Real role/preference renders under fixture-only static aliases. These are
+    # not application routes or authentication bypasses.
+    sign_in_synthetic_staff(colleague)
+    export_page(admin_jobs_path, "staff-jobs.html", fixture_path: "/__fixtures__/staff-jobs")
+    @staff.update!(theme: "dark", ui_density: "condensed")
+    sign_in_synthetic_staff
+    export_page(admin_jobs_path, "jobs-dark-condensed.html", fixture_path: "/__fixtures__/jobs-dark-condensed")
+    @staff.update!(theme: "system", ui_density: "normal")
     File.write(File.join(@directory, "pages.json"), JSON.pretty_generate(@pages))
 
     # Opening a conversation marks its reply read, as in the real workspace.
@@ -169,14 +180,14 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def sign_in_synthetic_staff
-    auth = OmniAuth::AuthHash.new(provider: "google_oauth2", uid: @staff.uid,
-      info: { email: @staff.email, name: @staff.name, image: "" },
+  def sign_in_synthetic_staff(staff = @staff)
+    auth = OmniAuth::AuthHash.new(provider: "google_oauth2", uid: staff.uid,
+      info: { email: staff.email, name: staff.name, image: staff.avatar_url.to_s },
       extra: { id_info: { hd: "example.com", email_verified: true } })
     with_env("GOOGLE_DOMAIN" => "example.com") do
       get "/auth/test/callback", env: { "omniauth.auth" => auth }
     end
-    assert_redirected_to admin_root_path
+    staff.admin? ? assert_redirected_to(admin_root_path) : assert_response(:redirect)
   end
 
   def prepare_pagination_jobs
@@ -200,11 +211,11 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     end)
   end
 
-  def export_page(path, filename)
+  def export_page(path, filename, fixture_path: path)
     get path
     assert_response :success, "Failed to render #{filename}."
     File.write(File.join(@directory, filename), response.body)
-    @pages[path] = filename
+    @pages[fixture_path] = filename
   end
 
   def export_attachment(attachment, filename, content)

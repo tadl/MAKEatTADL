@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_08_14_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_230000) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
@@ -133,7 +133,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_14_170000) do
     t.index ["printable_model_id"], name: "index_jobs_on_printable_model_id"
     t.index ["started_by_id"], name: "index_jobs_on_started_by_id"
     t.index ["status_id"], name: "index_jobs_on_status_id"
-    t.check_constraint "origin::text = ANY (ARRAY['print'::character varying, 'scan'::character varying]::text[])", name: "jobs_origin_check"
+    t.check_constraint "origin::text = ANY (ARRAY['print'::character varying::text, 'scan'::character varying::text])", name: "jobs_origin_check"
   end
 
   create_table "messages", force: :cascade do |t|
@@ -231,9 +231,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_14_170000) do
     t.boolean "admin", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "theme", default: "system", null: false
+    t.string "ui_density", default: "normal", null: false
     t.index ["email"], name: "index_staff_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_staff_users_on_reset_password_token", unique: true
     t.index ["uid"], name: "index_staff_users_on_uid", unique: true
+    t.check_constraint "theme::text = ANY (ARRAY['system'::character varying, 'light'::character varying, 'dark'::character varying]::text[])", name: "staff_users_theme_check"
+    t.check_constraint "ui_density::text = ANY (ARRAY['normal'::character varying, 'condensed'::character varying]::text[])", name: "staff_users_ui_density_check"
   end
 
   create_table "statuses", force: :cascade do |t|

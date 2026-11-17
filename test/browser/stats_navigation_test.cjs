@@ -74,6 +74,33 @@ const { chromium } = require('playwright');
       if (expectedDays) assert.equal(state.days, expectedDays);
     }
     await assertCharts(30);
+    async function setTheme(theme) {
+      await page.evaluate(value => {
+        document.documentElement.dataset.theme = value;
+        document.dispatchEvent(new CustomEvent('appearance:change'));
+      }, theme);
+    }
+    async function assertChartColor(expected) {
+      await page.waitForFunction(color => {
+        const normalized = value => {
+          const style = document.createElement('span').style;
+          style.color = value;
+          return style.color;
+        };
+        const chart = Chart.getChart(document.getElementById('printsPerDayChart'));
+        return normalized(chart.options.scales.y.ticks.color) === normalized(color) &&
+          normalized(Chart.getChart(document.getElementById('filamentColorChart')).options.plugins.legend.labels.color) === normalized(color);
+      }, expected, { timeout: 5000 });
+    }
+    await setTheme('dark');
+    await assertChartColor('#c2cfde');
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    await setTheme('light');
+    await assertChartColor('#666666');
+    await setTheme('system');
+    await assertChartColor('#c2cfde');
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await assertChartColor('#666666');
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Detroit' });
     await page.evaluate(url => Turbo.visit(url), origin + `/admin/stats?start=${today}&end=${today}`);
     await page.waitForURL('**/admin/stats?*');

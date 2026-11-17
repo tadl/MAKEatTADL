@@ -2,9 +2,14 @@
 class StaffUser < ApplicationRecord
   class UnauthorizedDomainError < StandardError; end
 
+  THEMES = %w[system light dark].freeze
+  UI_DENSITIES = %w[normal condensed].freeze
+
   # Required fields
   validates :uid,   presence: true, uniqueness: true
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :theme, inclusion: { in: THEMES }
+  validates :ui_density, inclusion: { in: UI_DENSITIES }
 
   def self.authorized_google_account!(auth)
     email = auth&.info&.email.to_s.strip.downcase

@@ -8,6 +8,8 @@ export default class extends Controller {
     const connection = Symbol("statistics connection")
     this.connection = connection
     this.charts = []
+    this.appearanceChanged = () => this.updateAppearance()
+    document.addEventListener("appearance:change", this.appearanceChanged)
 
     try {
       // This pinned UMD distribution exposes Chart on globalThis when imported.
@@ -31,6 +33,7 @@ export default class extends Controller {
           plugins: { legend: { position: "bottom" } }
         }
       }))
+      this.updateAppearance()
       this.errorTarget.hidden = true
     } catch (_error) {
       if (this.connection !== connection) return
@@ -40,6 +43,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener("appearance:change", this.appearanceChanged)
     this.clear()
   }
 
@@ -68,6 +72,22 @@ export default class extends Controller {
         plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
+    })
+  }
+
+  updateAppearance() {
+    const styles = getComputedStyle(this.element)
+    const color = styles.getPropertyValue("--admin-chart-text").trim() || "#666666"
+    const gridColor = styles.getPropertyValue("--admin-chart-grid").trim() || "#d6dde4"
+    this.charts?.forEach(chart => {
+      chart.options.color = color
+      chart.options.plugins.legend.labels.color = color
+      Object.values(chart.options.scales || {}).forEach(scale => {
+        scale.ticks.color = color
+        scale.grid.color = gridColor
+        scale.border.color = gridColor
+      })
+      chart.update("none")
     })
   }
 

@@ -26,6 +26,7 @@ custom actions, models, and installed authorization adapter on November 17,
 | Modify lookup and printable-model records | Denied | Allowed |
 | Directly manage staff, messages, conversations, or activity records | Denied | Administrator only, subject to each screen's allowed operations |
 | Change a staff account's administrator flag | Denied | Allowed |
+| Save own theme and density preferences | Allowed | Allowed |
 
 Lookup records include statuses, categories, printers, print types, filament
 colors, pickup locations, and printable models. The old interface hid these
@@ -36,6 +37,11 @@ is no existing per-location or per-job ownership restriction for staff.
 The original `Ability` aliased index, show, edit, and update to read. The custom
 interface uses conventional read/update actions instead, preserving effective
 permissions without implying that read access permits editing.
+
+`PATCH /admin/preferences` is an authenticated self-service endpoint for theme
+and density only. It always updates the signed-in staff account, ignores record
+IDs and identity/role fields, and does not grant general StaffUser edit access.
+The supported values are validated by the model and database constraints.
 
 ## Authentication and session boundaries
 
