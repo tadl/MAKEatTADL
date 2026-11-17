@@ -1,9 +1,13 @@
+abort "Stats browser fixtures must run in the test environment." unless ENV.fetch("RAILS_ENV", "test") == "test"
+
 require_relative "../test_helper"
+require_relative "support/fixture_database_guard"
 
 # Render real templates with synthetic data for the browser navigation regression.
 # Rails' test transaction rolls back all records when this test finishes.
 class StatsBrowserPagesTest < ActionDispatch::IntegrationTest
   test "export stats navigation pages" do
+    BrowserFixtureDatabaseGuard.verify!
     directory = ENV.fetch("STATS_BROWSER_PAGES")
     ensure_base_lookups!
     staff = create_staff_user(email: "charts@example.com")

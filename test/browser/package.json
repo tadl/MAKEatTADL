@@ -1,0 +1,10 @@
+{
+  "name": "make-at-tadl-browser-tests",
+  "private": true,
+  "scripts": {
+    "test": "node admin_layout_test.cjs && node stats_navigation_test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
+  }
+}

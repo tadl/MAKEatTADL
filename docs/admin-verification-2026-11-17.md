@@ -11,7 +11,33 @@ is implemented in the custom controllers and Tailwind staff layout. Historical
 email/bookmark GET links redirect to their replacements. New mention emails use
 the application's conversation route.
 
-## Observed checks
+## Latest verification and review readiness
+
+The latest local run after the pagination, appearance, and CI changes passed
+**247 Rails tests and 8,791 assertions** with `CI=1`, with no failures, errors,
+or skips. Both Chrome suites passed: 27 desktop/mobile page checks, 19 viewport
+confirmation controls, user-menu/appearance behavior, and chart navigation,
+theme changes, and failure recovery. Production-mode assets and eager loading
+also passed. The dependency audit and reviewed scanner result below were
+rechecked without a change in findings.
+
+GitHub Actions now runs the Rails suite, eager-load check, asset compilation,
+and both browser regressions on Ubuntu with PostgreSQL. Its actual run results
+are recorded in the repository's Actions tab. See [development and CI setup](admin-development.md#github-actions)
+for the locked browser dependencies, fixture safeguards, and coverage limits.
+
+The branch is ready for a coordinator walkthrough with synthetic data. Before
+acceptance, restore or explicitly defer the [remaining parity gaps](admin-parity-review-2026-11-17.md).
+Walk through pickup and library actions as both an ordinary staff member and an
+administrator; those dedicated actions retain their administrator-only boundary.
+Decide whether the existing global read-marking behavior is acceptable for this
+release or whether the proposed shared Needs response queue is required.
+
+Controlled live Google login/CAPTCHA, outbound email, and inbound-reply smoke
+tests remain outstanding. The browser CAPTCHA checks simulate the SDK.
+Production scheduling and a Dokku build/release have not been validated here.
+
+## Initial implementation checks
 
 | Check | Result |
 | --- | --- |
@@ -79,9 +105,13 @@ therefore exits with its warning status, rather than a clean-zero-warning status
 
 ## Boundaries and remaining validation
 
-No schema migrations, production access, deployment, live email, or live Google
-login were performed. Linux/Dokku builds and the actual production scheduler
-remain unverified. Existing Rails boot/test deprecation warnings remain.
+The initial port required no schema migration. A subsequent additive migration
+stores staff theme/density preferences, with defaults and database constraints;
+it has been applied only to local development/test databases. The existing
+Dokku predeploy command runs `db:migrate` during a separately authorized release.
+No production access, deployment, live email, or live Google login was performed.
+Actual Dokku builds and the production scheduler remain unverified. Existing
+Rails boot/test deprecation warnings remain.
 
 The public UX redesign and changes to backend workflow/pricing/automation rules
 remain later iterations with the makerspace specialist. The first library uses
@@ -101,8 +131,8 @@ The branch is intended for review and iteration before merging to `main`.
 
 The subsequent iteration adds the guarded `demo:seed` task, the TADL palette
 and shared header/body background images, automatic mesh thumbnails, and three
-clear library collections. The current suite passes **216 tests and 8,414
-assertions**, with no failures, errors, or skips. The updated Chrome checks cover
+clear library collections. At that checkpoint, the suite passed **216 tests and
+8,414 assertions**, with no failures, errors, or skips. Those Chrome checks covered
 19 desktop/mobile screens, actual generated thumbnails, uploaded-photo priority,
 missing-file states, collection choices, save-from-job discovery, and STL controls.
 The chart navigation/failure regression also passes. Production-mode asset

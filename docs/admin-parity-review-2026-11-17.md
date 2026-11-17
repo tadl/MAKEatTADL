@@ -61,7 +61,7 @@ administrator action boundaries are documented in `admin-permissions.md`.
 
 Pickup regression coverage checks positive, zero, estimated, and missing prices
 on both entry points, the retained patron/location/completion context, and the
-successful redirect to Overview. Browser coverage exercises all fourteen
+successful redirect to Overview. Browser coverage exercises all nineteen
 confirmation controls and real HTTP form submission against synthetic fixtures.
 CAPTCHA browser tests simulate the SDK; they do not contact Google's verification
 service. Server-side CAPTCHA verification remains unchanged.

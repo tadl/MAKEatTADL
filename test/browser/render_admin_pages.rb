@@ -1,6 +1,7 @@
 abort "Admin browser fixtures must run in the test environment." unless ENV.fetch("RAILS_ENV", "test") == "test"
 
 require_relative "../test_helper"
+require_relative "support/fixture_database_guard"
 require "base64"
 require "fileutils"
 
@@ -170,14 +171,7 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
   private
 
   def require_local_empty_test_database!
-    configuration = ActiveRecord::Base.connection_db_config
-    assert Rails.env.test?, "This renderer requires Rails' test environment."
-    assert_match(/(?:\A|_)test\z/, configuration.database, "Use a dedicated test database.")
-    assert_includes [nil, "", "localhost", "127.0.0.1", "::1"], configuration.configuration_hash[:host],
-      "This renderer only supports a local test database."
-    [Patron, StaffUser, Job, Conversation, Message, Notification, PrintableModel, Printer, Audited::Audit].each do |model|
-      assert_equal 0, model.count, "Refusing to export existing #{model.name} records. Use an empty test database."
-    end
+    BrowserFixtureDatabaseGuard.verify!
   end
 
   def sign_in_synthetic_staff(staff = @staff)

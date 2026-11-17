@@ -13,10 +13,9 @@ const { chromium } = require('playwright');
   let browser;
   let server;
   try {
-    const rendered = spawnSync('rbenv', ['exec', 'bundle', 'exec', 'ruby', 'test/browser/render_stats_pages.rb'], {
+    const rendered = spawnSync('bundle', ['exec', 'ruby', 'test/browser/render_stats_pages.rb'], {
       cwd: root, encoding: 'utf8', env: { ...process.env,
-        RAILS_ENV: 'test', DATABASE_URL: 'postgresql:///make_at_tadl_test',
-        RBENV_VERSION: fs.readFileSync(path.join(root, '.ruby-version'), 'utf8').trim(),
+        RAILS_ENV: 'test', DATABASE_URL: process.env.DATABASE_URL || 'postgresql:///make_at_tadl_test',
         STATS_BROWSER_PAGES: directory }
     });
     assert.equal(rendered.status, 0, rendered.stdout + rendered.stderr);

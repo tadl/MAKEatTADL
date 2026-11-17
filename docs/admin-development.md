@@ -147,14 +147,16 @@ model and service tests, using the local test database:
 RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test RBENV_VERSION=3.4.12 rbenv exec bundle exec rails test
 ```
 
-With Playwright available to Node and Google Chrome installed:
+The browser tests have a separate, locked npm development dependency. With
+Node 24, Google Chrome, and the repository's Ruby selected on `PATH`:
 
 ```sh
-node test/browser/stats_navigation_test.cjs
-node test/browser/admin_layout_test.cjs
+npm ci --ignore-scripts --prefix test/browser
+RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test npm test --prefix test/browser
 ```
 
-That check covers delayed Chart.js loading, filters, navigation away, history
+The npm command runs the layout and chart regressions sequentially. The chart
+check covers delayed Chart.js loading, filters, navigation away, history
 restoration, reload, narrow layout, and chart-library failure fallback. Browser
 verification needs access to the pinned library CDN, unless the environment
 provides a cache or fixture. The app itself uses importmap rather than an npm
@@ -177,6 +179,22 @@ Keep permission checks at the HTTP/controller boundary and test anonymous,
 ordinary staff, and administrator requests. Hidden controls alone do not secure
 a route. Retain checks for immutable job type, unchanged scan origin, safe URLs,
 escaped file names, private staff notes, and audit attribution.
+
+### GitHub Actions
+
+`.github/workflows/ci.yml` runs on source pushes, pull requests targeting `main`,
+and manual dispatch. It uses Ubuntu 24.04, the Ruby in `.ruby-version`, the locked
+bundle, Node 24, and local PostgreSQL. It checks eager loading, runs the Rails
+suite, compiles assets, and runs both Chrome browser regressions. Actions are
+pinned to commit SHAs. The workflow has read-only repository access and no
+deployment steps or production credentials.
+
+The runner creates a fresh test database with `db:create db:schema:load db:migrate`
+without loading seeds. This checks fresh-schema installation and behavior; it
+does not replay the upgrade migration path from the current production schema.
+Both fixture renderers also verify the test environment, configured and actual
+local database connection, and empty operational tables before exporting pages.
+Synthetic screenshots are retained as a workflow artifact for seven days.
 
 ## Model library scope
 
