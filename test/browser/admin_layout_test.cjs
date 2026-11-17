@@ -22,6 +22,11 @@ const { chromium } = require('playwright');
     });
     assert.equal(rendered.status, 0, rendered.stdout + rendered.stderr);
     const pages = JSON.parse(fs.readFileSync(path.join(directory, 'pages.json'), 'utf8'));
+    const thumbnailEntries = Object.entries(pages).filter(([url]) => /\/thumbnail$/.test(url));
+    assert.ok(thumbnailEntries.length >= 2, 'Generated library thumbnail responses are exported.');
+    for (const [, filename] of thumbnailEntries) {
+      assert.match(fs.readFileSync(path.join(directory, filename), 'utf8'), /<polygon\b/, 'Thumbnails render actual mesh faces.');
+    }
     server = http.createServer((req, res) => {
       const url = new URL(req.url, 'http://localhost');
       let file;
@@ -83,6 +88,28 @@ const { chromium } = require('playwright');
     await page.locator('nav a', { hasText: 'Model library' }).click();
     await page.waitForURL('**/admin/models');
     assert.equal(await page.evaluate(() => window.navigationSentinel), true);
+    assert.deepEqual(await page.locator('select[name="collection"] option').allTextContents(),
+      ['All collections', 'Staff library', 'Assistive', 'Fidget']);
+    assert.equal(await page.locator('article .admin-badge', { hasText: /^Patron$/ }).count(), 0);
+    const generatedImage = page.getByRole('link', { name: 'View Page-turning aid', exact: true }).locator('img');
+    await generatedImage.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const image = document.querySelector('a[aria-label="View Page-turning aid"] img');
+      return image && image.complete && image.naturalWidth > 0;
+    });
+    assert.match(await generatedImage.getAttribute('src'), /\/admin\/models\/\d+\/thumbnail$/);
+    const missingCard = page.locator('article').filter({ has: page.getByRole('link', { name: 'View Missing model file', exact: true }) });
+    assert.equal(await missingCard.locator('img').count(), 0);
+    assert.equal(await missingCard.getByText('No model file', { exact: true }).count(), 1);
+    const photoOnlyCard = page.locator('article').filter({ has: page.getByRole('link', { name: 'View Photo-only model', exact: true }) });
+    const uploadedImage = photoOnlyCard.locator('img');
+    await uploadedImage.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const image = document.querySelector('a[aria-label="View Photo-only model"] img');
+      return image && image.complete && image.naturalWidth > 0;
+    });
+    assert.match(await uploadedImage.getAttribute('src'), /\/rails\/active_storage\/blobs\//);
+    assert.equal(await photoOnlyCard.getByText('No model file', { exact: true }).count(), 1);
     await page.getByRole('link', { name: 'View Cable organizer', exact: true }).click();
     await page.getByRole('link', { name: 'Print again', exact: true }).waitFor();
     assert.match(await page.getByRole('link', { name: 'Print again', exact: true }).getAttribute('href'), /\/admin\/jobs\/new\?printable_model_id=\d+/);
@@ -91,10 +118,18 @@ const { chromium } = require('playwright');
     await preview.locator('canvas').waitFor({ timeout: 30000 });
     await preview.getByRole('button', { name: 'Zoom in', exact: true }).click();
     await preview.getByRole('button', { name: 'Reset view', exact: true }).click();
+    const jobPath = Object.entries(pages).find(([, name]) => name === 'job.html')[0];
+    await page.goto(origin + jobPath);
+    const saveModel = page.getByRole('link', { name: 'Save to model library', exact: true });
+    assert.equal(await saveModel.count(), 1, 'Job overview exposes the model-library action.');
+    const saveUrl = new URL(await saveModel.getAttribute('href'), origin);
+    assert.match(saveUrl.searchParams.get('source_job_id'), /^\d+$/);
+    assert.match(saveUrl.searchParams.get('attachment_id'), /^\d+$/);
+    assert.equal(await page.locator('form[action*="/files/"]').count(), 0, 'File deletion stays on the Files screen.');
     await page.locator('nav a', { hasText: 'Jobs', exact: true }).click();
     await page.waitForURL('**/admin/jobs');
     assert.deepEqual(errors, []);
-    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, Turbo library navigation, reprint link, and live STL preview controls.`);
+    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, collection choices, actual thumbnails, library-save discovery, Turbo navigation, reprint link, and live STL controls.`);
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

@@ -96,3 +96,42 @@ bearer-link behavior. See the [permission matrix](admin-permissions.md),
 [port inventory](admin-port-inventory.md), and [automation map](automations.md).
 
 The branch is intended for review and iteration before merging to `main`.
+
+## Feedback iteration
+
+The subsequent iteration adds the guarded `demo:seed` task, the TADL palette
+and shared header/body background images, automatic mesh thumbnails, and three
+clear library collections. The current suite passes **216 tests and 8,414
+assertions**, with no failures, errors, or skips. The updated Chrome checks cover
+19 desktop/mobile screens, actual generated thumbnails, uploaded-photo priority,
+missing-file states, collection choices, save-from-job discovery, and STL controls.
+The chart navigation/failure regression also passes. Production-mode asset
+compilation, eager loading, and the dependency audit pass; the same reviewed
+weak-confidence model-URL scanner warning remains.
+
+The default demo dataset has 300 jobs across all 11 statuses and five demo pickup
+locations, including 240 print jobs and 60 scan jobs. Local population and an
+idempotent second run were observed; the second run created zero jobs. An
+explicit supplied-STL run populated local library model files without adding
+the supplied binary to Git. See [demo data](demo-data.md) for guards, preservation
+behavior, optional templates, and the explicit library-file replacement flag.
+
+Generated thumbnails read actual ASCII/binary STL or core 3MF geometry on the
+server. Parsing has source/decompression, archive-entry, mesh, component, numeric,
+and recursion limits. Archives are never extracted to disk. Output contains only
+validated numeric geometry and fixed styles; authenticated image responses use
+no-store, nosniff, and sandbox headers. Orthographic backface culling prevents
+hidden faces from painting over thin models. Unsupported or malformed inputs
+receive a fixed safe placeholder. Materials, textures, beam lattices, and
+mixed-unit assemblies are outside the thumbnail renderer's scope.
+
+Staff library is the default for newly saved job models. Assistive/Fidget are
+explicit public choices; legacy duplicate job-category rows are preserved and
+do not produce duplicate collection options. Printing notes copy technical
+settings and per-copy material use, without patron identities or request text.
+
+The local development server was restarted after dependency/configuration
+changes and its `/up` endpoint returned HTTP 200. Development asset resolution
+now uses the current asset environment, so a previous QA precompile cannot mask
+Tailwind watcher updates. No production database, deployment, merge, or live
+production scheduler was involved in this iteration.

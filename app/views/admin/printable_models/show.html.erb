@@ -1,5 +1,5 @@
 <div class="admin-page-header">
-  <div><h1><%= @model.name %></h1><p><%= @model.code %> · <%= @model.category.name %></p></div>
+  <div><h1><%= @model.name %></h1><p><%= @model.code %> · <%= library_collection_label(@model.category) %></p></div>
   <div class="admin-actions">
     <% if can?(:create, Job) && @model.model_file.attached? %><%= link_to "Print again", new_admin_job_path(printable_model_id: @model.id), class: "admin-btn admin-btn-primary" %><% end %>
     <% if can?(:update, @model) %><%= link_to "Edit model", edit_admin_printable_model_path(@model), class: "admin-btn" %><% end %>
@@ -8,9 +8,16 @@
 </div>
 <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
   <section class="admin-card">
-    <% if @model.preview_image.attached? && @model.preview_image.content_type.in?(%w[image/jpeg image/png image/webp]) %><%= image_tag rails_blob_path(@model.preview_image), alt: @model.name, class: "mb-6 max-h-80 w-full rounded-lg bg-slate-50 object-contain" %><% end %>
+    <% uploaded_preview = @model.preview_image.attached? && @model.preview_image.content_type.in?(%w[image/jpeg image/png image/webp]) %>
+    <% if uploaded_preview %>
+      <%= image_tag rails_blob_path(@model.preview_image), alt: @model.name, class: "mb-6 max-h-80 w-full rounded-lg bg-slate-50 object-contain" %>
+    <% elsif @model.model_file.attached? %>
+      <%= image_tag thumbnail_admin_printable_model_path(@model), alt: @model.name, class: "mb-6 max-h-80 w-full rounded-lg bg-slate-50 object-contain" %>
+    <% else %>
+      <div class="mb-6 rounded-lg bg-slate-50 px-5 py-10 text-center"><%= admin_icon(:models, classes: "mx-auto h-12 w-12 text-slate-300") %><p class="mt-3 font-medium text-slate-700">No model file</p><p class="admin-muted mt-2">Upload a model file before printing this design again.</p></div>
+    <% end %>
     <h2>Model file</h2>
-    <% if @model.model_file.attached? %><%= render "admin/shared/model_files", files: [@model.model_file] %><% else %><p class="admin-muted">No model file is attached.</p><% end %>
+    <% if @model.model_file.attached? %><%= render "admin/shared/model_files", files: [@model.model_file] %><% elsif uploaded_preview %><p class="admin-muted">No model file is attached. Upload a model file before printing this design again.</p><% end %>
   </section>
   <section class="admin-card">
     <h2>Printing notes</h2>

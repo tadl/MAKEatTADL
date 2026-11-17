@@ -73,6 +73,15 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
       category: Category.find_by!(name: "Assistive"), weight_grams: 24,
       notes: "Synthetic example for reviewing grip shape. Confirm dimensions before preparing a print.")
     second_model.model_file.attach(io: StringIO.new(SYNTHETIC_STL), filename: "example-page-turner.stl", content_type: "model/stl")
+    legacy_category = Category.create!(name: "Patron", position: 99)
+    legacy_model = PrintableModel.create!(name: "Workshop hook", code: "example-workshop-hook",
+      category: legacy_category, weight_grams: 14, notes: "Synthetic staff-only model for reviewing legacy library collections.")
+    legacy_model.model_file.attach(io: StringIO.new(SYNTHETIC_STL), filename: "example-workshop-hook.stl", content_type: "model/stl")
+    PrintableModel.create!(name: "Missing model file", code: "example-missing-file",
+      category: Category.find_by!(name: "Staff"), notes: "Synthetic catalog entry awaiting its actual model file.")
+    photo_only_model = PrintableModel.create!(name: "Photo-only model", code: "example-photo-only-model",
+      category: Category.find_by!(name: "Staff"), notes: "Synthetic legacy entry with a supplied photo and no model file.")
+    photo_only_model.preview_image.attach(@model.preview_image.blob)
 
     @job = create_print_job(patron: @patrons.first, status_code: "information_requested",
       attrs: { pickup_location: @location.code, printable_model: @model, filament_color: "blue",
@@ -124,8 +133,11 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
 
     export_attachment(@model.model_file, "synthetic-model.stl", SYNTHETIC_STL)
     export_attachment(second_model.model_file, "synthetic-model.stl", SYNTHETIC_STL)
+    export_attachment(legacy_model.model_file, "synthetic-model.stl", SYNTHETIC_STL)
     export_attachment(@job.model_files.first, "synthetic-model.stl", SYNTHETIC_STL)
     export_attachment(@model.preview_image, "synthetic-preview.png", SYNTHETIC_PNG)
+    export_attachment(photo_only_model.preview_image, "synthetic-preview.png", SYNTHETIC_PNG)
+    [second_model, legacy_model].each { |model| export_thumbnail(model, "synthetic-thumbnail.svg") }
     File.write(File.join(@directory, "pages.json"), JSON.pretty_generate(@pages))
 
     # Opening a conversation marks its reply read, as in the real workspace.
@@ -166,5 +178,15 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     path = Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true)
     @pages[path] = filename
     File.binwrite(File.join(@directory, filename), content)
+  end
+
+  def export_thumbnail(model, filename)
+    path = thumbnail_admin_printable_model_path(model)
+    get path
+    assert_response :success
+    assert_equal "image/svg+xml", response.media_type
+    assert_includes response.body, "<polygon", "The fixture thumbnail must render the actual synthetic mesh."
+    @pages[path] = filename
+    File.write(File.join(@directory, filename), response.body)
   end
 end

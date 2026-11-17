@@ -9,5 +9,6 @@
       <div class="admin-field"><%= f.label :model_files, "STL or 3MF files", class: "admin-label" %><%= f.file_field :model_files, multiple: true, required: true, accept: ".stl,.3mf", class: "admin-input" %></div>
       <%= f.submit "Attach files", class: "admin-btn admin-btn-primary" %>
     <% end %>
+    <% if can?(:create, PrintableModel) %><div class="mt-6 border-t border-slate-100 pt-5"><h2 class="mb-2 text-lg font-semibold">Save to model library</h2><p class="admin-muted text-sm">Choose Save to model library beside a file to keep the design and useful printing settings for reuse. The original job keeps its file. You can review the library collection and printing notes before saving.</p></div><% end %>
   </section>
 </div>

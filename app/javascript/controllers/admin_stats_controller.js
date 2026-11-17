@@ -16,8 +16,8 @@ export default class extends Controller {
       if (!window.Chart) throw new Error("Chart.js did not initialize")
 
       const data = this.dataValue
-      this.charts.push(this.lineChart(this.printsTarget, data.labels, data.prints, "Prints", "#0f766e"))
-      this.charts.push(this.lineChart(this.filamentTarget, data.labels, data.filament, "Filament (g)", "#0284c7"))
+      this.charts.push(this.lineChart(this.printsTarget, data.labels, data.prints, "Prints", "#49688e"))
+      this.charts.push(this.lineChart(this.filamentTarget, data.labels, data.filament, "Filament (g)", "#07846c"))
       this.charts.push(new window.Chart(this.colorsTarget, {
         type: "doughnut",
         data: {

@@ -3,7 +3,7 @@
   <section class="admin-card"><h2 class="mb-5 text-lg font-semibold">Request</h2><div class="grid gap-5 sm:grid-cols-2">
     <% if @job.new_record? %>
       <%= f.hidden_field :type %>
-      <% if @selected_model %><%= f.hidden_field :printable_model_id %><p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900 sm:col-span-2">Using library model: <strong><%= @selected_model.name %></strong>. Its saved model file will be attached to the new job.</p><% end %>
+      <% if @selected_model %><%= f.hidden_field :printable_model_id %><p class="rounded-lg bg-brand-50 p-3 text-sm text-brand-800 sm:col-span-2">Using library model: <strong><%= @selected_model.name %></strong>. Its saved model file will be attached to the new job.</p><% end %>
       <div class="admin-field sm:col-span-2"><%= f.label :patron_id, "Patron", class: "admin-label" %><%= f.select :patron_id, @patrons.map { |patron| ["#{patron.name.presence || 'Unnamed patron'} — #{patron.email}", patron.id] }, { include_blank: "Choose a patron" }, class: "admin-input", required: true %><p class="admin-muted mt-1 text-sm">Create a patron in the Patrons section first if needed.</p></div>
     <% else %>
       <div><span class="admin-label">Patron</span><p class="mt-2"><%= @job.patron.name.presence || @job.patron.email %> <span class="admin-muted">(<%= @job.patron.email %>)</span></p></div>
@@ -40,7 +40,7 @@
   <% else %>
     <section class="admin-card"><h2 class="mb-5 text-lg font-semibold">Scan details</h2><div class="space-y-5">
       <label class="flex items-center gap-3"><%= f.check_box :spray_ok, class: "rounded border-slate-300" %><span>Patron permits scanning spray or powder</span></label>
-      <div class="admin-field"><%= f.label :scan_image, "Reference photo", class: "admin-label" %><% if @job.scan_image.attached? %><p class="mb-2 text-sm"><%= link_to @job.scan_image.filename, rails_blob_path(@job.scan_image, disposition: "attachment"), class: "text-blue-700 hover:underline" %></p><% end %><%= f.file_field :scan_image, accept: ".png,.jpg,.jpeg,.heic,.heif", class: "admin-input" %><p class="admin-muted mt-1 text-sm">PNG, JPEG, or HEIC. A new upload replaces the existing photo.</p></div>
+      <div class="admin-field"><%= f.label :scan_image, "Reference photo", class: "admin-label" %><% if @job.scan_image.attached? %><p class="mb-2 text-sm"><%= link_to @job.scan_image.filename, rails_blob_path(@job.scan_image, disposition: "attachment"), class: "text-brand-700 hover:underline" %></p><% end %><%= f.file_field :scan_image, accept: ".png,.jpg,.jpeg,.heic,.heif", class: "admin-input" %><p class="admin-muted mt-1 text-sm">PNG, JPEG, or HEIC. A new upload replaces the existing photo.</p></div>
     </div></section>
   <% end %>
 

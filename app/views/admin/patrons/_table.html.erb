@@ -15,7 +15,7 @@
           <% if selectable %>
             <td><%= check_box_tag "ids[]", patron.id, false, aria: { label: "Select #{patron.name.presence || patron.email}" } %></td>
           <% end %>
-          <td><%= link_to patron.name.presence || "Unnamed patron", admin_patron_path(patron), class: "font-medium text-teal-700 hover:underline" %></td>
+          <td><%= link_to patron.name.presence || "Unnamed patron", admin_patron_path(patron), class: "font-medium text-brand-700 hover:underline" %></td>
           <td><%= patron.email %></td>
           <td><%= @job_counts.fetch(patron.id, 0) %></td>
           <td><%= link_to "View", admin_patron_path(patron), class: "admin-btn" %></td>

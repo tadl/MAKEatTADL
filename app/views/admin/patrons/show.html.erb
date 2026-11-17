@@ -24,7 +24,7 @@
         <tbody>
           <% @jobs.each do |job| %>
             <tr>
-              <td><%= link_to "##{job.id}", admin_job_path(job), class: "font-medium text-teal-700 hover:underline" %></td>
+              <td><%= link_to "##{job.id}", admin_job_path(job), class: "font-medium text-brand-700 hover:underline" %></td>
               <td><%= job.is_a?(ScanJob) ? "Scan" : "Print" %></td>
               <td><%= job.category.name %></td>
               <td><%= job.status.name %></td>

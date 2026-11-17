@@ -69,6 +69,7 @@ gem 'omniauth-rails_csrf_protection'
 # Tailwind builds locally through its bundled CLI; no Node runtime is required.
 gem 'tailwindcss-rails', '~> 4.0'
 gem 'csv', '~> 3.3'
+gem 'rubyzip', '~> 3.0', require: 'zip'
 
 # Authorization for the staff workspace
 gem 'cancancan'

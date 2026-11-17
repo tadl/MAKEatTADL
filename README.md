@@ -153,6 +153,10 @@ Visit [the public site](http://localhost:3000) or
 [admin development](docs/admin-development.md) for branch iteration, synthetic
 previews, and the scope of the first port.
 
+Populate a local development database with 300 varied synthetic jobs using
+`bin/rails demo:seed`. See [demo data](docs/demo-data.md) for reruns, counts,
+and using a supplied STL throughout the test library.
+
 ---
 
 ## Usage

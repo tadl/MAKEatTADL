@@ -37,6 +37,7 @@ Rails.application.routes.draw do
       member { match :merge, via: [:get, :post] }
     end
     resources :printable_models, path: 'models' do
+      get :thumbnail, on: :member, to: 'model_thumbnails#show'
       collection do
         get :export
         post :bulk_destroy

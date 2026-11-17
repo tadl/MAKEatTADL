@@ -62,6 +62,31 @@ class AdminFilesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "javascript:alert(1)//https://example.org/model"
   end
 
+  test "job overview exposes library saving to admins without file deletion controls" do
+    job = create_print_job
+    job.model_files.attach(io: StringIO.new("synthetic saved model"),
+      filename: "part &copy; <img src=x onerror=alert(1)>.stl", content_type: "model/stl")
+    file = job.model_files.first
+    save_path = new_admin_printable_model_path(source_job_id: job.id, attachment_id: file.id)
+
+    get admin_job_path(job)
+    assert_response :success
+    assert_select "a[href='#{save_path}']", count: 0
+
+    StaffUser.find_by!(email: "files@example.com").update!(admin: true)
+    get admin_job_path(job)
+    assert_response :success
+    assert_select "a[href='#{save_path}']", text: "Save to model library"
+    assert_select "form[action='#{file_admin_job_path(job, file_id: file.id)}']", count: 0
+    assert_select "img[onerror]", count: 0
+    assert_select "a[href='#{rails_blob_path(file)}']", text: file.filename.to_s
+
+    get files_admin_job_path(job)
+    assert_response :success
+    assert_select "a[href='#{save_path}']", text: "Save to model library"
+    assert_select "form[action='#{file_admin_job_path(job, file_id: file.id)}']", count: 1
+  end
+
   test "catalog model previews and edit links preserve literal filenames" do
     StaffUser.find_by!(email: "files@example.com").update!(admin: true)
     model = PrintableModel.create!(name: "Catalog model", code: "catalog_model",

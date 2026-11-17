@@ -52,6 +52,17 @@ layout, admin helpers, and Stimulus controllers. Keep complete utility class
 names in scanned sources. The gem includes the Tailwind CLI, so these builds
 do not require Node or a JavaScript package installation.
 
+The staff palette follows the TADLPhone TADL theme and
+[TADL's website theme](https://www.tadl.org/themes/custom/website_theme/css/style?ton0n3):
+primary blue `#49688e`, strong/navy `#0b2f57`, and teal accent `#07846c`.
+The header and body use the shared `tadl-header-bg.jpg` and
+`tadl-content-bg.jpg` assets. Controls and text sit on solid readable panels.
+Development resolves current assets from the asset environment so a previous
+QA precompile cannot hide Tailwind watcher updates.
+
+To populate a local development database with representative jobs, files,
+conversations, and locations, see [synthetic demo data](demo-data.md).
+
 The public stylesheet and Bootstrap are separate from the staff layout. Avoid
 loading both CSS frameworks into the same page. Normal Rails asset
 precompilation also builds Tailwind.
@@ -149,6 +160,22 @@ containing several related files, explicit file revisions, searchable tags,
 printer/material profiles, and richer reprint defaults need a later design
 with the specialist. Keep the library record and each individual print request
 as separate concepts when adding those features.
+
+Library collections are **Staff library**, **Assistive**, and **Fidget**. New
+entries and files saved from jobs default to Staff library. Assistive and Fidget
+are explicit public choices because those entries also appear on the public
+request forms. Existing catalog entries backed by Patron or another nonpublic
+job category display and filter as Staff library; their stored category remains
+unchanged until a collection is explicitly selected. Duplicate job categories
+are not merged or deleted by this interface.
+
+Saving a job file pre-fills curated printing settings, source-run material totals,
+per-copy usage, and a rounded default weight per copy. It does not copy patron
+identity, contact information, request notes, conversation messages, or the job's
+URL into printing notes. Staff can review and edit those notes before saving.
+Cards and model details use an uploaded preview first, then a generated preview
+of the attached model. Entries without an actual model file say **No model file**
+and cannot start a reprint.
 
 ## Before accepting the branch
 

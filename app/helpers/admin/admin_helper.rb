@@ -38,7 +38,7 @@ module Admin::AdminHelper
     color = case status&.code
     when "pending", "information_requested" then "bg-amber-50 text-amber-800"
     when "approved", "in_progress", "response_received" then "bg-sky-50 text-sky-800"
-    when "ready_for_pickup" then "bg-brand-50 text-brand-800"
+    when "ready_for_pickup" then "bg-accent-50 text-accent-700"
     else "bg-slate-100 text-slate-600"
     end
     tag.span(status&.name || "Unknown", class: "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium #{color}")

@@ -17,7 +17,7 @@
          else
            "active"
          end %>
-      <%= link_to admin_jobs_path(status_id: status.id, scope: scope), class: "admin-card p-4 transition hover:border-teal-500 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600" do %>
+      <%= link_to admin_jobs_path(status_id: status.id, scope: scope), class: "admin-card p-4 transition hover:border-brand-600 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" do %>
         <span class="block text-sm font-medium text-slate-600"><%= status.name %></span>
         <span class="block mt-3 text-3xl font-semibold tabular-nums text-slate-950"><%= number_with_delimiter(@dashboard.job_counts.fetch(status.id, 0)) %></span>
       <% end %>
@@ -60,7 +60,7 @@
           <li>
             <%= link_to conversation_admin_job_path(job), class: "flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50" do %>
               <span><span class="font-medium">Job #<%= job.id %></span><span class="admin-muted ml-2"><%= job.patron.name.presence || job.patron.email %></span></span>
-              <span class="admin-badge bg-teal-100 text-teal-900"><%= count %><span class="sr-only"> unread mentions</span></span>
+              <span class="admin-badge bg-accent-50 text-accent-700"><%= count %><span class="sr-only"> unread mentions</span></span>
             <% end %>
           </li>
         <% end %>
@@ -83,7 +83,7 @@
         <tbody>
           <% @dashboard.ready_jobs.each do |job| %>
             <tr>
-              <td><%= link_to "##{job.id}", conversation_admin_job_path(job), class: "font-medium text-teal-800 hover:underline" %></td>
+              <td><%= link_to "##{job.id}", conversation_admin_job_path(job), class: "font-medium text-brand-700 hover:underline" %></td>
               <td><%= job.patron.name.presence || job.patron.email %></td>
               <td><%= @dashboard.pickup_location_names[job.pickup_location] || job.pickup_location %></td>
               <td class="whitespace-nowrap"><%= job.completion_date&.strftime("%b %-d, %Y") || "—" %></td>
@@ -92,7 +92,7 @@
                 <% if can?(:picked_up, job) %>
                   <%= button_to "Mark picked up", picked_up_admin_job_path(job), method: :post, class: "admin-btn admin-btn-secondary whitespace-nowrap", form: { data: { turbo_confirm: "Mark job ##{job.id} as picked up? This sets today’s pickup date and archives the job." } } %>
                 <% else %>
-                  <%= link_to "View job", admin_job_path(job), class: "font-medium text-teal-800 hover:underline whitespace-nowrap" %>
+                  <%= link_to "View job", admin_job_path(job), class: "font-medium text-brand-700 hover:underline whitespace-nowrap" %>
                 <% end %>
               </td>
             </tr>
