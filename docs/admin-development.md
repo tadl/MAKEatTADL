@@ -144,7 +144,7 @@ Run meaningful authorization and workflow integration tests, plus the existing
 model and service tests, using the local test database:
 
 ```sh
-RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test RBENV_VERSION=3.4.12 rbenv exec bundle exec rails test
+RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test APP_URL=http://example.test RBENV_VERSION=3.4.12 rbenv exec bundle exec rails test
 ```
 
 The browser tests have a separate, locked npm development dependency. With
@@ -152,7 +152,7 @@ Node 24, Google Chrome, and the repository's Ruby selected on `PATH`:
 
 ```sh
 npm ci --ignore-scripts --prefix test/browser
-RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test npm test --prefix test/browser
+RAILS_ENV=test DATABASE_URL=postgresql:///make_at_tadl_test APP_URL=http://example.test npm test --prefix test/browser
 ```
 
 The npm command runs the layout and chart regressions sequentially. The chart
@@ -239,3 +239,42 @@ and cannot start a reprint.
   any rules. Production scheduling and delivery require separate live validation.
 - Record remaining UX decisions and verification limits. Merge and deployment
   remain separate steps.
+
+## Coordinator design topics
+
+The following are proposals for discussion; the current roles and ongoing-job
+workflow are unchanged.
+
+Separate an **in-house plan** from its **production entries**. A plan could be a
+dated program target, recurring accessibility stock, or work to use spare printer
+capacity. Keep these plans in a dedicated backlog outside the active patron-job
+queue. Record each batch's date, usable quantity, printer, operator, and relevant
+material use. One request for 120 bookmarks can then accumulate 30 on Monday and
+20 on Tuesday, with 70 remaining and accurate daily production statistics.
+
+The current Ongoing status suppresses completion automations, and reports group
+the entire job quantity under one completion date. It cannot represent repeated
+daily output reliably. Requested quantity, produced quantity, and stock on hand
+need distinct meanings; lifetime production does not describe remaining stock.
+
+A staff-facing catalog could offer **Request this model**, with an internal or
+on-behalf-of-a-patron request flow. Show curated model information and previews;
+the existing operational library detail also includes patron print history and
+should not become the general staff shopping view unchanged.
+Use a restricted request form and record the submitting staff member separately
+from the patron. Operational status, printer assignment, and pricing belong to
+the maker workflow and its server-side rules.
+
+| Capability | General staff | Maker | Administrator |
+| --- | --- | --- | --- |
+| Browse staff catalog and submit requests | Yes | Yes | Yes |
+| Track their requests | Yes | Yes | Yes |
+| Operate the queue and record production | No | Current operational staff access | Yes |
+| Manage roles and configuration | No | No | Yes |
+| Curate and publish catalog entries | No | Decide with coordinator | Yes |
+
+Before implementing, decide deadline/priority ordering, stock targets and
+distribution tracking, successful versus failed production counts, catalog
+curation rights, pickup permissions, and contact/notification rules for patron
+requests entered by staff. Preserve existing operators' access deliberately when
+introducing a Maker permission.
