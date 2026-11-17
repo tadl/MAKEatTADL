@@ -91,7 +91,8 @@ const { chromium } = require('playwright');
     }
 
     const paginatedFiles = new Set(['jobs.html', 'jobs-page-2.html', 'jobs-middle-page.html', 'jobs-last-page.html',
-      'jobs-50.html', 'jobs-100.html', 'patrons.html', 'patron.html', 'models.html', 'printers.html', 'locations.html', 'activity.html']);
+      'jobs-50.html', 'jobs-100.html', 'patron.html', 'activity.html']);
+    const smallListFiles = new Set(['patrons.html', 'models.html', 'printers.html', 'locations.html']);
 
     async function assertViewportDialog() {
       const dimensions = await dialog.evaluate(element => {
@@ -114,6 +115,10 @@ const { chromium } = require('playwright');
       assert.equal(await page.locator('link[href*="rails_admin"],script[src*="rails_admin"]').count(), 0);
       assert.equal(await page.locator('link[rel="stylesheet"][href*="bootstrap"]').count(), 0);
       assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).fontFamily.includes('system-ui')), true);
+      if (smallListFiles.has(name)) {
+        assert.equal(await page.getByRole('navigation', { name: /^Pagination (top|bottom)$/ }).count(), 0, `${name}: small lists have no pagination UI.`);
+        assert.equal(await page.locator('select[name="per_page"]').count(), 0, `${name}: small lists have no page-size selector.`);
+      }
       if (paginatedFiles.has(name)) {
         const perPage = new URL(url, origin).searchParams.get('per_page') || '25';
         const selectIds = [];

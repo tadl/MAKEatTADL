@@ -1,12 +1,9 @@
+<% if @total_count > Admin::BaseController::PAGE_SIZES.first %>
 <% position = local_assigns.fetch(:position, "bottom") %>
 <nav aria-label="Pagination <%= position %>" class="my-5 flex flex-wrap items-center justify-between gap-4">
   <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
     <p class="admin-muted text-sm">
-      <% if @total_count.positive? %>
-        Showing <%= number_with_delimiter((@page - 1) * @per_page + 1) %>–<%= number_with_delimiter([@page * @per_page, @total_count].min) %> of <%= number_with_delimiter(@total_count) %>
-      <% else %>
-        No results
-      <% end %>
+      Showing <%= number_with_delimiter((@page - 1) * @per_page + 1) %>–<%= number_with_delimiter([@page * @per_page, @total_count].min) %> of <%= number_with_delimiter(@total_count) %>
     </p>
     <%= form_with url: request.path, method: :get, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
       <%= admin_pagination_hidden_fields %>
@@ -15,6 +12,7 @@
       <noscript><button type="submit" class="admin-btn admin-btn-small">Apply</button></noscript>
     <% end %>
   </div>
+  <% if @total_pages > 1 %>
   <div class="flex flex-wrap items-center gap-1">
     <% if @page > 1 %>
       <%= link_to "< Prev", admin_pagination_path(@page - 1), rel: "prev", class: "admin-btn px-3" %>
@@ -36,4 +34,6 @@
       <span class="admin-btn pointer-events-none px-3 text-slate-400" aria-disabled="true">Next &gt;</span>
     <% end %>
   </div>
+  <% end %>
 </nav>
+<% end %>

@@ -97,14 +97,38 @@ class AdminPaginationTest < ActionDispatch::IntegrationTest
     assert_select "nav script", count: 0
   end
 
-  test "patrons model library settings and patron history use the same controls" do
-    [admin_patrons_path, admin_printable_models_path, admin_resources_path(resource: "statuses"), admin_patron_path(@patron)].each do |path|
+  test "small lists omit pagination while long patron history retains it" do
+    [admin_patrons_path, admin_printable_models_path, admin_resources_path(resource: "statuses")].each do |path|
       get path, params: { per_page: 50 }
       assert_response :success
-      assert_select 'nav[aria-label="Pagination top"]', count: 1
-      assert_select 'nav[aria-label="Pagination bottom"]', count: 1
-      assert_select 'nav select[name="per_page"] option[value="50"][selected]', count: 2
+      assert_select 'nav[aria-label^="Pagination"]', count: 0
     end
+    get admin_patron_path(@patron), params: { per_page: 50 }
+    assert_response :success
+    assert_select 'nav[aria-label="Pagination top"]', count: 1
+    assert_select 'nav[aria-label="Pagination bottom"]', count: 1
+    assert_select 'nav select[name="per_page"] option[value="50"][selected]', count: 2
+  end
+
+  test "pagination begins above 25 results and omits page buttons when a larger size fits" do
+    status = Status.find_by!(code: "approved")
+    Job.where(id: @jobs.first(25).map(&:id)).update_all(status_id: status.id)
+
+    get admin_jobs_path, params: { status_id: status.id }
+    assert_response :success
+    assert_select 'nav[aria-label^="Pagination"]', count: 0
+
+    @jobs[25].update!(status: status)
+    get admin_jobs_path, params: { status_id: status.id }
+    assert_response :success
+    assert_select 'nav a[rel="next"]', count: 2
+
+    get admin_jobs_path, params: { status_id: status.id, per_page: 50 }
+    assert_response :success
+    assert_equal 26, displayed_job_ids.size
+    assert_select 'nav select[name="per_page"] option[value="50"][selected]', count: 2
+    assert_select 'nav[aria-label^="Pagination"] a', count: 0
+    assert_select 'nav[aria-label^="Pagination"] [aria-disabled]', count: 0
   end
 
   private

@@ -26,9 +26,11 @@ text. Preserve keyboard navigation, visible focus, labels, narrow layouts, and
 the readable data behind charts.
 
 Paginated staff lists share numbered controls above and below their results,
-including patron job history. The default page size is 25, with 50 and 100 also
-available. Changing the size starts at page one and keeps the current filters
-and sorting. The preference stays in the URL so filtered links can be shared.
+including patron job history. Lists with 25 or fewer results omit pagination
+entirely. The default page size is 25, with 50 and 100 also available. Larger
+lists that fit the selected size retain the size selector without page buttons.
+Changing the size starts at page one and keeps the current filters and sorting.
+The preference stays in the URL so filtered links can be shared.
 Bulk actions appear only while items on the current page are selected. Select
 all applies to the visible rows/cards, and its mixed state reflects partial
 selection. Server-side authorization remains independent of those controls.
