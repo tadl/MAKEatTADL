@@ -17,6 +17,9 @@ This is a list of confirmed interface gaps, not a claim of complete parity.
   `$0.00`. Both Overview and job-page buttons use the same helper.
 - Successful pickup returns to Overview, preserving consecutive handoffs from
   the ready-for-pickup list.
+- Lists now have numbered pagination above and below results, with a 25/50/100
+  page-size choice. Select all applies to the visible page; bulk actions remain
+  hidden until there is a selection.
 
 The previous pickup details and redirect are visible in
 `origin/main:app/views/rails_admin/main/dashboard.html.erb:114-178` and
@@ -32,7 +35,7 @@ conversion complete. They are not implemented by this review.
 | Job exports | Selected-row exports and field/association/CSV-option selection are absent. The fixed safe export also omits useful operational fields such as URL, filament color, duration, request origin, and starting/finishing staff/timestamps. | Old RailsAdmin export action/template; current `app/controllers/admin/jobs_controller.rb`, `export`. |
 | Other export menus | Patron, model, and settings lists visibly offer CSV only, though their JSON/XML endpoints remain available. Job list still offers all three formats. | Current list templates and export controller actions. |
 | Filters and old bookmarks | Exact patron/job-ID filters and generic operators are missing. Legacy job links translate query/scope/status, silently losing other old filters. | Old Job list configuration/generic index; current `JobsController#filtered_jobs` and `LegacyController`. |
-| List controls | Select all, scope counts, numbered page links, and the old limited Show all control are missing. Individual selection and previous/next pagination remain. | Old `app/views/rails_admin/main/index.html.erb`; current list and pagination templates. |
+| List controls | Scope counts and the old limited Show all control are missing. Select all and numbered pagination have been restored, with explicit 25/50/100 page sizes. | Old `app/views/rails_admin/main/index.html.erb`; current list and shared pagination templates. |
 | Patron navigation | Job rows and request details show patron names without the old direct patron-record links. Patron records and job history still exist. | Old association rendering; current `admin/jobs/index` and `admin/jobs/show`. |
 | Audit history | The patron-specific history link/view, exact audited-record filter, and actor/target record links are missing. Global read-only activity inspection remains. | Old RailsAdmin config lines 345-360 and 515-522; current patron show and generic audit resource. |
 | Merge context | Losing/winning patron job counts are absent from the merge screen. The transactional merge itself remains. | Old `merge_patron.html.erb:16,30`; current `admin/patrons/merge`. |

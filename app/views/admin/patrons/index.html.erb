@@ -12,28 +12,32 @@
 
 <div class="admin-card mb-6">
   <%= form_with url: admin_patrons_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
+    <%= hidden_field_tag :per_page, @per_page %>
     <div class="min-w-48 flex-1">
       <%= form.label :q, "Search by name or email", class: "admin-label" %>
       <%= form.search_field :q, value: @query, maxlength: 200, class: "admin-input" %>
     </div>
     <%= form.submit "Search", class: "admin-btn admin-btn-primary" %>
-    <% if @query.present? %><%= link_to "Clear", admin_patrons_path, class: "admin-btn" %><% end %>
+    <% if @query.present? %><%= link_to "Clear", admin_patrons_path(per_page: @per_page), class: "admin-btn" %><% end %>
   <% end %>
 </div>
 
 <div class="admin-card">
   <p class="admin-muted mb-4"><%= number_with_delimiter(@total_count) %> <%= "patron".pluralize(@total_count) %></p>
+  <%= render "admin/shared/pagination", position: "top" %>
+  <div data-controller="bulk-selection" data-action="change->bulk-selection#update">
   <% if @patrons.any? %>
     <% if can?(:destroy, Patron) %>
       <%= form_with url: bulk_destroy_admin_patrons_path, method: :post, data: { turbo_confirm: "Delete the selected patrons and all their jobs? This cannot be undone." } do |form| %>
         <%= render "table", selectable: true %>
-        <div class="mt-4"><%= form.submit "Delete selected", class: "admin-btn admin-btn-danger" %></div>
+        <div class="admin-actions mt-4" data-bulk-selection-target="actions" hidden><span class="admin-muted" data-bulk-selection-target="count">0 selected</span><%= form.submit "Delete selected", class: "admin-btn admin-btn-danger" %></div>
       <% end %>
     <% else %>
       <%= render "table", selectable: false %>
     <% end %>
-    <%= render "pagination" %>
   <% else %>
     <p class="py-8 text-center admin-muted">No patrons match this search.</p>
   <% end %>
+  </div>
+  <%= render "admin/shared/pagination", position: "bottom" %>
 </div>

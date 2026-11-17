@@ -6,12 +6,16 @@
   </div>
 </div>
 <%= form_with url: admin_printable_models_path, method: :get, class: "mb-6 flex flex-wrap items-end gap-3" do %>
+  <%= hidden_field_tag :per_page, @per_page %>
   <div class="min-w-48 flex-1"><%= label_tag :q, "Search models", class: "admin-label" %><%= search_field_tag :q, params[:q], placeholder: "Search names, codes, and notes…", class: "admin-input" %></div>
   <div class="min-w-40"><%= label_tag :collection, "Collection", class: "admin-label" %><%= select_tag :collection, options_for_select(library_collection_filters, params[:collection]), include_blank: "All collections", class: "admin-input" %></div>
   <%= submit_tag "Search", class: "admin-btn" %>
 <% end %>
+<%= render "admin/shared/pagination", position: "top" %>
+<div data-controller="bulk-selection" data-action="change->bulk-selection#update">
 <% if @models.any? %>
   <%= form_with url: bulk_destroy_admin_printable_models_path, method: :post, data: { turbo_confirm: "Delete the selected models? This cannot be undone." } do %>
+    <% if can?(:destroy, PrintableModel) %><label class="mb-4 flex w-fit items-center gap-2 text-sm font-medium"><%= tag.input type: "checkbox", class: "rounded border-slate-300", data: { bulk_selection_target: "all", action: "change->bulk-selection#toggleAll" } %>Select all visible models</label><% end %>
     <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       <% @models.each do |model| %>
         <% uploaded_preview = model.preview_image.attached? && model.preview_image.content_type.in?(%w[image/jpeg image/png image/webp]) %>
@@ -26,7 +30,7 @@
             <% end %>
           <% end %>
           <div class="p-5">
-            <div class="mb-2 flex items-center justify-between gap-3"><span class="admin-badge"><%= library_collection_label(model.category) %></span><% if can?(:destroy, model) %><%= check_box_tag "ids[]", model.id, false, "aria-label": "Select #{model.name}" %><% end %></div>
+            <div class="mb-2 flex items-center justify-between gap-3"><span class="admin-badge"><%= library_collection_label(model.category) %></span><% if can?(:destroy, model) %><%= check_box_tag "ids[]", model.id, false, "aria-label": "Select #{model.name}", data: { bulk_selection_target: "item" } %><% end %></div>
             <h2 class="font-semibold tracking-tight text-slate-950"><%= link_to model.name, admin_printable_model_path(model), class: "hover:text-brand-700" %></h2>
             <p class="mt-1 text-xs text-slate-500"><%= model.code %><%= " · #{model.weight_grams} g per copy" if model.weight_grams.present? %></p>
             <% if uploaded_preview && !model.model_file.attached? %><p class="mt-2 text-sm text-slate-500">No model file</p><% end %>
@@ -35,9 +39,10 @@
         </article>
       <% end %>
     </div>
-    <% if can?(:destroy, PrintableModel) %><%= submit_tag "Delete selected", class: "admin-btn admin-btn-danger mt-5" %><% end %>
+    <% if can?(:destroy, PrintableModel) %><div class="admin-actions mt-5" data-bulk-selection-target="actions" hidden><span class="admin-muted" data-bulk-selection-target="count">0 selected</span><%= submit_tag "Delete selected", class: "admin-btn admin-btn-danger" %></div><% end %>
   <% end %>
 <% else %>
   <div class="admin-card admin-empty"><%= admin_icon(:models, classes: "mx-auto mb-4 h-12 w-12 text-slate-300") %><p class="font-medium text-slate-700">No models found</p><p class="mt-2">Add a model or save a file from an existing job to start your library.</p></div>
 <% end %>
-<%= render "admin/shared/pagination" %>
+</div>
+<%= render "admin/shared/pagination", position: "bottom" %>

@@ -23,6 +23,14 @@ const { chromium } = require('playwright');
     });
     assert.equal(rendered.status, 0, rendered.stdout + rendered.stderr);
     const pages = JSON.parse(fs.readFileSync(path.join(directory, 'pages.json'), 'utf8'));
+    const fixtureKey = value => {
+      const url = new URL(value, 'http://example.test');
+      if (url.searchParams.get('page') === '1') url.searchParams.delete('page');
+      if (url.searchParams.get('per_page') === '25') url.searchParams.delete('per_page');
+      url.searchParams.sort();
+      return url.pathname + url.search;
+    };
+    const pageFiles = new Map(Object.entries(pages).map(([url, filename]) => [fixtureKey(url), filename]));
     const thumbnailEntries = Object.entries(pages).filter(([url]) => /\/thumbnail$/.test(url));
     assert.ok(thumbnailEntries.length >= 2, 'Generated library thumbnail responses are exported.');
     for (const [, filename] of thumbnailEntries) {
@@ -45,8 +53,8 @@ const { chromium } = require('playwright');
         const assetRoot = path.join(root, 'public/assets');
         file = path.resolve(assetRoot, '.' + url.pathname.slice('/assets'.length));
         if (!file.startsWith(assetRoot + path.sep)) return res.writeHead(404).end();
-      } else if (pages[url.pathname]) {
-        file = path.join(directory, pages[url.pathname]);
+      } else if (pageFiles.has(fixtureKey(url.href))) {
+        file = path.join(directory, pageFiles.get(fixtureKey(url.href)));
       }
       if (!file || !fs.existsSync(file)) return res.writeHead(404).end();
       const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
@@ -77,6 +85,14 @@ const { chromium } = require('playwright');
       assert.equal(await locator.evaluate(element => element === document.activeElement), true, message);
     }
 
+    async function waitForControllers(identifier) {
+      await page.waitForFunction(name => [...document.querySelectorAll(`[data-controller~="${name}"]`)]
+        .every(element => window.Stimulus?.getControllerForElementAndIdentifier(element, name)), identifier);
+    }
+
+    const paginatedFiles = new Set(['jobs.html', 'jobs-page-2.html', 'jobs-middle-page.html', 'jobs-last-page.html',
+      'jobs-50.html', 'jobs-100.html', 'patrons.html', 'patron.html', 'models.html', 'printers.html', 'locations.html', 'activity.html']);
+
     async function assertViewportDialog() {
       const dimensions = await dialog.evaluate(element => {
         const bounds = element.getBoundingClientRect();
@@ -98,6 +114,24 @@ const { chromium } = require('playwright');
       assert.equal(await page.locator('link[href*="rails_admin"],script[src*="rails_admin"]').count(), 0);
       assert.equal(await page.locator('link[rel="stylesheet"][href*="bootstrap"]').count(), 0);
       assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).fontFamily.includes('system-ui')), true);
+      if (paginatedFiles.has(name)) {
+        const perPage = new URL(url, origin).searchParams.get('per_page') || '25';
+        const selectIds = [];
+        for (const position of ['top', 'bottom']) {
+          const pagination = page.getByRole('navigation', { name: `Pagination ${position}`, exact: true });
+          assert.equal(await pagination.count(), 1, `${name}: ${position} pagination is present.`);
+          const pageSize = pagination.locator('select[name="per_page"]');
+          assert.deepEqual(await pageSize.locator('option').evaluateAll(options => options.map(option => option.value)), ['25', '50', '100']);
+          assert.equal(await pageSize.inputValue(), perPage);
+          selectIds.push(await pageSize.getAttribute('id'));
+          const currentPage = pagination.locator('[aria-current="page"]');
+          assert.equal(await currentPage.count(), 1);
+          assert.equal(await currentPage.getAttribute('aria-disabled'), 'true');
+          assert.equal(await currentPage.evaluate(element => element.tagName), 'SPAN');
+          if (name === 'jobs-middle-page.html') assert.match(await pagination.textContent(), /…/);
+        }
+        assert.ok(selectIds.every(Boolean) && selectIds[0] !== selectIds[1], `${name}: page-size labels have distinct controls.`);
+      }
       for (const requiredSelect of await page.locator('form[data-turbo-confirm] select[required]').all()) {
         if (!await requiredSelect.inputValue()) {
           const value = await requiredSelect.locator('option[value]:not([value=""])').first().getAttribute('value');
@@ -111,6 +145,14 @@ const { chromium } = require('playwright');
           : confirmation;
         // Read-only resource lists have no action to confirm.
         if (await submitter.count() === 0) continue;
+        let selectedBulkItem;
+        if (!await submitter.isVisible()) {
+          await waitForControllers('bulk-selection');
+          selectedBulkItem = page.locator('input[data-bulk-selection-target~="item"]').first();
+          assert.ok(await selectedBulkItem.count(), `${name}: a hidden bulk action has selectable records.`);
+          await selectedBulkItem.check();
+          await submitter.waitFor({ state: 'visible' });
+        }
         const message = await confirmation.getAttribute('data-turbo-confirm');
         const label = await submitter.evaluate(element => element.textContent.trim() || element.value);
         const danger = await submitter.evaluate(element => element.classList.contains('admin-btn-danger'));
@@ -127,6 +169,11 @@ const { chromium } = require('playwright');
         await dialog.waitFor({ state: 'hidden' });
         await assertFocused(submitter, `${name}: cancel returns focus to the triggering control.`);
         assert.equal(mutations.length, before, `${name}: cancelling sends no mutation request.`);
+        if (selectedBulkItem) {
+          assert.equal(await selectedBulkItem.isChecked(), true, `${name}: cancelling preserves the selection.`);
+          await selectedBulkItem.uncheck();
+          await submitter.waitFor({ state: 'hidden' });
+        }
         confirmationCount += 1;
       }
       if (screenshots && ['overview.html', 'jobs.html', 'job.html', 'models.html', 'job-conversation.html'].includes(name)) {
@@ -150,6 +197,79 @@ const { chromium } = require('playwright');
       }
       await page.setViewportSize({ width: 1440, height: 1000 });
     }
+
+    // Selection is local to the rendered page and participates in the real bulk
+    // form, including job checkboxes associated through their form attribute.
+    await page.goto(origin + '/admin/jobs');
+    await waitForControllers('bulk-selection');
+    await waitForControllers('auto-submit');
+    const bulk = page.locator('[data-controller~="bulk-selection"]').first();
+    const items = bulk.locator('input[data-bulk-selection-target~="item"]');
+    const selectAll = bulk.locator('input[data-bulk-selection-target~="all"]').first();
+    const bulkActions = bulk.locator('[data-bulk-selection-target~="actions"]').first();
+    const topPager = page.getByRole('navigation', { name: 'Pagination top', exact: true });
+    const bottomPager = page.getByRole('navigation', { name: 'Pagination bottom', exact: true });
+    assert.equal(await items.count(), 25);
+    assert.equal(await bulkActions.isVisible(), false, 'Bulk actions start hidden.');
+    assert.equal(await topPager.locator('a[rel="prev"]').count(), 0);
+    assert.equal(await topPager.locator('[aria-disabled="true"]').filter({ hasText: /Prev/ }).count(), 1);
+
+    await items.first().check();
+    assert.equal(await bulkActions.isVisible(), true, 'Selecting one row reveals bulk actions.');
+    assert.equal(await selectAll.evaluate(element => element.indeterminate), true);
+    const firstId = await items.first().inputValue();
+    assert.deepEqual(await items.first().evaluate(element => new FormData(element.form).getAll('ids[]')), [firstId]);
+
+    await selectAll.check();
+    assert.equal(await items.evaluateAll(elements => elements.every(element => element.checked)), true);
+    assert.equal(await selectAll.evaluate(element => element.indeterminate), false);
+    assert.equal(await items.first().evaluate(element => new FormData(element.form).getAll('ids[]').length), 25, 'Select all submits only the visible page.');
+    await items.nth(1).uncheck();
+    assert.equal(await selectAll.isChecked(), false);
+    assert.equal(await selectAll.evaluate(element => element.indeterminate), true);
+    await selectAll.check();
+    await selectAll.uncheck();
+    assert.equal(await items.evaluateAll(elements => elements.every(element => !element.checked)), true);
+    assert.equal(await bulkActions.isVisible(), false, 'Clearing the last selection hides bulk actions.');
+
+    await items.first().check();
+    await page.evaluate(() => { window.paginationSentinel = true; });
+    await topPager.locator('a[rel="next"]').click();
+    await page.waitForURL(url => url.pathname === '/admin/jobs' && url.searchParams.get('page') === '2');
+    await page.waitForFunction(() => document.querySelector('nav[aria-label="Pagination top"] [aria-current="page"]').textContent.trim() === '2');
+    await waitForControllers('bulk-selection');
+    assert.equal(await page.evaluate(() => window.paginationSentinel), true, 'Pagination uses Turbo navigation.');
+    assert.equal(await items.count(), 25);
+    assert.equal(await items.evaluateAll(elements => elements.every(element => !element.checked)), true, 'Navigating to another page resets its selection.');
+    assert.equal(await bulkActions.isVisible(), false);
+
+    const lastPagePath = Object.entries(pages).find(([, name]) => name === 'jobs-last-page.html')[0];
+    const lastPageNumber = new URL(lastPagePath, origin).searchParams.get('page');
+    await topPager.getByRole('link', { name: `Page ${lastPageNumber}`, exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get('page') === lastPageNumber);
+    await page.waitForFunction(expected => document.querySelector('nav[aria-label="Pagination top"] [aria-current="page"]').textContent.trim() === expected, lastPageNumber);
+    for (const pagination of [topPager, bottomPager]) {
+      assert.equal(await pagination.locator('a[rel="next"]').count(), 0);
+      assert.equal(await pagination.locator('[aria-disabled="true"]').filter({ hasText: /Next/ }).count(), 1);
+    }
+
+    await waitForControllers('auto-submit');
+    await topPager.locator('select[name="per_page"]').selectOption('50');
+    await page.waitForURL(url => url.pathname === '/admin/jobs' && url.searchParams.get('per_page') === '50');
+    await page.waitForFunction(() => document.querySelectorAll('input[data-bulk-selection-target~="item"]').length === 50);
+    assert.equal(new URL(page.url()).searchParams.get('page') || '1', '1', 'Changing page size resets to the first page.');
+    assert.equal(await bottomPager.locator('select[name="per_page"]').inputValue(), '50');
+    await waitForControllers('bulk-selection');
+    await items.first().check();
+    await waitForControllers('auto-submit');
+    await bottomPager.locator('select[name="per_page"]').selectOption('100');
+    await page.waitForURL(url => url.pathname === '/admin/jobs' && url.searchParams.get('per_page') === '100');
+    await page.waitForFunction(() => document.querySelectorAll('input[data-bulk-selection-target~="item"]').length === 100);
+    await waitForControllers('bulk-selection');
+    assert.equal(await topPager.locator('select[name="per_page"]').inputValue(), '100');
+    assert.equal(await items.evaluateAll(elements => elements.every(element => !element.checked)), true);
+    assert.equal(await bulkActions.isVisible(), false);
+    assert.equal(await page.evaluate(() => window.paginationSentinel), true, 'Page-size changes also preserve Turbo navigation.');
 
     await page.goto(origin + '/admin');
     await page.waitForFunction(() => window.Stimulus && window.Turbo);
@@ -449,8 +569,8 @@ const { chromium } = require('playwright');
     await expectPublicPost('synthetic-validation-retry-token');
     assert.deepEqual(nativeDialogs, [], 'No browser-native confirm or alert dialogs are used.');
     assert.deepEqual(errors, []);
-    assert.ok(confirmationCount >= 12, 'Every exported administrative confirmation surface is exercised.');
-    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, ${confirmationCount} branded confirmations, CAPTCHA token submission/failure/timeouts/late-token and validation retries, clickable rows, thumbnails, Turbo navigation, and live STL controls.`);
+    assert.ok(confirmationCount >= 14, 'Every exported administrative confirmation surface is exercised.');
+    console.log(`Staff layouts passed: ${htmlPages.length} desktop/mobile pages, pagination/page sizes/bulk selection, ${confirmationCount} branded confirmations, CAPTCHA token submission/failure/timeouts/late-token and validation retries, clickable rows, thumbnails, Turbo navigation, and live STL controls.`);
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

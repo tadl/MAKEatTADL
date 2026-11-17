@@ -85,14 +85,17 @@ class AdminPatronsTest < ActionDispatch::IntegrationTest
   end
 
   test "patron pagination is bounded and preserves the search" do
-    21.times { |index| create_patron(name: "Paged Patron #{index}") }
+    26.times { |index| create_patron(name: "Paged Patron #{index}") }
 
     get admin_patrons_path(q: "Paged Patron", page: 2)
 
     assert_response :success
     assert_select "tbody tr", count: 1
-    assert_select "nav[aria-label='Pagination'] a", text: "Previous"
-    assert_select "nav[aria-label='Pagination']", text: /Page 2 of 2/
+    assert_select "nav[aria-label^='Pagination'] a[rel='prev']", text: "< Prev", count: 2
+    assert_select "nav[aria-label^='Pagination'] [aria-current='page']", text: "2", count: 2
+    assert_select "nav[aria-label='Pagination top'] a[rel='prev']" do |links|
+      assert_equal "Paged Patron", Rack::Utils.parse_nested_query(URI.parse(links.first["href"]).query)["q"]
+    end
   end
 
   test "admin can create and delete a patron" do

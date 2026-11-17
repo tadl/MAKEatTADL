@@ -110,10 +110,17 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
     end
     create_scan_job(patron: @patrons.last,
       attrs: { pickup_location: @location.code, notes: "Synthetic scan request: small replacement handle.", spray_ok: true })
+    prepare_pagination_jobs
 
     sign_in_synthetic_staff
     export_page(admin_root_path, "overview.html")
     export_page(admin_jobs_path, "jobs.html")
+    export_page(admin_jobs_path(page: 2, per_page: 25), "jobs-page-2.html")
+    export_page(admin_jobs_path(page: 7, per_page: 25), "jobs-middle-page.html")
+    last_page = (Job.active.count / 25.0).ceil
+    export_page(admin_jobs_path(page: last_page, per_page: 25), "jobs-last-page.html")
+    export_page(admin_jobs_path(per_page: 50), "jobs-50.html")
+    export_page(admin_jobs_path(per_page: 100), "jobs-100.html")
     export_page(admin_job_path(@job), "job.html")
     export_page(admin_job_path(@ready_job), "job-ready.html")
     export_page(edit_admin_job_path(@job), "job-edit.html")
@@ -170,6 +177,27 @@ class AdminBrowserPagesTest < ActionDispatch::IntegrationTest
       get "/auth/test/callback", env: { "omniauth.auth" => auth }
     end
     assert_redirected_to admin_root_path
+  end
+
+  def prepare_pagination_jobs
+    # These rollback-only list snapshots need no transition callbacks, audits,
+    # messages, or mail. Keep conversations valid for subsequent staff browsing.
+    pending_id = Status.find_by!(code: "pending").id
+    patron_category_id = Category.order(:id).find_by!(name: "Patron").id
+    first_received_at = 90.days.ago.change(usec: 0)
+    rows = 400.times.map do |index|
+      received_at = first_received_at + index.minutes
+      { type: "PrintJob", origin: "print", patron_id: @patrons[index % @patrons.size].id,
+        status_id: pending_id, category_id: patron_category_id,
+        pickup_location: @location.code, print_type_code: "fdm", quantity: 1,
+        url: "https://example.org/synthetic-pagination-models/#{index + 1}",
+        notes: "Synthetic pagination example #{index + 1}.", created_at: received_at, updated_at: received_at }
+    end
+    inserted = Job.insert_all!(rows, returning: %w[id created_at updated_at]).to_a
+    Conversation.insert_all!(inserted.map do |job|
+      { job_id: job.fetch("id"), conversation_token: "synthetic-browser-job-#{job.fetch('id')}",
+        created_at: job.fetch("created_at"), updated_at: job.fetch("updated_at") }
+    end)
   end
 
   def export_page(path, filename)

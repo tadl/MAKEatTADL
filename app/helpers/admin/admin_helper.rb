@@ -59,4 +59,27 @@ module Admin::AdminHelper
      "Completed: #{job.completion_date&.strftime('%b %-d, %Y') || 'Not recorded'}",
      price, "", "This sets today’s pickup date and archives the job."].join("\n")
   end
+
+  def admin_pagination_pages(current_page:, total_pages:)
+    pages = ((1..[3, total_pages].min).to_a +
+      ([current_page - 2, 1].max..[current_page + 2, total_pages].min).to_a +
+      ([total_pages - 2, 1].max..total_pages).to_a).uniq.sort
+    pages.each_with_object([]) do |page, result|
+      previous = result.last
+      if previous && page > previous + 1
+        result << (page == previous + 2 ? previous + 1 : nil)
+      end
+      result << page
+    end
+  end
+
+  def admin_pagination_path(page)
+    query = request.query_parameters.merge("page" => page, "per_page" => @per_page)
+    "#{request.path}?#{query.to_query}"
+  end
+
+  def admin_pagination_hidden_fields
+    query = request.query_parameters.except("page", "per_page").to_query
+    safe_join(URI.decode_www_form(query).map { |name, value| hidden_field_tag(name, value, id: nil) })
+  end
 end

@@ -25,6 +25,14 @@ Use direct page headings, clear labels, restrained styling, and minimal eyebrow
 text. Preserve keyboard navigation, visible focus, labels, narrow layouts, and
 the readable data behind charts.
 
+Paginated staff lists share numbered controls above and below their results,
+including patron job history. The default page size is 25, with 50 and 100 also
+available. Changing the size starts at page one and keeps the current filters
+and sorting. The preference stays in the URL so filtered links can be shared.
+Bulk actions appear only while items on the current page are selected. Select
+all applies to the visible rows/cards, and its mixed state reflects partial
+selection. Server-side authorization remains independent of those controls.
+
 ## Local setup and styles
 
 Use the repository's `.ruby-version` and locked bundle. With a local PostgreSQL
@@ -130,16 +138,18 @@ verification needs access to the pinned library CDN, unless the environment
 provides a cache or fixture. The app itself uses importmap rather than an npm
 build.
 
-The layout check renders 19 screens in a transaction using an empty local test
-database. It checks desktop/mobile layouts, library navigation, the reprint
-link, and live STL preview controls. Set `ADMIN_SCREENSHOTS` to a directory
-outside the repository to save synthetic desktop/mobile screenshots.
+The layout check renders staff screens and pagination snapshots in a transaction
+using an empty local test database. It checks desktop/mobile layouts, numbered
+navigation and page sizes, selection-aware actions, confirmations, CAPTCHA
+handling, library navigation, the reprint link, and live STL preview controls.
+Set `ADMIN_SCREENSHOTS` to a directory outside the repository to save synthetic
+desktop/mobile screenshots.
 
 For exports of all those pages, run `test/browser/render_admin_pages.rb` with
 `ADMIN_BROWSER_PAGES` set to a temporary directory. Its `pages.json` maps app
-paths to the exported HTML and synthetic attachments. No application login
-bypass is installed; these are static layout fixtures with test mail/queue
-adapters, and all generated database records roll back.
+URLs, including pagination query strings, to the exported HTML and synthetic
+attachments. No application login bypass is installed; these are static layout
+fixtures with test mail/queue adapters, and all generated database records roll back.
 
 Keep permission checks at the HTTP/controller boundary and test anonymous,
 ordinary staff, and administrator requests. Hidden controls alone do not secure

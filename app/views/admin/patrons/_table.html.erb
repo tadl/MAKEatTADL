@@ -2,7 +2,7 @@
   <table class="admin-table">
     <thead>
       <tr>
-        <% if selectable %><th scope="col"><span class="sr-only">Select</span></th><% end %>
+        <% if selectable %><th scope="col" data-row-link-ignore><%= tag.input type: "checkbox", aria: { label: "Select all visible patrons" }, data: { bulk_selection_target: "all", action: "change->bulk-selection#toggleAll" } %></th><% end %>
         <th scope="col">Name</th>
         <th scope="col">Email</th>
         <th scope="col">Jobs</th>
@@ -13,7 +13,7 @@
       <% @patrons.each do |patron| %>
         <tr>
           <% if selectable %>
-            <td><%= check_box_tag "ids[]", patron.id, false, aria: { label: "Select #{patron.name.presence || patron.email}" } %></td>
+            <td data-row-link-ignore><%= check_box_tag "ids[]", patron.id, false, aria: { label: "Select #{patron.name.presence || patron.email}" }, data: { bulk_selection_target: "item" } %></td>
           <% end %>
           <td><%= link_to patron.name.presence || "Unnamed patron", admin_patron_path(patron), class: "font-medium text-brand-700 hover:underline" %></td>
           <td><%= patron.email %></td>

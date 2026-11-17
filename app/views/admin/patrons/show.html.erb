@@ -17,6 +17,7 @@
 
 <section class="admin-card">
   <h2 class="mb-4 text-lg font-semibold">Job history <span class="admin-muted font-normal">(<%= @total_count %>)</span></h2>
+  <%= render "admin/shared/pagination", position: "top" %>
   <% if @jobs.any? %>
     <div class="overflow-x-auto">
       <table class="admin-table">
@@ -34,10 +35,10 @@
         </tbody>
       </table>
     </div>
-    <%= render "pagination" %>
   <% else %>
     <p class="admin-muted">This patron has no jobs.</p>
   <% end %>
+  <%= render "admin/shared/pagination", position: "bottom" %>
 </section>
 
 <% if can?(:destroy, @patron) %>

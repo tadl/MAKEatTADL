@@ -17,6 +17,7 @@
 <section class="admin-card mb-5" aria-label="Filter jobs">
   <%= form_with url: admin_jobs_path, method: :get, class: "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" do |f| %>
     <%= hidden_field_tag :scope, params[:scope].presence || "active" %>
+    <%= hidden_field_tag :per_page, @per_page %>
     <div class="admin-field sm:col-span-2"><%= f.label :q, "Search jobs", class: "admin-label" %><%= f.search_field :q, value: params[:q], placeholder: "Job number, patron name, email, or model URL", class: "admin-input" %></div>
     <div class="admin-field"><%= f.label :status_id, "Status", class: "admin-label" %><%= f.select :status_id, options_from_collection_for_select(@statuses, :id, :name, params[:status_id]), { include_blank: "All statuses" }, class: "admin-input" %></div>
     <div class="admin-field"><%= f.label :category_id, "Category", class: "admin-label" %><%= f.select :category_id, options_from_collection_for_select(@categories, :id, :name, params[:category_id]), { include_blank: "All categories" }, class: "admin-input" %></div>
@@ -24,19 +25,22 @@
     <div class="admin-field"><%= f.label :pickup_location, "Pickup location", class: "admin-label" %><%= f.select :pickup_location, options_from_collection_for_select(@locations, :code, :name, params[:pickup_location]), { include_blank: "All locations" }, class: "admin-input" %></div>
     <div class="admin-field"><%= f.label :from, "Received from", class: "admin-label" %><%= f.date_field :from, value: params[:from], class: "admin-input" %></div>
     <div class="admin-field"><%= f.label :to, "Received through", class: "admin-label" %><%= f.date_field :to, value: params[:to], class: "admin-input" %></div>
-    <div class="flex flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-4"><%= f.submit "Apply filters", class: "admin-btn admin-btn-primary" %><%= link_to "Clear", admin_jobs_path, class: "admin-btn admin-btn-secondary" %><span class="admin-muted"><%= pluralize(@total_count, "job") %></span></div>
+    <div class="flex flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-4"><%= f.submit "Apply filters", class: "admin-btn admin-btn-primary" %><%= link_to "Clear", admin_jobs_path(per_page: @per_page), class: "admin-btn admin-btn-secondary" %><span class="admin-muted"><%= pluralize(@total_count, "job") %></span></div>
   <% end %>
 </section>
 
-<% if can?(:destroy, Job) %>
+<%= render "admin/shared/pagination", position: "top" %>
+<% selectable = can?(:destroy, Job) && @jobs.any? %>
+<div data-controller="bulk-selection" data-action="change->bulk-selection#update">
+<% if selectable %>
   <%= form_with url: bulk_destroy_admin_jobs_path, method: :post, id: "bulk-jobs", data: { turbo_confirm: "Delete the selected jobs and their conversations? This cannot be undone." } do |f| %>
-    <div class="mb-3 flex items-center justify-end"><%= f.submit "Delete selected", class: "admin-btn admin-btn-danger" %></div>
+    <div class="mb-3 flex flex-wrap items-center justify-end gap-3" data-bulk-selection-target="actions" hidden><span class="admin-muted" data-bulk-selection-target="count">0 selected</span><%= f.submit "Delete selected", class: "admin-btn admin-btn-danger" %></div>
   <% end %>
 <% end %>
 <div class="admin-card overflow-x-auto p-0">
   <table class="admin-table">
     <thead><tr>
-      <% if can?(:destroy, Job) %><th scope="col"><span class="sr-only">Select</span></th><% end %>
+      <% if selectable %><th scope="col" data-row-link-ignore><%= tag.input type: "checkbox", class: "rounded border-slate-300", aria: { label: "Select all visible jobs" }, data: { bulk_selection_target: "all", action: "change->bulk-selection#toggleAll" } %></th><% end %>
       <% [["Job", "id"], ["Patron", "patron"], ["Status", "status"], ["Category", "category"], ["Type", "type"], ["Pickup location", "pickup_location"], ["Received", "received"]].each do |label, key| %>
         <th scope="col"><%= link_to label, admin_jobs_path(request.query_parameters.except("page").merge(sort: key, direction: params[:sort] == key && params[:direction] == "asc" ? "desc" : "asc")) %></th>
       <% end %>
@@ -44,7 +48,7 @@
     <tbody>
       <% @jobs.each do |job| %>
         <tr class="cursor-pointer focus-within:bg-brand-50" data-controller="row-link" data-action="click->row-link#open">
-          <% if can?(:destroy, Job) %><td class="cursor-default" data-row-link-ignore><%= check_box_tag "ids[]", job.id, false, form: "bulk-jobs", aria: { label: "Select job #{job.id}" }, class: "rounded border-slate-300" %></td><% end %>
+          <% if selectable %><td class="cursor-default" data-row-link-ignore><%= check_box_tag "ids[]", job.id, false, form: "bulk-jobs", aria: { label: "Select job #{job.id}" }, class: "rounded border-slate-300", data: { bulk_selection_target: "item" } %></td><% end %>
           <th scope="row"><%= link_to "##{job.id}", admin_job_path(job), class: "font-semibold text-brand-700 hover:underline", data: { row_link_target: "link" } %></th>
           <td><%= job.patron.name.presence || job.patron.email %><div class="admin-muted text-xs"><%= job.patron.email %></div></td>
           <td><%= admin_status_badge(job.status) %></td>
@@ -53,8 +57,9 @@
           <td class="whitespace-nowrap"><%= job.created_at.strftime("%b %-d, %Y") %><div class="admin-muted text-xs"><%= job.created_at.strftime("%-I:%M %p") %></div></td>
         </tr>
       <% end %>
-      <% if @jobs.empty? %><tr><td colspan="<%= can?(:destroy, Job) ? 8 : 7 %>" class="py-12 text-center admin-muted">No jobs match these filters.</td></tr><% end %>
+      <% if @jobs.empty? %><tr><td colspan="<%= selectable ? 8 : 7 %>" class="py-12 text-center admin-muted">No jobs match these filters.</td></tr><% end %>
     </tbody>
   </table>
 </div>
-<%= render "admin/shared/pagination" %>
+</div>
+<%= render "admin/shared/pagination", position: "bottom" %>

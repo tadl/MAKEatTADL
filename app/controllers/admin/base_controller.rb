@@ -2,6 +2,8 @@ module Admin
   class BaseController < ApplicationController
     include CanCan::ControllerAdditions
 
+    PAGE_SIZES = [25, 50, 100].freeze
+
     layout "admin"
 
     before_action :prevent_admin_caching
@@ -38,10 +40,12 @@ module Admin
     end
 
     def paginate_scope(scope)
+      @per_page = PAGE_SIZES.find { |size| params[:per_page] == size.to_s } || PAGE_SIZES.first
       @total_count = scope.except(:limit, :offset, :order).count
-      @total_pages = [(@total_count / 20.0).ceil, 1].max
-      @page = [[params[:page].to_i, 1].max, @total_pages].min
-      scope.limit(20).offset((@page - 1) * 20)
+      @total_pages = [(@total_count + @per_page - 1) / @per_page, 1].max
+      requested_page = Integer(params[:page], exception: false) || 1
+      @page = [[requested_page, 1].max, @total_pages].min
+      scope.limit(@per_page).offset((@page - 1) * @per_page)
     end
   end
 end
