@@ -77,6 +77,49 @@ class AdminPickupCsrfTest < ActionDispatch::IntegrationTest
     assert_equal original_attributes, @job.reload.attributes
   end
 
+  test "a legacy dashboard global token permits the legacy pickup POST after cutover" do
+    dashboard_pickup_token
+    # The legacy hidden form used form_authenticity_token without per-form
+    # options, the same global token format used by csrf_meta_tags.
+    token = css_select("meta[name='csrf-token']").first["content"]
+    assert token.present?
+
+    post admin_legacy_picked_up_job_path(@job), params: { authenticity_token: token }
+
+    assert_response :see_other
+    assert_redirected_to admin_root_path
+    assert_equal Date.current, @job.reload.pickup_date
+    assert_equal "archived", @job.status.code
+  end
+
+  test "legacy pickup rejects invalid tokens without changing the job" do
+    dashboard_pickup_token
+    original_attributes = @job.reload.attributes
+
+    assert_no_difference -> { @job.audits.count } do
+      post admin_legacy_picked_up_job_path(@job), params: { authenticity_token: "invalid-synthetic-token" }
+    end
+
+    assert_response :see_other
+    assert_redirected_to admin_root_path
+    assert_includes flash[:alert], "Nothing was saved"
+    assert_equal original_attributes, @job.reload.attributes
+  end
+
+  test "cross-origin pickup is rejected even with a valid form token" do
+    token = dashboard_pickup_token
+    original_attributes = @job.reload.attributes
+
+    assert_no_difference -> { @job.audits.count } do
+      post picked_up_admin_job_path(@job), params: { authenticity_token: token },
+        headers: { "HTTP_ORIGIN" => "https://example.net" }
+    end
+
+    assert_response :see_other
+    assert_redirected_to admin_root_path
+    assert_equal original_attributes, @job.reload.attributes
+  end
+
   private
 
   def dashboard_pickup_token

@@ -52,6 +52,9 @@ Rails.application.routes.draw do
       end
     end
 
+    # An already-open RailsAdmin dashboard can finish a pickup after cutover.
+    post 'job/:id/picked_up', to: 'jobs#picked_up', as: :legacy_picked_up_job
+
     # Keep links in existing staff emails and bookmarks useful after the port.
     get ':model_name(/:id)(/:legacy_action)', to: 'legacy#show',
       constraints: { model_name: /job|patron|printable_model|printer|filament_color|pickup_location|print_type|status|category|staff_user|conversation|message|audited~audit/ }

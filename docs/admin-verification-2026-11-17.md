@@ -14,7 +14,7 @@ the application's conversation route.
 ## Latest verification and review readiness
 
 The latest local run after the pagination, appearance, CI, catalog-selection,
-and November 20 pickup changes passed **269 Rails tests and 9,311 assertions** with `CI=1`, with no
+and November 20 pickup changes passed **274 Rails tests and 9,380 assertions** with `CI=1`, with no
 failures, errors, or skips. Both Chrome suites passed: 27 desktop/mobile page checks, 19 viewport
 confirmation controls, user-menu/appearance behavior, and chart navigation,
 theme changes, and failure recovery. Production-mode assets and eager loading
@@ -119,7 +119,7 @@ it has been applied only to local development/test databases. The existing
 Dokku predeploy command runs `db:migrate` during a separately authorized release.
 No production access, deployment, live email, or live Google login was performed
 during the November 17 port verification.
-Actual Dokku builds and the production scheduler remain unverified. Existing
+Actual Dokku builds of the rewrite and the production scheduler remain unverified. Existing
 Rails boot/test deprecation warnings remain.
 
 The public UX redesign and changes to backend workflow/pricing/automation rules
@@ -178,7 +178,7 @@ production scheduler was involved in this iteration.
 
 ## Pickup investigation — November 20
 
-Read-only production file hashes matched `origin/main` for the legacy Ability,
+Initial read-only production file hashes matched main `5f6f589` for the legacy Ability,
 dashboard, and pickup action. That dashboard advertised pickup to ordinary staff,
 but RailsAdmin authorized the separate `:picked_up` action, which had no staff
 grant. The rewrite originally preserved this effective restriction. The explicit
@@ -202,6 +202,20 @@ JSON failures receive 422 without a background redirect. Tests also cover print
 and scan pickup, audit attribution, protected fields, invalid legacy data, escaped
 alerts, and unchanged anonymous/patron and unrelated administrator restrictions.
 
-The full local Rails suite, both browser suites, asset compilation, and eager-load
-check passed after these changes. A legacy-compatible hotfix is prepared
-separately from `main`; the admin rewrite remains a separate review branch.
+Main hotfix `b74b3eb` passed 107 Rails tests / 734 assertions, production asset
+compilation, eager loading, and a zero-warning Brakeman scan. It was pushed to
+`main` and deployed through Dokku on November 20. Startup healthchecks passed,
+`/up` returned 200, and an unauthenticated pickup POST returned 303 to staff login.
+The deployed source hashes matched the tested hotfix. Verification did not alter
+real jobs, and the hotfix added no dependencies or schema migrations.
+
+The hotfix was also merged into the rewrite branch, retaining the custom
+controllers and tests in place of the removed RailsAdmin components. An explicit
+POST alias for the former dashboard pickup URL dispatches to the same guarded
+action, so an already-open legacy form remains usable after cutover. Tests cover
+the legacy global CSRF token, invalid tokens, GET safety, authentication, and
+readiness through that alias. Other legacy mutation routes remain unavailable.
+
+The full local rewrite suite and both browser suites passed after synchronization.
+Asset compilation and eager loading also passed. The rewrite remains a separate,
+undeployed review branch.

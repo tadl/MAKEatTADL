@@ -57,6 +57,44 @@ class AdminLegacyTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an already open legacy dashboard can submit pickup through the guarded new action" do
+    sign_in_staff(create_staff_user)
+    [create_print_job(status_code: "ready_for_pickup"), create_scan_job(status_code: "ready_for_pickup")].each do |job|
+      post admin_legacy_picked_up_job_path(job)
+
+      assert_response :see_other
+      assert_redirected_to admin_root_path
+      assert_equal Date.current, job.reload.pickup_date
+      assert_equal "archived", job.status.code
+    end
+  end
+
+  test "legacy pickup retains staff authentication readiness and nonmutating GET behavior" do
+    patron = create_patron
+    ready = create_print_job(patron: patron, status_code: "ready_for_pickup")
+    unfinished = create_print_job
+    [false, true].each do |patron_signed_in|
+      post consume_dashboard_token_path, params: { token: patron.access_token } if patron_signed_in
+      post admin_legacy_picked_up_job_path(ready)
+      assert_redirected_to admin_login_path
+      assert_nil ready.reload.pickup_date
+      assert_equal "ready_for_pickup", ready.status.code
+    end
+
+    sign_in_staff(create_staff_user)
+    assert_no_difference -> { unfinished.audits.count } do
+      post admin_legacy_picked_up_job_path(unfinished)
+    end
+    assert_redirected_to admin_job_path(unfinished)
+    assert_nil unfinished.reload.pickup_date
+
+    assert_no_difference -> { ready.audits.count } do
+      get admin_legacy_picked_up_job_path(ready)
+    end
+    assert_redirected_to admin_job_path(ready)
+    assert_nil ready.reload.pickup_date
+  end
+
   private
 
   def sign_in_staff(staff)
