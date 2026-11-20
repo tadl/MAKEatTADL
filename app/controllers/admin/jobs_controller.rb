@@ -192,12 +192,23 @@ module Admin
 
     def picked_up
       authorize! :picked_up, @job
-      unless @job.status.code == "ready_for_pickup"
+
+      picked_up = @job.with_lock do
+        # Reload and check under the same lock so a stale dashboard cannot
+        # overwrite a pickup recorded by another staff member.
+        next false unless @job.pickup_date.nil? && @job.status.code == "ready_for_pickup"
+
+        @job.update!(pickup_date: Date.current)
+      end
+      unless picked_up
         return redirect_to admin_job_path(@job), alert: "This job is not ready for pickup.", status: :see_other
       end
 
-      @job.update!(pickup_date: Date.current)
       redirect_to admin_root_path, notice: "Job ##{@job.id} marked as picked up and archived.", status: :see_other
+    rescue ActiveRecord::RecordInvalid => error
+      redirect_to admin_root_path,
+        alert: "Job ##{@job.id} could not be marked picked up. Correct these details in Edit job, then retry: #{error.record.errors.full_messages.to_sentence}",
+        status: :see_other
     end
 
     private

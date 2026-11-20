@@ -18,7 +18,7 @@ custom actions, models, and installed authorization adapter on November 17,
 | Create, delete, bulk delete, or export jobs | Denied | Allowed |
 | Read and send job conversations | Allowed | Allowed |
 | Attach, download, and remove job model files | Allowed | Allowed |
-| Mark a ready job picked up using the dedicated action | Denied | Allowed |
+| Mark a ready job picked up using the dedicated action | Allowed | Allowed |
 | View patrons and update name/email | Allowed | Allowed |
 | Create, delete, bulk delete, or export patrons | Denied | Allowed |
 | Merge patrons | Denied | Allowed |
@@ -91,10 +91,17 @@ input alone does not protect a field.
 
 The former dashboard rendered pickup controls to all staff, but the dedicated
 `picked_up` action had no ordinary-staff grant and was denied by CanCanCan.
-The custom interface preserves that effective permission and hides the action
-from staff who cannot use it. Ordinary staff can still update a job's pickup
-date through the existing edit workflow, which invokes the same archival
-callback. Changing that policy is separate from porting the interface.
+The November 20 pickup fix deliberately corrects that mismatch with an explicit
+staff `:picked_up` grant. It provides the same archival outcome already available
+through staff job editing, without granting broader management access. The
+dedicated action accepts only ready jobs with no recorded pickup, checks and
+updates under a row lock, and records today's date using the existing validated,
+audited save. Anonymous and patron-only sessions remain denied. Future Maker
+roles and general-staff catalog access remain separate design proposals.
+
+Staff form CSRF failures still reject the operation. HTML requests return to
+Overview with a session-refresh message; JSON clients receive a 422 response
+without a background redirect.
 
 The `files` permission includes deleting model attachments, even though staff
 cannot delete jobs. Attachment deletion must be scoped to the selected job.

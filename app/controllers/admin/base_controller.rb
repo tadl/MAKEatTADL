@@ -14,6 +14,14 @@ module Admin
 
     rescue_from CanCan::AccessDenied, with: :forbidden
     rescue_from ActiveRecord::RecordNotFound, with: :not_found
+    rescue_from ActionController::InvalidAuthenticityToken do
+      message = "Your session changed or expired. Reload the page and try again. Nothing was saved."
+      respond_to do |format|
+        format.html { redirect_to admin_root_path, alert: message, status: :see_other }
+        format.json { render json: { errors: [message] }, status: :unprocessable_content }
+        format.any { head :unprocessable_content }
+      end
+    end
     rescue_from ActionController::ParameterMissing, ActionController::BadRequest do
       head :bad_request
     end

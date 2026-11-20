@@ -128,7 +128,7 @@ class AdminJobsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Patron does not exist"
   end
 
-  test "staff cannot create delete bulk delete export or use picked-up action" do
+  test "staff cannot create delete bulk delete or export jobs" do
     job = create_print_job(status_code: "ready_for_pickup")
     get new_admin_job_path
     assert_response :forbidden
@@ -142,9 +142,127 @@ class AdminJobsTest < ActionDispatch::IntegrationTest
       get export_admin_jobs_path(format: format)
       assert_response :forbidden
     end
-    post picked_up_admin_job_path(job)
-    assert_response :forbidden
     assert_nil job.reload.pickup_date
+  end
+
+  test "staff pickup archives ready print and scan jobs with the current date and audit actor" do
+    other_patron = create_patron
+    jobs = [create_print_job(status_code: "ready_for_pickup"), create_scan_job(status_code: "ready_for_pickup")]
+
+    jobs.each do |job|
+      protected_attributes = job.attributes.slice("patron_id", "actual_cost", "type", "origin", "started_by_id", "finished_by_id")
+      assert_difference -> { job.audits.count }, 1 do
+        assert_no_enqueued_emails do
+          post picked_up_admin_job_path(job), params: { job: { pickup_date: Date.yesterday,
+            status_id: Status.find_by!(code: "cancelled").id, patron_id: other_patron.id, actual_cost: "999.99" } }
+        end
+      end
+
+      assert_response :see_other
+      assert_redirected_to admin_root_path
+      assert_equal Date.current, job.reload.pickup_date
+      assert_equal "archived", job.status.code
+      assert_equal protected_attributes, job.attributes.slice(*protected_attributes.keys)
+      audit = job.audits.reorder(:version).last
+      assert_equal @staff, audit.user
+      assert_equal "update", audit.action
+      assert_includes audit.audited_changes.keys, "pickup_date"
+    end
+  end
+
+  test "staff cannot pick up jobs that are not ready" do
+    jobs = [create_print_job, create_scan_job(status_code: "in_progress"), create_print_job(status_code: "cancelled")]
+    jobs.each do |job|
+      original_attributes = job.attributes
+      assert_no_difference -> { job.audits.count } do
+        assert_no_enqueued_emails { post picked_up_admin_job_path(job) }
+      end
+
+      assert_response :see_other
+      assert_redirected_to admin_job_path(job)
+      assert_equal "This job is not ready for pickup.", flash[:alert]
+      assert_equal original_attributes, job.reload.attributes
+    end
+  end
+
+  test "repeated staff pickup does not rewrite the date or add an audit" do
+    job = create_print_job(status_code: "ready_for_pickup")
+    post picked_up_admin_job_path(job)
+    assert_redirected_to admin_root_path
+    original_attributes = job.reload.attributes
+
+    travel 1.day do
+      assert_no_difference -> { job.audits.count } do
+        assert_no_enqueued_emails { post picked_up_admin_job_path(job) }
+      end
+
+      assert_response :see_other
+      assert_redirected_to admin_job_path(job)
+      assert_equal "This job is not ready for pickup.", flash[:alert]
+      assert_equal original_attributes, job.reload.attributes
+    end
+  end
+
+  test "staff pickup reports an inactive pickup location without changing the job" do
+    job = create_print_job(status_code: "ready_for_pickup")
+    ensure_pickup_location.update!(active: false)
+    original_attributes = job.attributes
+
+    assert_no_difference -> { job.audits.count } do
+      assert_no_enqueued_emails { post picked_up_admin_job_path(job) }
+    end
+
+    assert_response :see_other
+    assert_redirected_to admin_root_path
+    assert_includes flash[:alert], "is not a valid pickup location"
+    assert_equal original_attributes, job.reload.attributes
+  end
+
+  test "an existing pickup date is preserved even if a legacy job is still marked ready" do
+    job = create_print_job(status_code: "ready_for_pickup")
+    job.update_columns(pickup_date: Date.yesterday)
+    original_attributes = job.attributes
+
+    assert_no_difference -> { job.audits.count } do
+      post picked_up_admin_job_path(job)
+    end
+
+    assert_response :see_other
+    assert_redirected_to admin_job_path(job)
+    assert_equal original_attributes, job.reload.attributes
+  end
+
+  test "pickup validation errors are escaped when shown on the overview" do
+    job = create_print_job(status_code: "ready_for_pickup")
+    invalid_location = "<script data-synthetic-pickup>ignored</script>"
+    job.update_columns(pickup_location: invalid_location)
+
+    post picked_up_admin_job_path(job)
+    assert_redirected_to admin_root_path
+    follow_redirect!
+
+    assert_response :success
+    assert_select "[role='alert']" do |alerts|
+      assert_includes alerts.first.text, invalid_location
+      assert_select "script", count: 0
+    end
+    assert_nil job.reload.pickup_date
+    assert_equal "ready_for_pickup", job.status.code
+  end
+
+  test "staff pickup reports an invalid legacy URL without bypassing validation" do
+    job = create_print_job(status_code: "ready_for_pickup")
+    job.update_columns(url: "javascript:alert(1)")
+    original_attributes = job.attributes
+
+    assert_no_difference -> { job.audits.count } do
+      assert_no_enqueued_emails { post picked_up_admin_job_path(job) }
+    end
+
+    assert_response :see_other
+    assert_redirected_to admin_root_path
+    assert_includes flash[:alert], "must be a valid HTTP or HTTPS URL"
+    assert_equal original_attributes, job.reload.attributes
   end
 
   test "administrators can create either job type and retain scan identity on edit" do

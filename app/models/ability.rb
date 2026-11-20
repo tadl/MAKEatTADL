@@ -10,7 +10,7 @@ class Ability
     if user.admin?
       can :manage, :all
     else
-      can [:read, :update, :conversation, :files, :help], Job
+      can [:read, :update, :conversation, :files, :help, :picked_up], Job
       can [:read, :update], Patron
 
       # Lookup tables: only read, block all modification

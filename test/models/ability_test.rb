@@ -10,6 +10,7 @@ class AbilityTest < ActiveSupport::TestCase
       assert_not ability.can?(:read, model)
       assert_not ability.can?(:manage, model)
     end
+    [Job, PrintJob, ScanJob].each { |model| assert_not ability.can?(:picked_up, model) }
   end
 
   test "staff can work existing jobs and patron contact details" do
@@ -23,6 +24,7 @@ class AbilityTest < ActiveSupport::TestCase
       end
     end
     %i[conversation files help].each { |action| assert ability.can?(action, Job) }
+    [Job, PrintJob, ScanJob].each { |model| assert ability.can?(:picked_up, model) }
   end
 
   test "staff can read lookup records without changing them" do
@@ -36,14 +38,15 @@ class AbilityTest < ActiveSupport::TestCase
     end
   end
 
-  test "staff cannot create delete export merge or mark picked up" do
+  test "staff cannot create delete export merge or manage roles" do
     ability = Ability.new(StaffUser.new(admin: false))
 
     [Job, Patron].each do |model|
       %i[new create destroy export bulk_delete].each { |action| assert_not ability.can?(action, model) }
+      assert_not ability.can?(:manage, model)
     end
     assert_not ability.can?(:merge_patron, Patron)
-    assert_not ability.can?(:picked_up, Job)
+    assert_not ability.can?(:picked_up, Patron)
     [Message, Conversation, StaffUser, Audited::Audit].each do |model|
       %i[read create update destroy].each { |action| assert_not ability.can?(action, model) }
     end

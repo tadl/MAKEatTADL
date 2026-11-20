@@ -22,9 +22,9 @@ All admin pages require the existing Google-authenticated staff session. An ordi
 | Read model catalog and configuration lookup records | Yes | Yes |
 | Modify model catalog or configuration | No | Yes |
 | Staff role management, conversations/messages administration, activity log | No | Yes |
-| Dedicated Mark picked up action | No | Yes |
+| Dedicated Mark picked up action | Yes | Yes |
 
-The old ability rules did not grant ordinary staff the custom `picked_up` action, despite its prominent dashboard placement. Staff can still record a pickup date while updating a job, which archives it through the existing callback. The custom interface makes the dedicated action's administrator restriction explicit. A later permissions revision can change this deliberately.
+The old ability rules did not grant ordinary staff the custom `picked_up` action, despite its prominent dashboard placement. The November 20 fix explicitly grants that action to operational staff, who could already record a pickup date through job editing. It retains authentication, ready-state checks, validation, audit attribution, and all unrelated administrator restrictions.
 
 The existing patron-update permission is preserved through explicit update authorization. Ordinary staff can edit patron name and email. Patron credentials and role attributes are not accepted through that form.
 

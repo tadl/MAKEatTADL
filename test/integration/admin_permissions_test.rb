@@ -59,6 +59,29 @@ class AdminPermissionsTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_login_path
   end
 
+  test "anonymous and patron-only sessions cannot pick up even their own ready jobs" do
+    patron = create_patron
+    jobs = [create_print_job(patron: patron, status_code: "ready_for_pickup"),
+            create_scan_job(patron: patron, status_code: "ready_for_pickup")]
+
+    [false, true].each do |patron_signed_in|
+      if patron_signed_in
+        post consume_dashboard_token_path, params: { token: patron.access_token }
+        assert_redirected_to dashboard_path
+      end
+
+      jobs.each do |job|
+        original_attributes = job.attributes
+        assert_no_difference -> { job.audits.count } do
+          assert_no_enqueued_jobs { post picked_up_admin_job_path(job) }
+        end
+
+        assert_redirected_to admin_login_path
+        assert_equal original_attributes, job.reload.attributes
+      end
+    end
+  end
+
   test "staff login returns to a requested admin page" do
     get admin_patrons_path(q: "sample")
     assert_redirected_to admin_login_path

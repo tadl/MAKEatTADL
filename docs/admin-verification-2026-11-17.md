@@ -13,8 +13,8 @@ the application's conversation route.
 
 ## Latest verification and review readiness
 
-The latest local run after the pagination, appearance, CI, and catalog-selection
-changes passed **256 Rails tests and 9,075 assertions** with `CI=1`, with no
+The latest local run after the pagination, appearance, CI, catalog-selection,
+and November 20 pickup changes passed **269 Rails tests and 9,311 assertions** with `CI=1`, with no
 failures, errors, or skips. Both Chrome suites passed: 27 desktop/mobile page checks, 19 viewport
 confirmation controls, user-menu/appearance behavior, and chart navigation,
 theme changes, and failure recovery. Production-mode assets and eager loading
@@ -29,7 +29,8 @@ for the locked browser dependencies, fixture safeguards, and coverage limits.
 The branch is ready for a coordinator walkthrough with synthetic data. Before
 acceptance, restore or explicitly defer the [remaining parity gaps](admin-parity-review-2026-11-17.md).
 Walk through pickup and library actions as both an ordinary staff member and an
-administrator; those dedicated actions retain their administrator-only boundary.
+administrator. Pickup is available to operational staff after the November 20
+correction; library writes and reprints retain their administrator-only boundary.
 Decide whether the existing global read-marking behavior is acceptable for this
 release or whether the proposed shared Needs response queue is required.
 
@@ -116,7 +117,8 @@ The initial port required no schema migration. A subsequent additive migration
 stores staff theme/density preferences, with defaults and database constraints;
 it has been applied only to local development/test databases. The existing
 Dokku predeploy command runs `db:migrate` during a separately authorized release.
-No production access, deployment, live email, or live Google login was performed.
+No production access, deployment, live email, or live Google login was performed
+during the November 17 port verification.
 Actual Dokku builds and the production scheduler remain unverified. Existing
 Rails boot/test deprecation warnings remain.
 
@@ -125,8 +127,9 @@ remain later iterations with the makerspace specialist. The first library uses
 the existing single-file catalog schema; richer revisions, multi-file designs,
 tags, and printer/material profiles remain design work.
 
-Existing effective role boundaries are preserved. Administrator-only library
-writes/reprints and the dedicated pickup action follow those boundaries. The
+Existing effective role boundaries are preserved apart from the explicit
+November 20 staff pickup correction. Library writes/reprints remain
+administrator-only. The
 activity log is deliberately read-only, and authentication tokens are omitted
 from forms/exports. Signed ActiveStorage download URLs retain their existing
 bearer-link behavior. See the [permission matrix](admin-permissions.md),
@@ -172,3 +175,33 @@ changes and its `/up` endpoint returned HTTP 200. Development asset resolution
 now uses the current asset environment, so a previous QA precompile cannot mask
 Tailwind watcher updates. No production database, deployment, merge, or live
 production scheduler was involved in this iteration.
+
+## Pickup investigation — November 20
+
+Read-only production file hashes matched `origin/main` for the legacy Ability,
+dashboard, and pickup action. That dashboard advertised pickup to ordinary staff,
+but RailsAdmin authorized the separate `:picked_up` action, which had no staff
+grant. The rewrite originally preserved this effective restriction. The explicit
+staff grant now corrects it without granting broader administration permissions.
+Staff could already archive jobs by entering the pickup date through job editing.
+
+Retained application logs covered November 19–20 and contained no pickup action
+requests. Available access-log output also contained no pickup requests. The
+secondhand report had no error or incident details, so its specific cause remains
+unconfirmed; the permission mismatch is independently established from source.
+
+Pickup now checks readiness and an absent pickup date under a row lock, then
+uses the existing validated/audited save. Repeated or stale requests preserve
+the recorded date and audit history. Invalid legacy fields receive an actionable
+error on Overview rather than a generic 500 response. Validation is not bypassed.
+
+Request tests enable real CSRF protection, obtain the actual dashboard form token,
+and verify successful staff pickup. Missing, invalid, and previous-login tokens
+remain rejected without changing the job. HTML failures receive a refresh message;
+JSON failures receive 422 without a background redirect. Tests also cover print
+and scan pickup, audit attribution, protected fields, invalid legacy data, escaped
+alerts, and unchanged anonymous/patron and unrelated administrator restrictions.
+
+The full local Rails suite, both browser suites, asset compilation, and eager-load
+check passed after these changes. A legacy-compatible hotfix is prepared
+separately from `main`; the admin rewrite remains a separate review branch.

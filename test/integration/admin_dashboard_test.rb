@@ -27,13 +27,13 @@ class AdminDashboardTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href='#{conversation_admin_job_path(job)}']", count: 3
     assert_select "a[href='#{conversation_admin_job_path(other_job)}']", count: 0
-    assert_select "form[action='#{picked_up_admin_job_path(job)}']", count: 0
+    assert_select "form[action='#{picked_up_admin_job_path(job)}'][method='post']", count: 1
     ongoing = Status.find_by!(code: "ongoing")
     assert_select "a[href='#{admin_jobs_path(status_id: ongoing.id, scope: 'ongoing')}']", count: 1
     assert_nil message.reload.read_at
   end
 
-  test "pickup button is reserved for administrators" do
+  test "administrators retain the pickup button" do
     @staff.update!(admin: true)
     sign_in_staff(@staff)
     job = create_print_job(status_code: "ready_for_pickup")
@@ -61,8 +61,7 @@ class AdminDashboardTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "30 days"
   end
 
-  test "pickup confirmations show the final price on the overview and job pages" do
-    @staff.update!(admin: true)
+  test "staff pickup confirmations show the final price on the overview and job pages" do
     sign_in_staff(@staff)
 
     [[{ actual_cost: "12.34", slicer_cost: "9.87" }, "Price: $12.34"],
@@ -74,6 +73,7 @@ class AdminDashboardTest < ActionDispatch::IntegrationTest
         get path
         assert_response :success
         assert_select "form[action='#{picked_up_admin_job_path(job)}']" do |forms|
+          assert_equal "post", forms.first["method"]
           assert_includes forms.first["data-turbo-confirm"], price
           assert_includes forms.first["data-turbo-confirm"], "Patron: #{job.patron.name}"
           assert_includes forms.first["data-turbo-confirm"], "Pickup location: Woodmere"
@@ -81,6 +81,22 @@ class AdminDashboardTest < ActionDispatch::IntegrationTest
         end
       end
     end
+  end
+
+  test "staff can find the pickup action for ready scans but not unfinished jobs" do
+    sign_in_staff(@staff)
+    scan = create_scan_job(status_code: "ready_for_pickup")
+    unfinished = create_print_job
+
+    [admin_root_path, admin_job_path(scan)].each do |path|
+      get path
+      assert_response :success
+      assert_select "form[action='#{picked_up_admin_job_path(scan)}'][method='post']", count: 1
+    end
+
+    get admin_job_path(unfinished)
+    assert_response :success
+    assert_select "form[action='#{picked_up_admin_job_path(unfinished)}']", count: 0
   end
 
   private
