@@ -18,6 +18,7 @@ class Ability
       can   :conversation, Job
       can   :files, Job
       can   :help, Job
+      can   :picked_up, Job
 
       # Lookup tables: only read, block all modification
       lookups = [

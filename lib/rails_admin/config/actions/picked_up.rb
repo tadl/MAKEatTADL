@@ -42,25 +42,27 @@ module RailsAdmin
           proc do
             @job = @abstract_model.model.find(params[:id])
 
-            ready = Status.find_by(code: 'ready_for_pickup')
-            unless ready && @job.status_id == ready.id
-              flash[:alert] = "Job ##{@job.id} is not in 'Ready for pickup'."
-              return redirect_to rails_admin.dashboard_path
-            end
-
             prev_current = Current.staff_user
             Current.staff_user = current_staff_user
 
             begin
-              @job.update!(pickup_date: Date.current)
-              flash[:success] = "Job ##{@job.id} marked as picked up and archived."
-            rescue => e
-              flash[:error] = "Failed to mark picked up: #{e.message}"
+              picked_up = @job.with_lock do
+                next false unless @job.status&.code == 'ready_for_pickup' && @job.pickup_date.blank?
+
+                @job.update!(pickup_date: Date.current)
+              end
+              if picked_up
+                flash[:success] = "Job ##{@job.id} marked as picked up and archived."
+              else
+                flash[:alert] = "Job ##{@job.id} is not ready for pickup or has already been picked up."
+              end
+            rescue ActiveRecord::RecordInvalid => error
+              flash[:error] = "Job ##{@job.id} could not be marked picked up. Correct these details in Edit job, then retry: #{error.record.errors.full_messages.to_sentence}"
             ensure
               Current.staff_user = prev_current
             end
 
-            redirect_to rails_admin.dashboard_path
+            redirect_to rails_admin.dashboard_path, status: :see_other
           end
         end
 

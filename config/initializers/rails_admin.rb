@@ -29,7 +29,7 @@ RailsAdmin.config do |config|
   config.authorize_with :cancancan, Ability
 
   # Authentication & inheritance
-  config.parent_controller = '::ApplicationController'
+  config.parent_controller = '::RailsAdminParentController'
   config.authenticate_with do
     redirect_to '/admin/login' unless current_staff_user
   end
